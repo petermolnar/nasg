@@ -101,3 +101,4 @@ ENV/
 .mypy_cache/
 config.ini
 config.yml
+nasg/config.py
