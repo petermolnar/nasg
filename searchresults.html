@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
+	<title>Search results for "{{ term }}"</title>
+</head>
+
+<body>
+<section class="content-body">
+	<h1 class="p-name hide">Search results for "{{ term }}"</h1>
+	{% if posts|length %}
+	{% for post in posts %}
+		<article class="searchresult">
+			<header>
+				<h2>
+					<a href="{{ post.url }}">
+						<span class="p-name">
+							{% if post.title|length %}
+								{{ post.title }}
+							{% else %}
+								{{ post.url }}
+							{% endif %}
+						</span>
+					</a>
+				</h2>
+				<h3>{{ post.url }}</h3>
+			</header>
+
+			<div class="highlight">… {{ post.highlight }} …</div>
+			{% if post.img %}
+				<p>{{ post.img }}</p>
+			{% endif %}
+		</article>
+	{% endfor %}
+	{% else %}
+	<h2>No results for search term "{{ term }}"</h2>
+	{% endif %}
+</section>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<aside class="exif">
+	<ul>
+{% if post.exif.camera %}
+		<li>
+			<svg class="icon"><use xlink:href="#icon-camera" /></svg>
+			{{ post.exif.camera }}
+		</li>
+{% endif %}
+{% if post.exif.aperture %}
+		<li>
+			<svg class="icon"><use xlink:href="#icon-aperture" /></svg>
+			f/{{ post.exif.aperture }}
+		</li>
+{% endif %}
+{% if post.exif.shutter_speed %}
+		<li>
+			<svg class="icon"><use xlink:href="#icon-clock" /></svg>
+			{{ post.exif.shutter_speed }} sec
+		</li>
+{% endif %}
+{% if post.exif.focal_length %}
+		<li>
+			<svg class="icon"><use xlink:href="#icon-focallength" /></svg>
+			{{ post.exif.focal_length }}{% if not post.exif.focal_length|search( 'mm' ) %} mm{% endif %}
+		</li>
+{% endif %}
+{% if post.exif.iso %}
+		<li>
+			<svg class="icon"><use xlink:href="#icon-sensitivity" /></svg>
+			ISO {{ post.exif.iso }}
+		</li>
+{% endif %}
+{% if post.exif.lens %}
+		<li>
+			<svg class="icon"><use xlink:href="#icon-lens" /></svg>
+			{{ post.exif.lens }}
+		</li>
+{% endif %}
+{% if (post.exif.geo_latitude) and (post.exif.geo_longitude) %}
+		<li>
+			<svg class="icon"><use xlink:href="#icon-location" /></svg>
+			<a class="h-geo geo p-location" href="https://www.bing.com/maps?cp={{ post.exif.geo_latitude}}~{{ post.exif.geo_longitude }}&v=2&lvl=16&sty=a&sp=point.{{ post.exif.geo_latitude}}_{{ post.exif.geo_longitude }}_{{ site.url|urlencode() ~ '/' ~ post.slug|urlencode() }}">
+				<span class="p-latitude">{{ post.exif.geo_latitude }}</span>
+				<span class="p-longitude">{{ post.exif.geo_longitude }}</span>
+			</a>
+		</li>
+{% endif %}
+	</ul>
+</aside>

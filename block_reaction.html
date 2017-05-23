@@ -1,0 +1,38 @@
+{% if post.reactions.bookmark %}
+	{% for reaction in post.reactions.bookmark %}
+		{% if post.title|length %}
+			<span class="p-name">{{ post.title }}</span><br />
+			<svg class="icon"><use xlink:href="#icon-bookmark" /></svg>
+			<a href="{{ reaction }}" class="u-bookmark-of" title="Bookmarked URL: {{ reaction }}">{{ reaction }}</a>
+		{% else %}
+			<span class="p-name">
+				<svg class="icon"><use xlink:href="#icon-bookmark" /></svg>
+				<a href="{{ reaction }}" class="{{ class }}">{{ reaction }}</a>
+			</span>
+		{% endif %}
+	{% endfor %}
+{% endif %}
+
+{% if post.reactions.reply %}
+	{% for reaction in post.reactions.reply %}
+		<span class="p-name">
+			<svg class="icon"><use xlink:href="#icon-reply" /></svg>
+			<a href="{{ reaction }}" class="u-in-reply-to" title="Reply to: {{ reaction }}">{{ reaction }}</a>
+		</span>
+	{% endfor %}
+{% endif %}
+
+{% if post.reactions.repost %}
+	{% for reaction in post.reactions.repost %}
+		{% if post.title|length %}
+			<span class="p-name">{{ post.title }}</span><br />
+			<svg class="icon"><use xlink:href="#icon-repost" /></svg>
+			<a href="{{ reaction }}" class="u-repost-of" title="Repost of: {{ reaction }}">{{ reaction }}</a>
+		{% else %}
+			<svg class="icon"><use xlink:href="#icon-repost" /></svg>
+			<span class="p-name">
+				<a href="{{ reaction }}" class="u-repost-of" title="Repost of: {{ reaction }}">{{ reaction }}</a>
+			</span>
+		{% endif %}
+	{% endfor %}
+{% endif %}

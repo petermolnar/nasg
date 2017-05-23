@@ -1,0 +1,19 @@
+{% include 'block_header_open.html' %}
+
+{%- if taxonomy.name -%}
+{%- set title = taxonomy.name ~ ' | ' ~ site.name -%}
+{%- else -%}
+{%- set title = site.name -%}
+{%- endif -%}
+	<title>{{ title }}</title>
+
+{% include 'block_header_close.html' %}
+
+<section class="content-body h-feed">
+	<div id="justified-gallery">
+	{% for post in posts %}
+		{{ post.srcset }}
+	{% endfor %}
+</section>
+
+{% include 'block_footer.html' %}

@@ -1,0 +1,8 @@
+<aside class="syndicate hide">
+{% for s, c in post.syndicate.items() %}
+	<a href="https://brid.gy/publish/{{ s }}"></a>
+	{% if c %}
+		<p class="p-bridgy-{{ s }}-content">{{ c }}</p>
+	{% endif %}
+{% endfor %}
+</aside>

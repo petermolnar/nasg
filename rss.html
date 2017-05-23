@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<rss version="2.0"
+		xmlns:content="http://purl.org/rss/1.0/modules/content/"
+		xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+		xmlns:dc="http://purl.org/dc/elements/1.1/"
+		xmlns:atom="http://www.w3.org/2005/Atom"
+		xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+		xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+{%- if taxonomy.name -%}
+{%- set title = taxonomy.name ~ ' | ' ~ site.name -%}
+{%- else -%}
+{%- set title = site.name -%}
+{%- endif -%}
+
+<channel>
+	<title>{{ title }}</title>
+	<atom:link href="{{ site.url}}{{ taxonomy.url }}feed" rel="self" type="application/rss+xml" />
+	<link>{{ site.url}}{{ taxonomy.url }}feed</link>
+	<description>{{ description }}</description>
+	<language>{{ site.lang }}</language>
+	<sy:updatePeriod>daily</sy:updatePeriod>
+	<sy:updateFrequency>1</sy:updateFrequency>
+
+{% for post in posts %}
+	<item>
+		<title>{% if post.title %}{{ post.title }}{% endif%}</title>
+		<link>{{ site.url }}/{{ post.slug }}</link>
+		<pubDate>{{ post.published|date("%a, %d %b %Y %T %z") }}</pubDate>
+		<dc:creator><![CDATA[{{ post.author.name }}]]></dc:creator>
+		<guid isPermaLink="true">{{ site.url }}/{{ post.slug }}</guid>
+		<description><![CDATA[{{ post.summary }}]]></description>
+		<content:encoded><![CDATA[{{ post.html }}]]></content:encoded>
+		<language>{{ post.lang }}</language>
+		{% if post.tags %}
+			{% for tname in post.tags %}
+				<category domain="{{ site.url }}/tag/{{ tname|slugify }}"><![CDATA[{{ tname }}]]></category>
+			{% endfor %}
+		{% endif %}
+		{% if post.rssenclosure %}
+		<enclosure url="{{ post.rssenclosure.url }}" type="{{ post.rssenclosure.mime }}" length="{{ post.rssenclosure.size }}" />
+		{% endif %}
+	</item>
+{% endfor %}
+</channel>
+</rss>

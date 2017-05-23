@@ -1,0 +1,144 @@
+{%- if post.exif -%}
+{%- set dctype = "Image" -%}
+{%- else -%}
+{%- set dctype = "Text" -%}
+{%- endif -%}
+{% include 'block_header_open.html' %}
+
+	{% if post.title %}
+	<title>{{ post.title }} | {{ site.domain }}</title>
+	{% else %}
+	<title>{{ post.name }} | {{ site.domain }}</title>
+	{% endif %}
+
+	<link rel="canonical" href="{{ site.url }}/{{ post.slug }}" />
+	<link rel="shortlink" href="{{ site.url }}/{{ post.shortslug }}" />
+
+	<meta name="author" content="{{ post.author.name }}">
+	<meta name="keywords" content="{{ post.tags|join(',') }}">
+	<meta name="description" content="{{ post.excerpt|default(post.title) }}">
+
+	<meta property="og:description" content="{{ post.excerpt|striptags }}" />
+	<meta property="og:locale" content="{{ post.lang|default(site.lang) }}" />
+	<meta property="og:site_name" content="{{ site.name }}" />
+	<meta property="og:title" content="{{ post.title }}" />
+	<meta property="og:type" content="blog" />
+	{% if post.modified %}<meta name="og:updated_time" content="{{ post.modified|date("c") }}" />{%endif%}
+	<meta property="og:url" content="{{ site.url }}/{{ post.shortslug }}" />
+
+	<meta name="DC.Format" content="text/html" />
+	<meta name="DC.Title" content="{{ post.title }}">
+	<meta name="DC.Creator" content="{{ post.author.name }}">
+	<meta name="DC.Description" content="{{ post.excerpt|default(post.title) }}">
+	<meta name="DC.Date" content="{{ post.published|date("%Y-%m-%d") }}">
+	<meta name="DC.Type" content="{{ dctype }}">
+	<meta name="DC.Identifier" content="{{ site.url }}/{{ post.slug }}">
+	<meta name="DC.Source" content="{{ site.url }}/{{ post.slug }}">
+	<meta name="DC.Language" content="{{ post.lang|default(site.lang) }}">
+	<meta name="DC.Rights" content="Copyright {{ post.published|date("%Y") }}, {{ post.author.name }} <{{ post.author.email }}>. All rights reserved.">
+
+{% include 'block_header_close.html' %}
+
+<section class="content-body">
+	<article class="h-entry singular"{% if post and post.lang %} lang="{{ post.lang }}"{% endif %}>
+		<header>
+		{% if post.reactions %}
+			<h1 class="reaction">{% include 'block_reaction.html' %}</h1>
+		{% elif post.title|length %}
+			<h1>
+				<a href="{{ site.url }}/{{ post.slug }}" title="{{ post.title }}">
+					<span class="p-name">{{ post.title }}</span>
+				</a>
+			</h1>
+		{% endif %}
+
+			{% if 'IT' in post.tags %}
+				{% if post.updated %}
+					{% set py = post.updated|date('%Y')|int %}
+				{% else %}
+					{% set py = post.published|date('%Y')|int %}
+				{% endif %}
+				{% if( "now"|date('%Y')|int - py ) >= 2 %}
+				<h2 class="old-warning">WARNING: this entry was published in {{ post.published|date('%Y') }}.<br />It might be outdated.</h2>
+				{% endif %}
+			{%endif%}
+
+		</header>
+
+		{% if post.summary %}
+		<div class="e-summary">
+			{{ post.summary }}
+			<br class="clear" />
+		</div>
+		{% endif %}
+
+		<div class="e-content">
+			<div class="content-inner">
+				{{ post.html }}
+
+				{% if ( post.exif ) %}
+					{% include 'block_exif.html'  %}
+				{% endif %}
+
+				{% if ( post.syndicate ) %}
+					{% include 'block_syndicate.html'  %}
+				{% endif %}
+
+			</div>
+		</div>
+
+		<footer>
+			<aside class="pubdate">
+				<h6 class="pubdate-title">Published</h6>
+				<p>
+					<a class="u-url u-uuid" href="{{ site.url}}/{{ post.slug }}/"></a>
+					<a title="{{ post.title }}" href="{{ site.url }}/{{ post.slug }}">
+						<time class="dt-published"
+							datetime="{{ post.published|date("c") }}">
+							{{ post.published|date("%Y-%m-%d %H:%M") }}
+						</time>
+					</a>
+				</p>
+
+				{% if post.updated %}
+				<h6 class="update-title">Last updated</h6>
+				<p>
+					<time class="dt-updated"
+						datetime="{{ post.updated|date("c") }}">
+						{{ post.updated|date("%Y-%m-%d %H:%M") }}
+					</time>
+				</p>
+				{% endif %}
+			</aside>
+
+			{% if post.tags %}
+				<aside class="tags">
+					<h6 class="tags-title">Tags</h6>
+					<ul>
+						{% for tname in post.tags %}<li>
+							<a href="/tag/{{ tname|slugify }}" class="p-category">{{ tname }}</a>
+						</li>{% endfor %}
+					</ul>
+				</aside>
+			{% endif %}
+
+			<h6 class="shortlink-title">Short URL</h6>
+			<aside class="shortlink">
+				<p>
+					<a href="{{ site.url }}/{{ post.shortslug }}">{{ site.url }}/{{ post.shortslug }}</a>
+				</p>
+			</aside>
+		</footer>
+	</article>
+	<aside class="content-note">
+		<hr />
+		<p>Want to leave a comment or get in touch? Reply with your own blog using
+			<a href="http://indiewebcamp.com/webmention">Webmentions</a> or send an
+			<a href="mailto:{{ post.author.email }}?subject=RE: {{ post.title }}"
+			>email</a>.
+		</p>
+	</aside>
+</section>
+
+
+{% include 'block_footer.html' %}
