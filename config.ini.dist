@@ -1,0 +1,68 @@
+[common]
+base = ~/your_base_directory
+domain = your.domain.com
+; thiss should be in the base directory speficied above
+watermark = watermark_file.png
+; size of the default image show, get one from the list in [downsize]
+fallbackimg = 720
+; items per page, also applies to RSS feed
+pagination = 8
+
+[source]
+; directories for various content; all within "base" from "common"
+content = content
+files = files
+templates = templates
+tags = tag
+photos = photos
+offlinecopies = offlinecopies
+; static is a folder where the contents will be copied to the destination
+static = copy
+
+[target]
+; directories for various targets; all within "base" from "common"
+; these are created automatically
+build = build
+
+[var]
+; directories for various targets; all within "build" from "target"
+; these are created automatically
+searchdb = s
+
+[site]
+charset = UTF-8
+title = additional title text | ${common:domain}
+url = https://${common:domain}
+default_lang = en
+domains = ${common:domain} extra.domain
+
+[author]
+; author details for h-card
+name = Your Name
+email = your@email.address
+url = ${site:url}
+; you may want to put this into the "static" dir from "source"
+avatar = name_of_avatar_file.jpg
+; GPG long key
+gpg = XXXX XXX XXXX XXXX
+
+[socials]
+; list of social network name = social network account
+flickr = https://www.flickr.com/people/yourhandle
+github = https://github.com/yourhandle
+; feel free to add more
+
+[photo]
+; regex to be matched in EXIF data against EXIF:Author
+regex = "this should be a tricky regex to match your usual author line in EXIF"
+
+[downsize]
+; size = suffix
+90 = s
+360 = m
+720 = z
+1280 = b
+
+[crop]
+; size = crop to square boolean, defaults to False
+90 = true
