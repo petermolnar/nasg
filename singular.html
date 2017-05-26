@@ -129,6 +129,15 @@
 				</p>
 			</aside>
 		</footer>
+		{% if post.offlinecopies %}
+			{% for url, copy in post.offlinecopies %}
+			<!-- {{ url }}
+
+			{{ copy }}
+
+			-->
+			{% endfor %}
+		{% endif %}
 	</article>
 	<aside class="content-note">
 		<hr />

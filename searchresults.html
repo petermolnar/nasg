@@ -1,12 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="utf-8" />
+	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
+	<style media="all">
+		{% include 'style.css' %}
+	</style>
 	<title>Search results for "{{ term }}"</title>
 </head>
 
 <body>
+
+<header class="content-header" id="main-header">
+	<nav class="content-navigation">
+		<ul>
+			<li>
+				<a title="back to site" href="/">
+					« back to the site
+				</a>
+			</li>
+		</ul>
+	</nav>
+
+	<form role="search" method="get" class="search-form" action="/search">
+		<label for="search" class="hide">Search</label>
+		<input type="search" class="search-field" placeholder="search..." value="{{ term }}" name="s" id="s" title="Search for:">
+		<input type="submit" class="search-submit" value="Go ➡">
+	</form>
+
+	<br class="clear" />
+</header>
+
 <section class="content-body">
 	<h1 class="p-name hide">Search results for "{{ term }}"</h1>
 	{% if posts|length %}
@@ -28,7 +52,7 @@
 			</header>
 
 			<div class="highlight">… {{ post.highlight }} …</div>
-			{% if post.img %}
+			{% if post.img and 'None' != post.img %}
 				<p>{{ post.img }}</p>
 			{% endif %}
 		</article>
