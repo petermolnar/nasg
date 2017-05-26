@@ -8,15 +8,15 @@ import shutil
 import logging
 import json
 import glob
-import subprocess
 import tempfile
 import atexit
 import re
 import hashlib
 import math
 import asyncio
-import magic
+import csv
 
+import magic
 import arrow
 import wand.image
 import similar_text
@@ -27,7 +27,7 @@ import requests
 from breadability.readable import Article
 from whoosh import index
 import jinja2
-
+import urllib.parse
 import shared
 
 def splitpath(path):
@@ -70,13 +70,19 @@ class Indexer(object):
         for url, offlinecopy in singular.offlinecopies.items():
             content_remote.append("%s" % offlinecopy)
 
+        weight = 1
+        if singular.isbookmark:
+            weight = 10
+        if singular.ispage:
+            weight = 100
+
         self.writer.add_document(
             title=singular.title,
             url=singular.url,
             content=" ".join(list(map(str,[*content_real, *content_remote]))),
             date=singular.published.datetime,
             tags=",".join(list(map(str, singular.tags))),
-            weight=1,
+            weight=weight,
             img="%s" % singular.photo
         )
 
@@ -190,35 +196,6 @@ class Renderer(object):
             return True
         return False
 
-    #def rendersingular(self, singular):
-        #logging.debug("rendering and saving %s", singular.fname)
-        #targetdir = os.path.abspath(os.path.join(
-            #shared.config.get('target', 'builddir'),
-            #singular.fname
-        #))
-        #target = os.path.join(targetdir, 'index.html')
-
-        #if not shared.config.get('params', 'force') and os.path.isfile(target):
-            #ttime = int(os.path.getmtime(target))
-            #if ttime == singular.mtime:
-                #logging.debug('%s exists and up-to-date (lastmod: %d)', target, ttime)
-                #return
-
-        #if not os.path.isdir(targetdir):
-            #os.mkdir(targetdir)
-
-        #tmpl = self.j2.get_template(singular.tmplfile)
-        #tmplvars = {
-            #'post': singular.tmplvars,
-            #'site': self.sitevars,
-            #'taxonomy': {},
-        #}
-        #r = tmpl.render(tmplvars)
-        #with open(target, "w") as html:
-            #html.write(r)
-            #html.close()
-            #os.utime(target, (singular.mtime, singular.mtime))
-
 
 class BaseIter(object):
     def __init__(self):
@@ -248,97 +225,97 @@ class BaseIter(object):
             yield (k, v)
         return
 
-class CMDLine(object):
-    def __init__(self, executable):
-        self.executable = self._which(executable)
-        if self.executable is None:
-            raise OSError('No %s found in PATH!' % executable)
-            return
+#class CMDLine(object):
+    #def __init__(self, executable):
+        #self.executable = self._which(executable)
+        #if self.executable is None:
+            #raise OSError('No %s found in PATH!' % executable)
+            #return
 
-    @staticmethod
-    def _which(name):
-        for d in os.environ['PATH'].split(':'):
-            which = glob.glob(os.path.join(d, name), recursive=True)
-            if which:
-                return which.pop()
-        return None
+    #@staticmethod
+    #def _which(name):
+        #for d in os.environ['PATH'].split(':'):
+            #which = glob.glob(os.path.join(d, name), recursive=True)
+            #if which:
+                #return which.pop()
+        #return None
 
-    def __enter__(self):
-        self.process = subprocess.Popen(
-            [self.executable, "-stay_open", "True",  "-@", "-"],
-            universal_newlines=True,
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        return self
+    #def __enter__(self):
+        #self.process = subprocess.Popen(
+            #[self.executable, "-stay_open", "True",  "-@", "-"],
+            #universal_newlines=True,
+            #stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        #return self
 
-    def  __exit__(self, exc_type, exc_value, traceback):
-        self.process.stdin.write("-stay_open\nFalse\n")
-        self.process.stdin.flush()
+    #def  __exit__(self, exc_type, exc_value, traceback):
+        #self.process.stdin.write("-stay_open\nFalse\n")
+        #self.process.stdin.flush()
 
-    def execute(self, *args):
-        args = args + ("-execute\n",)
-        self.process.stdin.write(str.join("\n", args))
-        self.process.stdin.flush()
-        output = ""
-        fd = self.process.stdout.fileno()
-        while not output.endswith(self.sentinel):
-            output += os.read(fd, 4096).decode('utf-8', errors='ignore')
-        return output[:-len(self.sentinel)]
+    #def execute(self, *args):
+        #args = args + ("-execute\n",)
+        #self.process.stdin.write(str.join("\n", args))
+        #self.process.stdin.flush()
+        #output = ""
+        #fd = self.process.stdout.fileno()
+        #while not output.endswith(self.sentinel):
+            #output += os.read(fd, 4096).decode('utf-8', errors='ignore')
+        #return output[:-len(self.sentinel)]
 
 
-class Pandoc(CMDLine):
-    """ Handles calling external binary `exiftool` in an efficient way """
-    def __init__(self, md2html=True):
-        super().__init__('pandoc')
-        if md2html:
-            self.i = "markdown+" + "+".join([
-                'backtick_code_blocks',
-                'auto_identifiers',
-                'fenced_code_attributes',
-                'definition_lists',
-                'grid_tables',
-                'pipe_tables',
-                'strikeout',
-                'superscript',
-                'subscript',
-                'markdown_in_html_blocks',
-                'shortcut_reference_links',
-                'autolink_bare_uris',
-                'raw_html',
-                'link_attributes',
-                'header_attributes',
-                'footnotes',
-            ])
-            self.o = 'html5'
-        else:
-            self.o = "markdown-" + "-".join([
-                'raw_html',
-                'native_divs',
-                'native_spans',
-            ])
-            self.i = 'html'
+#class Pandoc(CMDLine):
+    #""" Handles calling external binary `exiftool` in an efficient way """
+    #def __init__(self, md2html=True):
+        #super().__init__('pandoc')
+        #if md2html:
+            #self.i = "markdown+" + "+".join([
+                #'backtick_code_blocks',
+                #'auto_identifiers',
+                #'fenced_code_attributes',
+                #'definition_lists',
+                #'grid_tables',
+                #'pipe_tables',
+                #'strikeout',
+                #'superscript',
+                #'subscript',
+                #'markdown_in_html_blocks',
+                #'shortcut_reference_links',
+                #'autolink_bare_uris',
+                #'raw_html',
+                #'link_attributes',
+                #'header_attributes',
+                #'footnotes',
+            #])
+            #self.o = 'html5'
+        #else:
+            #self.o = "markdown-" + "-".join([
+                #'raw_html',
+                #'native_divs',
+                #'native_spans',
+            #])
+            #self.i = 'html'
 
-    def convert(self, text):
-        cmd = (
-            self.executable,
-            '-o-',
-            '--from=%s' % self.i,
-            '--to=%s' % self.o
-        )
-        logging.debug('converting content with Pandoc')
-        p = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+    #def convert(self, text):
+        #cmd = (
+            #self.executable,
+            #'-o-',
+            #'--from=%s' % self.i,
+            #'--to=%s' % self.o
+        #)
+        #logging.debug('converting content with Pandoc')
+        #p = subprocess.Popen(
+            #cmd,
+            #stdin=subprocess.PIPE,
+            #stdout=subprocess.PIPE,
+            #stderr=subprocess.PIPE,
+        #)
 
-        stdout, stderr = p.communicate(input=text.encode())
-        if stderr:
-            logging.error("Error during pandoc covert:\n\t%s\n\t%s", cmd, stderr)
-        return stdout.decode('utf-8').strip()
+        #stdout, stderr = p.communicate(input=text.encode())
+        #if stderr:
+            #logging.error("Error during pandoc covert:\n\t%s\n\t%s", cmd, stderr)
+        #return stdout.decode('utf-8').strip()
 
 # based on http://stackoverflow.com/a/10075210
-class ExifTool(CMDLine):
+class ExifTool(shared.CMDLine):
     """ Handles calling external binary `exiftool` in an efficient way """
     sentinel = "{ready}\n"
 
@@ -419,6 +396,7 @@ class WebImage(object):
         self.alttext = ''
         self.sizes = []
         self.fallbacksize = int(shared.config.get('common','fallbackimg', fallback='720'))
+        self.cl = None
 
         for size in shared.config.options('downsize'):
             sizeext = shared.config.get('downsize', size)
@@ -453,7 +431,7 @@ class WebImage(object):
             )
 
     def __str__(self):
-        if self.is_downsizeable:
+        if self.is_downsizeable and not self.cl:
             return '\n<figure class="photo"><a target="_blank" class="adaptive" href="%s"><img src="%s" class="adaptimg" alt="%s" /></a><figcaption class=\"caption\">%s%s</figcaption></figure>\n' % (
                 self.target,
                 self.fallback,
@@ -461,8 +439,18 @@ class WebImage(object):
                 self.fname,
                 self.ext
             )
+        elif self.cl:
+            self.cl = self.cl.replace('.', ' ')
+            return '<img src="%s" class="%s" alt="%s" title="%s%s" />' % (
+                self.fallback,
+                self.cl,
+                self.alttext,
+                self.fname,
+                self.ext
+            )
+
         else:
-            return '\n<figure class="picture"><img src="%s" class="aligncenter" alt="%s" /><figcaption class=\"caption\">%s%s</figcaption></figure>\n' % (
+            return '<img src="%s" class="aligncenter" alt="%s" title="%s%s" />' % (
                 self.fallback,
                 self.alttext,
                 self.fname,
@@ -768,9 +756,14 @@ class Content(BaseIter):
         self.front = Taxonomy()
 
     def populate(self):
+        now = arrow.utcnow().timestamp
         for fpath in self.files:
             item = Singular(fpath, self.images)
             self.append(item.pubtime, item)
+
+            if item.pubtime > now:
+                logging.warning("skipping future post %s", item.fname)
+                continue
 
             if item.isonfront:
                 self.front.append(item.pubtime, item)
@@ -804,7 +797,7 @@ class Content(BaseIter):
             'sitemap.txt'
         )
         urls = []
-        for t, item in self.data.items():
+        for item in self.data.values():
             urls.append( "%s/%s/" % (
                 shared.config.get('site', 'url'),
                 item.fname
@@ -813,6 +806,47 @@ class Content(BaseIter):
         with open(target, "wt") as f:
             logging.info("writing sitemap to %s" % (target))
             f.write("\n".join(urls))
+
+    def magicphp(self, renderer):
+        redirects = []
+        gones = []
+        rfile = os.path.join(
+            shared.config.get('common', 'basedir'),
+            shared.config.get('common', 'redirects')
+        )
+        if os.path.isfile(rfile):
+            with open(rfile, newline='') as csvfile:
+                r = csv.reader(csvfile, delimiter=' ')
+                for row in r:
+                    redirects.append((row[0], row[1]))
+        for item in self.data.values():
+            redirects.append((item.shortslug, item.fname))
+
+        rfile = os.path.join(
+            shared.config.get('common', 'basedir'),
+            shared.config.get('common', 'gone')
+        )
+        if os.path.isfile(rfile):
+            with open(rfile, newline='') as csvfile:
+                r = csv.reader(csvfile, delimiter=' ')
+                for row in r:
+                    gones.append(row[0])
+
+        tmplvars = {
+            'redirects': redirects,
+            'gones': gones
+        }
+
+        r = renderer.j2.get_template("magic.php").render(tmplvars)
+        target = os.path.abspath(os.path.join(
+            shared.config.get('target', 'builddir'),
+            'magic.php'
+        ))
+
+        with open(target, "w") as html:
+            logging.debug('writing %s', target)
+            html.write(r)
+            html.close()
 
 class Singular(object):
     def __init__(self, path, images):
@@ -874,6 +908,9 @@ class Singular(object):
                 logging.debug("%s not found in images", fname)
                 continue
 
+            if cl:
+                image.cl = cl
+
             logging.debug(
                 "replacing %s in content with %s",
                 shortcode,
@@ -903,6 +940,24 @@ class Singular(object):
             reactions[v] = x
 
         return reactions
+
+    @property
+    def urls(self):
+        urls = shared.URLREGEX.findall(self.content)
+
+        for reactionurls in self.reactions.values():
+            urls = [*urls, *reactionurls]
+
+        r = []
+        for link in urls:
+            domain = '{uri.netloc}'.format(uri=urllib.parse.urlparse(link))
+            if domain in shared.config.get('site', 'domains'):
+                continue
+            if r.get(link, False):
+                continue
+            r.append(link)
+
+        return r
 
     @property
     def lang(self):
@@ -976,7 +1031,7 @@ class Singular(object):
             maybe = self.meta.get(maybe, False)
             if maybe:
                 return maybe
-        return self.fname
+        return ''
 
     @property
     def url(self):
@@ -1091,6 +1146,7 @@ class Singular(object):
             'slug': self.fname,
             'shortslug': self.shortslug,
             'rssenclosure': self.rssenclosure,
+            'copies': self.offlinecopies,
         }
 
     @property
@@ -1143,6 +1199,12 @@ class NASG(object):
     def __init__(self):
         # --- set params
         parser = argparse.ArgumentParser(description='Parameters for NASG')
+        parser.add_argument(
+            '--clear',
+            action='store_true',
+            default=False,
+            help='clear build directory in advance'
+        )
         parser.add_argument(
             '--regenerate',
             action='store_true',
@@ -1217,6 +1279,13 @@ class NASG(object):
             await searchdb.append(singular)
 
     def run(self):
+
+        if shared.config.getboolean('params', 'clear'):
+            input('about to clear build directory, press enter to continue')
+            shutil.rmtree(os.path.abspath(
+                shared.config.get('target', 'builddir')
+            ))
+
         loop = asyncio.get_event_loop()
 
         for d in shared.config.options('target'):
@@ -1235,8 +1304,8 @@ class NASG(object):
         content = Content(images)
         content.populate()
 
+        renderer = Renderer()
         if not shared.config.getboolean('params', 'norender'):
-            renderer = Renderer()
             logging.info("rendering content")
             loop.run_until_complete(self.__acrender(content, renderer))
 
@@ -1248,6 +1317,9 @@ class NASG(object):
 
             logging.info("rendering sitemap")
             content.sitemap()
+
+        logging.info("render magic.php")
+        content.magicphp(renderer)
 
         logging.info("copy the static bits")
         src = shared.config.get('source', 'staticdir')
@@ -1263,7 +1335,6 @@ class NASG(object):
         searchdb.finish()
 
         loop.close()
-
 
 if __name__ == '__main__':
     worker = NASG()
