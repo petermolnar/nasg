@@ -70,6 +70,9 @@ schema = fields.Schema(
     ),
     img=fields.TEXT(
         stored=True
+    ),
+    mtime=fields.NUMERIC(
+        stored=True
     )
 )
 

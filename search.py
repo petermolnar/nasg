@@ -9,8 +9,6 @@ import sanic.response
 from sanic.log import log as logging
 from whoosh import index
 from whoosh import qparser
-from whoosh import fields
-from whoosh import analysis
 import jinja2
 import shared
 

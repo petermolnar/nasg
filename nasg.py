@@ -26,6 +26,7 @@ import langdetect
 import requests
 from breadability.readable import Article
 from whoosh import index
+from whoosh import qparser
 import jinja2
 import urllib.parse
 import shared
@@ -38,27 +39,94 @@ def splitpath(path):
         (path,tail) = os.path.split(path)
     return parts
 
-class Indexer(object):
+#class Indexer(object):
+
+    #def __init__(self):
+        #self.tmp = tempfile.mkdtemp(
+            #'whooshdb_',
+            #dir=tempfile.gettempdir()
+        #)
+        #atexit.register(
+            #shutil.rmtree,
+            #os.path.abspath(self.tmp)
+        #)
+        #self.ix = index.create_in(self.tmp, shared.schema)
+        #self.target = os.path.abspath(os.path.join(
+            #shared.config.get('target', 'builddir'),
+            #shared.config.get('var', 'searchdb')
+        #))
+        #self.writer = self.ix.writer()
+
+
+    #async def append(self, singular):
+        #logging.info("appending search index with %s", singular.fname)
+
+        #content_real = [
+            #singular.fname,
+            #singular.summary,
+            #singular.content,
+        #]
+
+        #content_remote = []
+        #for url, offlinecopy in singular.offlinecopies.items():
+            #content_remote.append("%s" % offlinecopy)
+
+        #weight = 1
+        #if singular.isbookmark:
+            #weight = 10
+        #if singular.ispage:
+            #weight = 100
+
+        #self.writer.add_document(
+            #title=singular.title,
+            #url=singular.url,
+            #content=" ".join(list(map(str,[*content_real, *content_remote]))),
+            #date=singular.published.datetime,
+            #tags=",".join(list(map(str, singular.tags))),
+            #weight=weight,
+            #img="%s" % singular.photo
+        #)
+
+    #def finish(self):
+        #self.writer.commit()
+        #if os.path.isdir(self.target):
+            #shutil.rmtree(self.target)
+        #shutil.copytree(self.tmp, self.target)
+
+
+class SmartIndexer(object):
 
     def __init__(self):
-        self.tmp = tempfile.mkdtemp(
-            'whooshdb_',
-            dir=tempfile.gettempdir()
-        )
-        atexit.register(
-            shutil.rmtree,
-            os.path.abspath(self.tmp)
-        )
-        self.ix = index.create_in(self.tmp, shared.schema)
         self.target = os.path.abspath(os.path.join(
             shared.config.get('target', 'builddir'),
             shared.config.get('var', 'searchdb')
         ))
-        self.writer = self.ix.writer()
+        if not os.path.isdir(self.target):
+            os.mkdir(self.target)
 
+        if index.exists_in(self.target):
+            self.ix = index.open_dir(self.target)
+        else:
+            self.ix = index.create_in(self.target, shared.schema)
+        self.writer = self.ix.writer()
+        self.qp = qparser.QueryParser("url", schema=shared.schema)
 
     async def append(self, singular):
-        logging.info("appending search index with %s", singular.fname)
+        logging.debug("searching for existing index for %s", singular.fname)
+        exists = False
+
+        q = self.qp.parse(singular.url)
+        r = self.ix.searcher().search(q, limit=1)
+        if r:
+            r = r[0]
+            # nothing to do, the entry is present and is up to date
+            ixtime = r['mtime']
+            if  int(ixtime) == int(singular.mtime):
+                logging.info("search index is up to date for %s", singular.fname)
+                return
+            else:
+                logging.info("search index is out of date: %d (indexed) vs %d", ixtime, singular.mtime)
+                exists = True
 
         content_real = [
             singular.fname,
@@ -76,21 +144,33 @@ class Indexer(object):
         if singular.ispage:
             weight = 100
 
-        self.writer.add_document(
-            title=singular.title,
-            url=singular.url,
-            content=" ".join(list(map(str,[*content_real, *content_remote]))),
-            date=singular.published.datetime,
-            tags=",".join(list(map(str, singular.tags))),
-            weight=weight,
-            img="%s" % singular.photo
-        )
+        if exists:
+            logging.info("updating search index with %s", singular.fname)
+            self.writer.add_document(
+                title=singular.title,
+                url=singular.url,
+                content=" ".join(list(map(str,[*content_real, *content_remote]))),
+                date=singular.published.datetime,
+                tags=",".join(list(map(str, singular.tags))),
+                weight=weight,
+                img="%s" % singular.photo,
+                mtime=singular.mtime,
+            )
+        else:
+            logging.info("appending search index with %s", singular.fname)
+            self.writer.update_document(
+                title=singular.title,
+                url=singular.url,
+                content=" ".join(list(map(str,[*content_real, *content_remote]))),
+                date=singular.published.datetime,
+                tags=",".join(list(map(str, singular.tags))),
+                weight=weight,
+                img="%s" % singular.photo,
+                mtime=singular.mtime
+            )
 
     def finish(self):
         self.writer.commit()
-        if os.path.isdir(self.target):
-            shutil.rmtree(self.target)
-        shutil.copytree(self.tmp, self.target)
 
 class OfflineCopy(object):
     def __init__(self, url):
@@ -160,7 +240,7 @@ class OfflineCopy(object):
         doc = Article(r.text, url=self.url)
         self.fm.metadata['title'] = doc._original_document.title
         self.fm.metadata['realurl'] = r.url
-        self.fm.content = Pandoc(False).convert(doc.readable)
+        self.fm.content = shared.Pandoc(False).convert(doc.readable)
         self.write()
 
 
@@ -1046,7 +1126,7 @@ class Singular(object):
 
     @property
     def html(self):
-        return Pandoc().convert(self.content)
+        return shared.Pandoc().convert(self.content)
 
     @property
     def offlinecopies(self):
@@ -1330,7 +1410,7 @@ class NASG(object):
             shutil.copy2(s, d)
 
         logging.info("pouplating searchdb")
-        searchdb = Indexer()
+        searchdb = SmartIndexer()
         loop.run_until_complete(self.__aindex(content, searchdb))
         searchdb.finish()
 
