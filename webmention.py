@@ -32,8 +32,8 @@ class WebmentionHandler(object):
             return
 
         self._parse()
-        self._save()
-        self._notify()
+        if self._save():
+            self._notify()
 
     def _validate(self):
         test = {
@@ -82,7 +82,6 @@ class WebmentionHandler(object):
             )
             return False
 
-        self.source = self._source.realurl
         if not self._source.linksTo(self.target):
             self.r = sanic.response.text(
                 "'source' (%s) does not link to 'target' (%s)" % (
@@ -100,17 +99,34 @@ class WebmentionHandler(object):
                 "couldn't fetch 'target' from %s" % (self.target),
                 status=408
             )
-        self.target = self._target.realurl
         #logging.info("parsed webmention:\n%s\n\n%s", self.meta, self.content)
 
+    def _accepted(self):
+        self.r = sanic.response.text(
+            "accepted",
+            status=202
+        )
+
+
     def _save(self):
-        doc = frontmatter.loads('')
-        doc.metadata = self.meta
-        doc.content = self.content
         target = os.path.join(
             shared.config.get('source', 'commentsdir'),
             self.mhash
         )
+
+        if os.path.isfile(target):
+            with open(target) as f:
+                doc = frontmatter.loads(f.read())
+        else:
+            doc = frontmatter.loads('')
+
+        if self.content == doc.content:
+            logging.warning('repinged target, no update needed')
+            self._accepted()
+            return False
+
+        doc.metadata = self.meta
+        doc.content = self.content
         if os.path.isfile(target):
             logging.warning('updating existing webmention %s', target)
         else:
@@ -118,18 +134,17 @@ class WebmentionHandler(object):
 
         with open(target, 'wt') as t:
             t.write(frontmatter.dumps(doc))
-            self.r = sanic.response.text(
-                "accepted",
-                status=202
-            )
+            self._accepted()
+            return True
 
     def _notify(self):
-        text = "# webmention\n## Source\n\nauthor\n:    %s\n\nURL\n:    %s\n\nemail\n:    %s\n\ndate\n:    %s\n\n## Target\n\nURL\n:    %s\n\n---\n\n%s" % (
+        text = "\nsource URL\n:    %s\n\ntarget URL:\n:    %s\n\ndate\n:    %s\n\nauthor name:\n:    %s\n\nauthor URL:\n:    %s\n\nauthor email:\n:    %s\n\n---\n\n%s" % (
+            self.source,
+            self.target,
+            self._meta['date'],
             self._meta['author'].get('name', self.source),
             self._meta['author'].get('url', self.source),
             self._meta['author'].get('email', ''),
-            self._meta['date'],
-            self.target,
             self.content
         )
 
@@ -158,12 +173,13 @@ class WebmentionHandler(object):
             return self._meta
 
         self._meta = {
-            'author': self._source.author(),
-            'type': self._source.relationType(),
+            'author': self._source.author,
+            'type': self._source.relationType,
             'target': self.target,
             'source': self.source,
-            'date': arrow.get(self._source.pubDate()).format(shared.ARROWISO),
+            'date': arrow.get(self._source.pubDate).format(shared.ARROWISO),
         }
+
         return self._meta
 
     @property
@@ -171,10 +187,7 @@ class WebmentionHandler(object):
         if hasattr(self, '_content'):
             return self._content
 
-        # from HTML to Markdown
-        self._content = shared.Pandoc(False).convert(self._source.content())
-        # from Markdown back to HTML
-        #self._content = shared.Pandoc().convert(tmpcontent)
+        self._content = shared.Pandoc(False).convert(self._source.content)
         return self._content
 
 

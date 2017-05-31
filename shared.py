@@ -22,6 +22,7 @@ def __expandconfig(config):
     return config
 
 ARROWISO = 'YYYY-MM-DDTHH:mm:ssZ'
+STRFISO = '%Y-%m-%dT%H:%M:%S%z'
 
 URLREGEX = re.compile(
     r'\s+https?\:\/\/?[a-zA-Z0-9\.\/\?\:@\-_=#]+'
@@ -46,8 +47,7 @@ schema = fields.Schema(
     ),
     title=fields.TEXT(
         stored=True,
-        analyzer=analysis.FancyAnalyzer(
-        )
+        analyzer=analysis.FancyAnalyzer()
     ),
     date=fields.DATETIME(
         stored=True,
@@ -55,8 +55,7 @@ schema = fields.Schema(
     ),
     content=fields.TEXT(
         stored=True,
-        analyzer=analysis.FancyAnalyzer(
-        )
+        analyzer=analysis.FancyAnalyzer()
     ),
     tags=fields.TEXT(
         stored=True,
@@ -120,7 +119,7 @@ class CMDLine(object):
         return output[:-len(self.sentinel)]
 
 class Pandoc(CMDLine):
-    """ Handles calling external binary `exiftool` in an efficient way """
+    """ Pandoc command line call with piped in- and output """
     def __init__(self, md2html=True):
         super().__init__('pandoc')
         if md2html:
@@ -158,7 +157,7 @@ class Pandoc(CMDLine):
             '--from=%s' % self.i,
             '--to=%s' % self.o
         )
-        logging.debug('converting content with Pandoc')
+        logging.debug('converting string with Pandoc')
         p = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
@@ -168,5 +167,9 @@ class Pandoc(CMDLine):
 
         stdout, stderr = p.communicate(input=text.encode())
         if stderr:
-            logging.error("Error during pandoc covert:\n\t%s\n\t%s", cmd, stderr)
+            logging.error(
+                "Error during pandoc covert:\n\t%s\n\t%s",
+                cmd,
+                stderr
+            )
         return stdout.decode('utf-8').strip()

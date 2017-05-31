@@ -15,6 +15,7 @@ import hashlib
 import math
 import asyncio
 import csv
+import operator
 
 import magic
 import arrow
@@ -30,6 +31,9 @@ from whoosh import qparser
 import jinja2
 import urllib.parse
 import shared
+from webmentiontools.send import WebmentionSend
+
+import time
 
 def splitpath(path):
     parts = []
@@ -38,60 +42,6 @@ def splitpath(path):
         parts.insert(0,tail)
         (path,tail) = os.path.split(path)
     return parts
-
-#class Indexer(object):
-
-    #def __init__(self):
-        #self.tmp = tempfile.mkdtemp(
-            #'whooshdb_',
-            #dir=tempfile.gettempdir()
-        #)
-        #atexit.register(
-            #shutil.rmtree,
-            #os.path.abspath(self.tmp)
-        #)
-        #self.ix = index.create_in(self.tmp, shared.schema)
-        #self.target = os.path.abspath(os.path.join(
-            #shared.config.get('target', 'builddir'),
-            #shared.config.get('var', 'searchdb')
-        #))
-        #self.writer = self.ix.writer()
-
-
-    #async def append(self, singular):
-        #logging.info("appending search index with %s", singular.fname)
-
-        #content_real = [
-            #singular.fname,
-            #singular.summary,
-            #singular.content,
-        #]
-
-        #content_remote = []
-        #for url, offlinecopy in singular.offlinecopies.items():
-            #content_remote.append("%s" % offlinecopy)
-
-        #weight = 1
-        #if singular.isbookmark:
-            #weight = 10
-        #if singular.ispage:
-            #weight = 100
-
-        #self.writer.add_document(
-            #title=singular.title,
-            #url=singular.url,
-            #content=" ".join(list(map(str,[*content_real, *content_remote]))),
-            #date=singular.published.datetime,
-            #tags=",".join(list(map(str, singular.tags))),
-            #weight=weight,
-            #img="%s" % singular.photo
-        #)
-
-    #def finish(self):
-        #self.writer.commit()
-        #if os.path.isdir(self.target):
-            #shutil.rmtree(self.target)
-        #shutil.copytree(self.tmp, self.target)
 
 
 class SmartIndexer(object):
@@ -175,8 +125,7 @@ class SmartIndexer(object):
 class OfflineCopy(object):
     def __init__(self, url):
         self.url = url
-        h = url.encode('utf-8')
-        self.fname = hashlib.sha1(h).hexdigest()
+        self.fname = hashlib.sha1(url.encode('utf-8')).hexdigest()
         self.targetdir = os.path.abspath(
             shared.config.get('source', 'offlinecopiesdir')
         )
@@ -283,7 +232,14 @@ class BaseIter(object):
 
     def append(self, key, value):
         if key in self.data:
-            logging.error("duplicate key: %s", key)
+            logging.warning("duplicate key: %s, using existing instead", key)
+            existing = self.data.get(key)
+            if hasattr(value, 'fname') and hasattr(existing, 'fname'):
+                logging.warning(
+                    "%s collides with existing %s",
+                    value.fname,
+                    existing.fname
+                )
             return
         self.data[key] = value
 
@@ -305,95 +261,6 @@ class BaseIter(object):
             yield (k, v)
         return
 
-#class CMDLine(object):
-    #def __init__(self, executable):
-        #self.executable = self._which(executable)
-        #if self.executable is None:
-            #raise OSError('No %s found in PATH!' % executable)
-            #return
-
-    #@staticmethod
-    #def _which(name):
-        #for d in os.environ['PATH'].split(':'):
-            #which = glob.glob(os.path.join(d, name), recursive=True)
-            #if which:
-                #return which.pop()
-        #return None
-
-    #def __enter__(self):
-        #self.process = subprocess.Popen(
-            #[self.executable, "-stay_open", "True",  "-@", "-"],
-            #universal_newlines=True,
-            #stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        #return self
-
-    #def  __exit__(self, exc_type, exc_value, traceback):
-        #self.process.stdin.write("-stay_open\nFalse\n")
-        #self.process.stdin.flush()
-
-    #def execute(self, *args):
-        #args = args + ("-execute\n",)
-        #self.process.stdin.write(str.join("\n", args))
-        #self.process.stdin.flush()
-        #output = ""
-        #fd = self.process.stdout.fileno()
-        #while not output.endswith(self.sentinel):
-            #output += os.read(fd, 4096).decode('utf-8', errors='ignore')
-        #return output[:-len(self.sentinel)]
-
-
-#class Pandoc(CMDLine):
-    #""" Handles calling external binary `exiftool` in an efficient way """
-    #def __init__(self, md2html=True):
-        #super().__init__('pandoc')
-        #if md2html:
-            #self.i = "markdown+" + "+".join([
-                #'backtick_code_blocks',
-                #'auto_identifiers',
-                #'fenced_code_attributes',
-                #'definition_lists',
-                #'grid_tables',
-                #'pipe_tables',
-                #'strikeout',
-                #'superscript',
-                #'subscript',
-                #'markdown_in_html_blocks',
-                #'shortcut_reference_links',
-                #'autolink_bare_uris',
-                #'raw_html',
-                #'link_attributes',
-                #'header_attributes',
-                #'footnotes',
-            #])
-            #self.o = 'html5'
-        #else:
-            #self.o = "markdown-" + "-".join([
-                #'raw_html',
-                #'native_divs',
-                #'native_spans',
-            #])
-            #self.i = 'html'
-
-    #def convert(self, text):
-        #cmd = (
-            #self.executable,
-            #'-o-',
-            #'--from=%s' % self.i,
-            #'--to=%s' % self.o
-        #)
-        #logging.debug('converting content with Pandoc')
-        #p = subprocess.Popen(
-            #cmd,
-            #stdin=subprocess.PIPE,
-            #stdout=subprocess.PIPE,
-            #stderr=subprocess.PIPE,
-        #)
-
-        #stdout, stderr = p.communicate(input=text.encode())
-        #if stderr:
-            #logging.error("Error during pandoc covert:\n\t%s\n\t%s", cmd, stderr)
-        #return stdout.decode('utf-8').strip()
-
 # based on http://stackoverflow.com/a/10075210
 class ExifTool(shared.CMDLine):
     """ Handles calling external binary `exiftool` in an efficient way """
@@ -403,7 +270,32 @@ class ExifTool(shared.CMDLine):
         super().__init__('exiftool')
 
     def get_metadata(self, *filenames):
-        return json.loads(self.execute('-sort', '-json', '-MIMEType', '-FileType', '-FileName', '-ModifyDate', '-CreateDate', '-DateTimeOriginal', '-ImageHeight', '-ImageWidth', '-Aperture', '-FOV', '-ISO', '-FocalLength', '-FNumber', '-FocalLengthIn35mmFormat', '-ExposureTime', '-Copyright', '-Artist', '-Model', '-GPSLongitude#', '-GPSLatitude#', '-LensID', *filenames))
+        return json.loads(self.execute(
+            '-sort',
+            #'-quiet',
+            '-json',
+            '-MIMEType',
+            '-FileType',
+            '-FileName',
+            '-ModifyDate',
+            '-CreateDate',
+            '-DateTimeOriginal',
+            '-ImageHeight',
+            '-ImageWidth',
+            '-Aperture',
+            '-FOV',
+            '-ISO',
+            '-FocalLength',
+            '-FNumber',
+            '-FocalLengthIn35mmFormat',
+            '-ExposureTime',
+            '-Copyright',
+            '-Artist',
+            '-Model',
+            '-GPSLongitude#',
+            '-GPSLatitude#',
+            '-LensID',
+            *filenames))
 
 class Images(BaseIter):
     def __init__(self, extensions=['jpg', 'gif', 'png']):
@@ -477,6 +369,7 @@ class WebImage(object):
         self.sizes = []
         self.fallbacksize = int(shared.config.get('common','fallbackimg', fallback='720'))
         self.cl = None
+        self.singleimage = False
 
         for size in shared.config.options('downsize'):
             sizeext = shared.config.get('downsize', size)
@@ -512,7 +405,11 @@ class WebImage(object):
 
     def __str__(self):
         if self.is_downsizeable and not self.cl:
-            return '\n<figure class="photo"><a target="_blank" class="adaptive" href="%s"><img src="%s" class="adaptimg" alt="%s" /></a><figcaption class=\"caption\">%s%s</figcaption></figure>\n' % (
+            uphoto = ''
+            if self.singleimage:
+                uphoto = ' u-photo'
+            return '\n<figure class="photo"><a target="_blank" class="adaptive%s" href="%s"><img src="%s" class="adaptimg" alt="%s" /></a><figcaption class=\"caption\">%s%s</figcaption></figure>\n' % (
+                uphoto,
                 self.target,
                 self.fallback,
                 self.alttext,
@@ -913,6 +810,7 @@ class Content(BaseIter):
                     gones.append(row[0])
 
         tmplvars = {
+            'site': renderer.sitevars,
             'redirects': redirects,
             'gones': gones
         }
@@ -939,6 +837,8 @@ class Singular(object):
         self.meta = {}
         self.content = ''
         self.photo = self.images.data.get("%s.jpg" % self.fname, None)
+        if self.photo:
+            self.photo.singleimage = True
         self.__parse()
 
     def __repr__(self):
@@ -949,7 +849,6 @@ class Singular(object):
             self.meta, self.content = frontmatter.parse(f.read())
             self.__filter_images()
         if self.isphoto:
-            #self.photo.alttext = self.content
             self.content = "%s\n%s" % (
                 self.content,
                 self.photo
@@ -1033,7 +932,7 @@ class Singular(object):
             domain = '{uri.netloc}'.format(uri=urllib.parse.urlparse(link))
             if domain in shared.config.get('site', 'domains'):
                 continue
-            if r.get(link, False):
+            if link in r:
                 continue
             r.append(link)
 
@@ -1275,6 +1174,45 @@ class Singular(object):
             html.close()
             os.utime(target, (self.mtime, self.mtime))
 
+
+class Webmentioner(object):
+    def __init__(self):
+        self.dbpath = os.path.abspath(os.path.join(
+            shared.config.get('target', 'builddir'),
+            shared.config.get('var', 'webmentions')
+        ))
+
+        if os.path.isfile(self.dbpath):
+            with open(self.dbpath, 'rt') as f:
+                self.db = json.loads(f.read())
+        else:
+            self.db = {}
+
+    async def ping(self, singular, dry_run = False):
+        for target in singular.urls:
+            record = {
+                'mtime': singular.mtime,
+                'source': singular.url,
+                'target': target
+            }
+            h = json.dumps(record, sort_keys=True)
+            h = hashlib.sha1(h.encode('utf-8')).hexdigest()
+            if self.db.get(h, False):
+                logging.debug("%s is already pinged from %s @ %d, skipping",
+                    target, singular.url, singular.mtime)
+                continue
+
+            logging.info("sending webmention from %s to %s", singular, target)
+            if not dry_run:
+                ws = WebmentionSend(source, target)
+                await ws.send(allowredirect=True, timeout=30)
+            self.db[h] = record
+
+    def finish(self):
+        with open(self.dbpath, 'wt') as f:
+            f.write(json.dumps(self.db, sort_keys=True, indent=4))
+
+
 class NASG(object):
     def __init__(self):
         # --- set params
@@ -1299,7 +1237,7 @@ class NASG(object):
         )
         parser.add_argument(
             '--loglevel',
-            default='info',
+            default='error',
             help='change loglevel'
         )
         parser.add_argument(
@@ -1358,6 +1296,10 @@ class NASG(object):
         for (pubtime, singular) in content:
             await searchdb.append(singular)
 
+    async def __aping(self, content, pinger):
+        for (pubtime, singular) in content:
+            await pinger.ping(singular)
+
     def run(self):
 
         if shared.config.getboolean('params', 'clear'):
@@ -1375,7 +1317,10 @@ class NASG(object):
         logging.info("discovering images")
         images = Images()
         images.populate()
-        existing = glob.glob(os.path.join(shared.config.get('target', 'filesdir'), "*"))
+        existing = glob.glob(os.path.join(
+            shared.config.get('target', 'filesdir'),
+            "*"
+        ))
         if not shared.config.getboolean('params', 'nodownsize'):
             logging.info("downsizing images")
             loop.run_until_complete(self.__adownsize(images, existing))
@@ -1413,6 +1358,11 @@ class NASG(object):
         searchdb = SmartIndexer()
         loop.run_until_complete(self.__aindex(content, searchdb))
         searchdb.finish()
+
+        logging.info("webmentioning urls")
+        pinger = Webmentioner()
+        loop.run_until_complete(self.__aping(content, pinger))
+        pinger.finish()
 
         loop.close()
 
