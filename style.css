@@ -1,4 +1,5 @@
-* {
+
+		* {
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 	box-sizing: border-box;
@@ -201,6 +202,7 @@ svg {
 	overflow: visible;
 }
 
+
 code.sourceCode span.kw { font-weight: bold; }
 code.sourceCode span.dt { color: #800000; }
 code.sourceCode span.dv { color: #0000FF; }
@@ -220,16 +222,20 @@ code,
 pre {
 	font-family: "Inconsolata", monospace;
 	font-size: 0.9rem;
+	border: 1px solid #dddddd;
+	background-color: #efefef;
+	padding: 0 0.3rem;
 }
+
 
 pre.sourceCode {
 	margin-top: -0.3rem;
 	overflow: auto;
-	border-top: 1px solid #dddddd;
-	border-bottom: 1px solid #dddddd;
 }
 
 code.sourceCode {
+	background-color: transparent;
+	border: none;
 	direction: ltr;
 	text-align: left;
 	white-space: pre;
@@ -278,6 +284,10 @@ code.sourceCode {
 	display:block;
 	margin: 0 0 0.6rem 0;
 
+}
+
+.footnotes {
+	margin: 0 -0.6rem;
 }
 
 .footnotes ol li a {
@@ -843,3 +853,4 @@ input[type=submit]:hover {
 	}
 
 }
+	

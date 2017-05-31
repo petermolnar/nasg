@@ -5,7 +5,7 @@ function redirect_to($uri) {
     if (preg_match("/^https?/", $uri))
         $target = $uri;
     else
-        $target = 'https://petermolnar.net/'.  trim($uri, '/') . '/';
+        $target = '{{ site.url }}/'.  trim($uri, '/') . '/';
     header("Location: ". $target);
     exit;
 }
@@ -50,7 +50,7 @@ function notfound() {
 }
 
 function maybe_redirect($uri) {
-    if (file_exists("./{$uri}/index.html")) {
+    if (file_exists("./$uri/index.html")) {
         redirect_to($uri);
     }
 }
