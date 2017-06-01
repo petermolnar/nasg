@@ -28,7 +28,7 @@ def SearchHandler(query, tmpl):
     )))
 
     qp = qparser.MultifieldParser(
-        ["title", "content", "tags"],
+        ["title", "content","fuzzy", "tags"],
         schema = shared.schema
     )
 

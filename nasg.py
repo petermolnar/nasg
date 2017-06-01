@@ -44,7 +44,7 @@ def splitpath(path):
     return parts
 
 
-class SmartIndexer(object):
+class Indexer(object):
 
     def __init__(self):
         self.target = os.path.abspath(os.path.join(
@@ -94,12 +94,14 @@ class SmartIndexer(object):
         if singular.ispage:
             weight = 100
 
+        content = " ".join(list(map(str,[*content_real, *content_remote])))
         if exists:
             logging.info("updating search index with %s", singular.fname)
             self.writer.add_document(
                 title=singular.title,
                 url=singular.url,
-                content=" ".join(list(map(str,[*content_real, *content_remote]))),
+                content=content,
+                fuzzy=content,
                 date=singular.published.datetime,
                 tags=",".join(list(map(str, singular.tags))),
                 weight=weight,
@@ -1355,7 +1357,7 @@ class NASG(object):
             shutil.copy2(s, d)
 
         logging.info("pouplating searchdb")
-        searchdb = SmartIndexer()
+        searchdb = Indexer()
         loop.run_until_complete(self.__aindex(content, searchdb))
         searchdb.finish()
 

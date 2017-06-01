@@ -57,12 +57,15 @@ schema = fields.Schema(
         stored=True,
         analyzer=analysis.FancyAnalyzer()
     ),
+    fuzzy=fields.NGRAMWORDS(
+        tokenizer=analysis.NgramTokenizer(4)
+    ),
     tags=fields.TEXT(
         stored=True,
         analyzer=analysis.KeywordAnalyzer(
             lowercase=True,
             commas=True
-        )
+        ),
     ),
     weight=fields.NUMERIC(
         sortable=True
