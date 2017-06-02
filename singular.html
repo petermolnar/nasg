@@ -129,16 +129,12 @@
 				</p>
 			</aside>
 		</footer>
-		{% if post.offlinecopies %}
-			{% for url, copy in post.offlinecopies %}
-			<!-- {{ url }}
-
-			{{ copy }}
-
-			-->
-			{% endfor %}
-		{% endif %}
 	</article>
+
+	{% if ( post.comments ) %}
+		{% include 'block_comments.html'  %}
+	{% endif %}
+
 	<aside class="content-note">
 		<hr />
 		<p>Want to leave a comment or get in touch? Reply with your own blog using
@@ -147,6 +143,7 @@
 			>email</a>.
 		</p>
 	</aside>
+
 </section>
 
 

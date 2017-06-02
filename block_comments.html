@@ -1,0 +1,55 @@
+<section class="comments">
+	{% if post.replies|length > 0 %}
+	<h6 class="comments-replies"><a name="replies"></a>Replies</h6>
+	<ol>
+		{% for reply in post.replies %}
+			<li class="p-comment comment">
+				<div class="comment-author p-author h-card vcard">
+					{% if reply.author.url %}
+						<a class="url u-url" href="{{ reply.author.url }}">
+							<span class="p-name fn">{{ reply.author.name }}</span>
+						</a>
+					{% else %}
+						<span class="p-name fn">{{ reply.author.name }}</span>
+					{% endif %}
+					<time class="dt-published" datetime="{{ reply.published|date("c") }}">
+						{{ reply.published|date("%Y-%m-%d %H:%M") }}
+					</time>
+				</div>
+				<div class="comment-content e-content">
+					{{ reply.html }}
+				</div>
+				{% if reply.source|length > 0 %}
+				<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
+				{% endif %}
+				<a class="u-in-reply-to" href="{{ post.url }}"></a>
+			</li>
+		{% endfor %}
+		</ol>
+	{% endif %}
+
+	{% if post.reacjis|length > 0 %}
+	<h6 class="comments-reacji"><a name="reacji"></a>Reacji</h6>
+	<dl>
+	{% for reacji, replies in post.reacjis.items() %}
+		<dt><a name="{{ reacji }}"></a>{{ reacji }}</dt>
+		<dd>
+			<ul>
+			{% for reply in replies %}
+				<li class="p-comment comment reacji">
+					<time class="dt-published" datetime="{{ reply.published|date("c") }}">
+						{{ reply.published|date("%Y-%m-%d %H:%M") }}
+					</time>
+					<span class="comment-author p-author h-card vcard">
+						<a href="{{ reply.author.url }}" title="{{ reply.author.name }}">{{ reply.author.name }}</a>
+					</span>
+					<a class="u-in-reply-to" href="{{ post.url }}"></a>
+				</li>
+			{% endfor %}
+			</ul>
+		</dd>
+		{% endfor %}
+	</dl>
+	{% endif %}
+
+</section>

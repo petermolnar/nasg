@@ -233,7 +233,8 @@ pre.sourceCode {
 	overflow: auto;
 }
 
-code.sourceCode {
+code.sourceCode,
+pre code {
 	background-color: transparent;
 	border: none;
 	direction: ltr;
@@ -466,10 +467,11 @@ input[type=submit]:hover {
 	margin: 1rem auto;
 }
 
-.h-entry {
+.h-entry,
+.comments {
 	font-size: 0.86rem;
 	padding: 0.6rem;
-	margin: 0 0 1rem 0;
+	/*! margin: 0 0 1rem 0; */
 }
 
 .h-entry header h1 {
@@ -527,7 +529,8 @@ input[type=submit]:hover {
 }
 
 .h-entry .e-summary {
-	margin: 0.6rem 0.6rem 0 0.6rem;
+	margin: 2rem 0.6rem;
+	font-size: 1rem;
 }
 
 .h-entry .e-summary img {
@@ -724,6 +727,57 @@ input[type=submit]:hover {
 	border-bottom: none;
 }
 
+.comments {
+  font-size: 0.9rem;
+}
+
+.comments ol li {
+	margin: 1rem 0 0 0;
+}
+
+.comments ol li .p-name {
+	font-weight: bold;
+	display: block;
+}
+
+.comments ol li time {
+	font-family: mono;
+	font-size: 0.7rem;
+	display: inline-block;
+}
+
+.comments ol li .u-repost-of {
+	display: block;
+  font-size: 0.9rem;
+	border:none;
+	opacity: 0.7;
+}
+
+.comments ol .u-in-reply-to {
+	display:none;
+	visibility:hidden;
+}
+
+.comments dl dt {
+	display: inline-block;
+	clear: both;
+	float:left;
+}
+
+.comments dl dd ul {
+	padding: 0 0 0 1rem;
+	list-style-type: none;
+	display: inline-block;
+}
+.comments dl dd li {
+	display: inline-block;
+}
+
+.comments dl dd time {
+	display:none;
+	visibility: hidden;
+}
+
 @media all and (min-width: 50rem) {
   .footer-contact,
   .footer-notes {
@@ -792,7 +846,7 @@ input[type=submit]:hover {
 		page-break-inside: avoid !important;
 	}
 
-	.e-content {
+	.h-entry {
     -webkit-columns: 2 20rem;
     -moz-columns: 2 20rem;
     columns: 2 20rem;
