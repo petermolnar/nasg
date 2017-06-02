@@ -111,7 +111,8 @@ class WebmentionHandler(object):
     def _save(self):
         target = os.path.join(
             shared.config.get('source', 'commentsdir'),
-            self.mhash
+            self.mhash,
+            '.md'
         )
 
         if os.path.isfile(target):

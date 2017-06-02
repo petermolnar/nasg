@@ -16,6 +16,7 @@ import math
 import asyncio
 import csv
 import operator
+import getpass
 
 import magic
 import arrow
@@ -32,8 +33,10 @@ import jinja2
 import urllib.parse
 import shared
 from webmentiontools.send import WebmentionSend
+from bleach import clean
+from emoji import UNICODE_EMOJI
 
-import time
+from pprint import pprint
 
 def splitpath(path):
     parts = []
@@ -51,20 +54,34 @@ class Indexer(object):
             shared.config.get('target', 'builddir'),
             shared.config.get('var', 'searchdb')
         ))
+
         if not os.path.isdir(self.target):
             os.mkdir(self.target)
 
+        self.mtime = 0
+
         if index.exists_in(self.target):
             self.ix = index.open_dir(self.target)
+            tocfiles = glob.glob(os.path.join(
+                self.target,
+                "_MAIN_*.toc"
+            ))
+            if len(tocfiles):
+                self.mtime = int(os.path.getmtime(tocfiles[0]))
         else:
             self.ix = index.create_in(self.target, shared.schema)
+
         self.writer = self.ix.writer()
         self.qp = qparser.QueryParser("url", schema=shared.schema)
 
+
     async def append(self, singular):
         logging.debug("searching for existing index for %s", singular.fname)
-        exists = False
+        if self.mtime >= singular.mtime:
+            logging.debug("search index is newer than post mtime (%d vs %d), skipping post", self.mtime, singular.mtime)
+            return
 
+        exists = False
         q = self.qp.parse(singular.url)
         r = self.ix.searcher().search(q, limit=1)
         if r:
@@ -114,6 +131,7 @@ class Indexer(object):
                 title=singular.title,
                 url=singular.url,
                 content=" ".join(list(map(str,[*content_real, *content_remote]))),
+                fuzzy=content,
                 date=singular.published.datetime,
                 tags=",".join(list(map(str, singular.tags))),
                 weight=weight,
@@ -274,7 +292,6 @@ class ExifTool(shared.CMDLine):
     def get_metadata(self, *filenames):
         return json.loads(self.execute(
             '-sort',
-            #'-quiet',
             '-json',
             '-MIMEType',
             '-FileType',
@@ -298,6 +315,102 @@ class ExifTool(shared.CMDLine):
             '-GPSLatitude#',
             '-LensID',
             *filenames))
+
+
+class Comment(object):
+    def __init__(self, path):
+        logging.debug("initiating comment object from %s", path)
+        self.path = path
+        self.fname, self.ext = os.path.splitext(os.path.basename(self.path))
+        self.mtime = int(os.path.getmtime(self.path))
+        self.meta = {}
+        self.content = ''
+        self.__parse()
+
+    def __repr__(self):
+        return "%s" % (self.path)
+
+    def __parse(self):
+        with open(self.path, mode='rt') as f:
+            self.meta, self.content = frontmatter.parse(f.read())
+
+    @property
+    def reacji(self):
+        t = self.meta.get('type', 'webmention')
+        typemap = {
+            'like-of': '👍',
+            'bookmark-of': '🔖',
+            'favorite': '★',
+        }
+
+        if t in typemap.keys():
+            return typemap[t]
+
+        maybe = clean(self.content).strip()
+        if maybe in UNICODE_EMOJI:
+            return maybe
+
+        return ''
+
+    @property
+    def html(self):
+        return shared.Pandoc().convert(self.content)
+
+    @property
+    def tmplvars(self):
+        return {
+            'published': self.published.datetime,
+            'author': dict(self.meta.get('author', {})),
+            'content': self.content,
+            'html': self.html,
+            'source': self.meta.get('source', ''),
+            'target': self.meta.get('target', ''),
+            'type': self.meta.get('type', 'webmention'),
+            'reacji': self.reacji
+        }
+
+    @property
+    def published(self):
+        return arrow.get(self.meta.get('date', self.mtime))
+
+    @property
+    def pubtime(self):
+        return int(self.published.timestamp)
+
+    @property
+    def source(self):
+        s = self.meta.get('source')
+        for d in shared.config.get('site', 'domains').split(' '):
+            if d in s:
+                return ''
+        return s
+
+    @property
+    def target(self):
+        t = self.meta.get('target', shared.config.get('site', 'url'))
+        t = '{p.path}'.format(p=urllib.parse.urlparse(t)).strip('/')
+        return t
+
+
+class Comments(object):
+    def __init__(self):
+        self.files = glob.glob(os.path.join(
+            shared.config.get('source', 'commentsdir'),
+            "*.md"
+        ))
+        self.bytarget = {}
+
+    def __getitem__(self, key):
+        return self.bytarget.get(key, BaseIter())
+
+    def populate(self):
+        for fpath in self.files:
+            item = Comment(fpath)
+            t = item.target
+            if not self.bytarget.get(t):
+                self.bytarget[t] = BaseIter()
+            self.bytarget[t].append(item.pubtime, item)
+
 
 class Images(BaseIter):
     def __init__(self, extensions=['jpg', 'gif', 'png']):
@@ -646,7 +759,10 @@ class Taxonomy(BaseIter):
 
     @property
     def mtime(self):
-        return int(list(sorted(self.data.keys(), reverse=True))[0])
+        if hasattr(self, '_mtime'):
+            return self._mtime
+        self._mtime = int(list(sorted(self.data.keys(), reverse=True))[0])
+        return self._mtime
 
     def __mkdirs(self):
         check = [self.basep, self.myp, self.feedp]
@@ -671,16 +787,23 @@ class Taxonomy(BaseIter):
         else:
             return "%s/%d/index.html" % (self.pagep, page)
 
-
     async def render(self, renderer):
         self.__mkdirs()
         page = 1
         testpath = self.tpath(page)
         if not shared.config.getboolean('params', 'force') and os.path.isfile(testpath):
             ttime = int(os.path.getmtime(testpath))
-            if ttime == self.mtime:
+            mtime = self.mtime
+            if ttime == mtime:
                 logging.info('taxonomy index for "%s" exists and up-to-date (lastmod: %d)', self.slug, ttime)
                 return
+            else:
+                logging.info('taxonomy update needed: %s timestamp is %d, last post timestamp is %d (%s)',
+                    testpath,
+                    ttime,
+                    mtime,
+                    self.data[mtime].fname
+                )
 
         while page <= self.pages:
             self.renderpage(renderer, page)
@@ -712,7 +835,7 @@ class Taxonomy(BaseIter):
         r = renderer.j2.get_template('archive.html').render(tmplvars)
         with open(target, "wt") as html:
             html.write(r)
-            os.utime(target, (self.mtime, self.mtime))
+        os.utime(target, (self.mtime, self.mtime))
 
         if 1 == page:
             target = os.path.join(self.feedp, 'index.xml')
@@ -723,9 +846,10 @@ class Taxonomy(BaseIter):
             os.utime(target, (self.mtime, self.mtime))
 
 class Content(BaseIter):
-    def __init__(self, images, extensions=['md']):
+    def __init__(self, images, comments, extensions=['md']):
         super(Content, self).__init__()
         self.images = images
+        self.comments = comments
         basepath = shared.config.get('source', 'contentdir')
         self.files = []
         for ext in extensions:
@@ -733,12 +857,14 @@ class Content(BaseIter):
         self.tags = {}
         self.categories = {}
         self.front = Taxonomy()
+        self.shortslugmap = {}
 
     def populate(self):
         now = arrow.utcnow().timestamp
         for fpath in self.files:
-            item = Singular(fpath, self.images)
+            item = Singular(fpath, self.images, self.comments)
             self.append(item.pubtime, item)
+            #self.shortslugmap[item.shortslug] = item.fname
 
             if item.pubtime > now:
                 logging.warning("skipping future post %s", item.fname)
@@ -829,10 +955,11 @@ class Content(BaseIter):
             html.close()
 
 class Singular(object):
-    def __init__(self, path, images):
+    def __init__(self, path, images, comments):
         logging.debug("initiating singular object from %s", path)
         self.path = path
         self.images = images
+        self.allcomments = comments
         self.category = splitpath(path)[-2]
         self.mtime = int(os.path.getmtime(self.path))
         self.fname, self.ext = os.path.splitext(os.path.basename(self.path))
@@ -903,6 +1030,47 @@ class Singular(object):
             )
 
     @property
+    def comments(self):
+        if hasattr(self, '_comments'):
+            return self._comments
+
+        # the comments could point to both the "real" url and the shortslug
+        # so I need to get both
+        c = {}
+        for by in [self.fname, self.shortslug]:
+            c = {**c, **self.allcomments[by].data}
+        #self._comments = [c[k].tmplvars for k in list(sorted(c.keys(), reverse=True))]
+        self._comments = [c[k] for k in list(sorted(c.keys(), reverse=True))]
+        return self._comments
+
+    @property
+    def replies(self):
+        if hasattr(self, '_replies'):
+            return self._replies
+        self._replies = [c.tmplvars for c in self.comments if not len(c.reacji)]
+        return self._replies
+
+    @property
+    def reacjis(self):
+        if hasattr(self, '_reacjis'):
+            return self._reacjis
+        reacjis = {}
+        for c in self.comments:
+            rj = c.reacji
+
+            if not len(rj):
+                continue
+
+            if not reacjis.get(rj, False):
+                reacjis[rj] = []
+
+            reacjis[rj].append(c.tmplvars)
+
+        self._reacjis = reacjis
+        return self._reacjis
+
+
+    @property
     def reactions(self):
         # getting rid of '-' to avoid css trouble and similar
         convert = {
@@ -958,17 +1126,23 @@ class Singular(object):
 
     @property
     def published(self):
-        return arrow.get(
+        if hasattr(self, '_published'):
+            return self._published
+        self._published = arrow.get(
             self.meta.get('published', self.mtime)
         )
+        return self._published
 
     @property
     def updated(self):
-        return arrow.get(
+        if hasattr(self, '_updated'):
+            return self._updated
+        self._updated = arrow.get(
             self.meta.get('updated',
                 self.meta.get('published', self.mtime)
             )
         )
+        return self._updated
 
     @property
     def pubtime(self):
@@ -1027,7 +1201,19 @@ class Singular(object):
 
     @property
     def html(self):
-        return shared.Pandoc().convert(self.content)
+        if hasattr(self, '_html'):
+            return self._html
+        self._html = shared.Pandoc().convert(self.content)
+        return self._html
+
+    @property
+    def sumhtml(self):
+        if hasattr(self, '_sumhtml'):
+            return self._sumhtml
+        self._sumhtml = self.meta.get('summary', '')
+        if len(self._sumhtml):
+            self._sumhtml = shared.Pandoc().convert(self.summary)
+        return self._sumhtml
 
     @property
     def offlinecopies(self):
@@ -1110,7 +1296,10 @@ class Singular(object):
 
     @property
     def tmplvars(self):
-        return {
+        if hasattr(self, '_tmplvars'):
+            return self._tmplvars
+
+        self._tmplvars = {
             'title': self.title,
             'published': self.published.datetime,
             'tags': self.tags,
@@ -1120,7 +1309,7 @@ class Singular(object):
             'category': self.category,
             'reactions': self.reactions,
             'updated': self.updated.datetime,
-            'summary': self.meta.get('summary', ''),
+            'summary': self.sumhtml,
             'exif': self.exif,
             'lang': self.lang,
             'syndicate': '',
@@ -1128,11 +1317,18 @@ class Singular(object):
             'shortslug': self.shortslug,
             'rssenclosure': self.rssenclosure,
             'copies': self.offlinecopies,
+            'comments': self.comments,
+            'replies': self.replies,
+            'reacjis': self.reacjis,
         }
+        return self._tmplvars
 
     @property
     def shortslug(self):
-        return self.baseN(self.pubtime)
+        if hasattr(self, '_shortslug'):
+            return self._shortslug
+        self._shortslug = self.baseN(self.pubtime)
+        return self._shortslug
 
     @staticmethod
     def baseN(num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
@@ -1147,6 +1343,11 @@ class Singular(object):
         )
 
     async def render(self, renderer):
+        if len(self.comments):
+            lctime = self.comments[0].mtime
+            if lctime > self.mtime:
+                self.mtime = lctime
+
         logging.info("rendering and saving %s", self.fname)
         targetdir = os.path.abspath(os.path.join(
             shared.config.get('target', 'builddir'),
@@ -1174,8 +1375,29 @@ class Singular(object):
             logging.debug('writing %s', target)
             html.write(r)
             html.close()
-            os.utime(target, (self.mtime, self.mtime))
+        os.utime(target, (self.mtime, self.mtime))
 
+
+    async def ping(self, pinger):
+        for target in self.urls:
+            record = {
+                'mtime': self.mtime,
+                'source': self.url,
+                'target': target
+            }
+            h = json.dumps(record, sort_keys=True)
+            h = hashlib.sha1(h.encode('utf-8')).hexdigest()
+            if pinger.db.get(h, False):
+                logging.debug(
+                    "%s is already pinged from %s @ %d, skipping",
+                    target, self.url, self.mtime
+                )
+                continue
+
+            logging.info("sending webmention from %s to %s", self.url, target)
+            ws = WebmentionSend(self.url, target)
+            ws.send(allow_redirects=True, timeout=30)
+            pinger.db[h] = record
 
 class Webmentioner(object):
     def __init__(self):
@@ -1190,32 +1412,14 @@ class Webmentioner(object):
         else:
             self.db = {}
 
-    async def ping(self, singular, dry_run = False):
-        for target in singular.urls:
-            record = {
-                'mtime': singular.mtime,
-                'source': singular.url,
-                'target': target
-            }
-            h = json.dumps(record, sort_keys=True)
-            h = hashlib.sha1(h.encode('utf-8')).hexdigest()
-            if self.db.get(h, False):
-                logging.debug("%s is already pinged from %s @ %d, skipping",
-                    target, singular.url, singular.mtime)
-                continue
-
-            logging.info("sending webmention from %s to %s", singular, target)
-            if not dry_run:
-                ws = WebmentionSend(source, target)
-                await ws.send(allowredirect=True, timeout=30)
-            self.db[h] = record
-
     def finish(self):
         with open(self.dbpath, 'wt') as f:
             f.write(json.dumps(self.db, sort_keys=True, indent=4))
 
 
 class NASG(object):
+    lockfile = os.path.join(tempfile.gettempdir(), 'nasg_%s.lock' % getpass.getuser())
+
     def __init__(self):
         # --- set params
         parser = argparse.ArgumentParser(description='Parameters for NASG')
@@ -1300,9 +1504,19 @@ class NASG(object):
 
     async def __aping(self, content, pinger):
         for (pubtime, singular) in content:
-            await pinger.ping(singular)
+            await singular.ping(pinger)
 
     def run(self):
+        if os.path.isfile(self.lockfile):
+            raise ValueError(
+                "Lockfile is present at %s; another instance is running." % (
+                    self.lockfile
+                )
+            )
+        else:
+            atexit.register(os.remove, self.lockfile)
+            with open(self.lockfile, "wt") as f:
+                f.write(arrow.utcnow().format())
 
         if shared.config.getboolean('params', 'clear'):
             input('about to clear build directory, press enter to continue')
@@ -1327,20 +1541,30 @@ class NASG(object):
             logging.info("downsizing images")
             loop.run_until_complete(self.__adownsize(images, existing))
 
+        logging.info("discovering comments")
+        comments = Comments()
+        comments.populate()
+
         logging.info("discovering content")
-        content = Content(images)
+        content = Content(images, comments)
         content.populate()
 
         renderer = Renderer()
         if not shared.config.getboolean('params', 'norender'):
             logging.info("rendering content")
-            loop.run_until_complete(self.__acrender(content, renderer))
+            loop.run_until_complete(self.__acrender(
+                content, renderer
+            ))
 
             logging.info("rendering categories and tags")
-            loop.run_until_complete(self.__atrender([content.categories, content.tags], renderer))
+            loop.run_until_complete(self.__atrender(
+                [content.categories, content.tags], renderer
+            ))
 
             logging.info("rendering the front page elements")
-            loop.run_until_complete(self.__afrender(content.front, renderer))
+            loop.run_until_complete(self.__afrender(
+                content.front, renderer
+            ))
 
             logging.info("rendering sitemap")
             content.sitemap()
