@@ -15,7 +15,6 @@ import hashlib
 import math
 import asyncio
 import csv
-import operator
 import getpass
 
 import magic
@@ -35,8 +34,6 @@ import shared
 from webmentiontools.send import WebmentionSend
 from bleach import clean
 from emoji import UNICODE_EMOJI
-
-from pprint import pprint
 
 def splitpath(path):
     parts = []
@@ -336,6 +333,9 @@ class Comment(object):
 
     @property
     def reacji(self):
+        if hasattr(self, '_reacji'):
+            return self._reacji
+
         t = self.meta.get('type', 'webmention')
         typemap = {
             'like-of': '👍',
@@ -343,35 +343,62 @@ class Comment(object):
             'favorite': '★',
         }
 
+        self._reacji = ''
+
         if t in typemap.keys():
-            return typemap[t]
+            self._reacji = typemap[t]
+        else:
+            maybe = clean(self.content).strip()
+            if maybe in UNICODE_EMOJI:
+                self._reacji = maybe
 
-        maybe = clean(self.content).strip()
-        if maybe in UNICODE_EMOJI:
-            return maybe
+        return self._reacji
 
-        return ''
+    @property
+    def h(self):
+        if hasattr(self, '_h'):
+            return self._h
+        record = {
+            'mtime': self.mtime,
+            'source': self.source,
+            'target': self.target
+        }
+        h = json.dumps(record, sort_keys=True)
+        self._h = hashlib.sha1(h.encode('utf-8')).hexdigest()
+        return self._h
 
     @property
     def html(self):
-        return shared.Pandoc().convert(self.content)
+        if hasattr(self, '_html'):
+            return self._html
+
+        self._html = shared.Pandoc().convert(self.content)
+        return self._html
 
     @property
     def tmplvars(self):
-        return {
+        if hasattr(self, '_tmplvars'):
+            return self._tmplvars
+
+        self._tmplvars = {
             'published': self.published.datetime,
             'author': dict(self.meta.get('author', {})),
             'content': self.content,
             'html': self.html,
-            'source': self.meta.get('source', ''),
-            'target': self.meta.get('target', ''),
+            'source': self.source,
+            'target': self.target,
             'type': self.meta.get('type', 'webmention'),
-            'reacji': self.reacji
+            'reacji': self.reacji,
+            'id': self.h
         }
+        return self._tmplvars
 
     @property
     def published(self):
-        return arrow.get(self.meta.get('date', self.mtime))
+        if hasattr(self, '_published'):
+            return self._published
+        self._published = arrow.get(self.meta.get('date', self.mtime))
+        return self._published
 
     @property
     def pubtime(self):
@@ -379,17 +406,23 @@ class Comment(object):
 
     @property
     def source(self):
-        s = self.meta.get('source')
-        for d in shared.config.get('site', 'domains').split(' '):
+        if hasattr(self, '_source'):
+            return self._source
+        s = self.meta.get('source', '')
+        domains = shared.config.get('site', 'domains').split(' ')
+        self._source = s
+        for d in domains:
             if d in s:
-                return ''
-        return s
+                self._source = ''
+        return self._source
 
     @property
     def target(self):
+        if hasattr(self, '_target'):
+            return self._target
         t = self.meta.get('target', shared.config.get('site', 'url'))
-        t = '{p.path}'.format(p=urllib.parse.urlparse(t)).strip('/')
-        return t
+        self._target = '{p.path}'.format(p=urllib.parse.urlparse(t)).strip('/')
+        return self._target
 
 
 class Comments(object):
@@ -552,47 +585,57 @@ class WebImage(object):
     @property
     def rssenclosure(self):
         """ Returns the largest available image for RSS to add as attachment """
+        if hasattr(self, '_rssenclosure'):
+            return self._rssenclosure
+
         target = self.sizes[-1][1]
-        return {
+        self._rssenclosure = {
             'mime': magic.Magic(mime=True).from_file(target['fpath']),
             'url': target['url'],
             'bytes':  os.path.getsize(target['fpath'])
         }
+        return self._rssenclosure
 
     @property
     def is_photo(self):
-        """ Match image meta against config artist regex to see if the file is
-        a photo or just a regular image """
-        pattern = shared.config.get('photo', 'regex', fallback=None)
-        if not pattern or not isinstance(pattern, str):
-            return False
-        pattern = re.compile(pattern)
+        if hasattr(self, '_is_photo'):
+            return self._is_photo
+
+        self._is_photo = False
+        #if not pattern or not isinstance(pattern, str):
+        #    return False
+        pattern = re.compile(shared.config.get('photo', 'regex'))
 
         cpr = self.meta.get('Copyright', '')
         art = self.meta.get('Artist', '')
         if not cpr and not art:
             return False
 
-        if pattern.search(cpr) \
-        or pattern.search(art):
-            return True
+        if cpr and art:
+            if pattern.search(cpr) or pattern.search(art):
+                self._is_photo = True
 
-        return False
+        return self._is_photo
 
     @property
     def is_downsizeable(self):
+        if hasattr(self, '_is_downsizeable'):
+            return self._is_downsizeable
+
+        self._is_downsizeable = False
         """ Check if the image is large enough and jpeg or png in order to
         downsize it """
         fb = self.sizes[-1][0]
         ftype = self.meta.get('FileType', None)
         if not ftype:
-            return False
+            return self._is_downsizeable
         if ftype.lower() == 'jpeg' or ftype.lower() == 'png':
             width = int(self.meta.get('ImageWidth', 0))
             height = int(self.meta.get('ImageHeight', 0))
             if width > fb or height > fb:
-                return True
-        return False
+                self._is_downsizeable = True
+
+        return self._is_downsizeable
 
     def _copy(self):
         target = os.path.join(
@@ -723,7 +766,10 @@ class Taxonomy(BaseIter):
 
     @property
     def pages(self):
-        return math.ceil(len(self.data) / shared.config.getint('common', 'pagination'))
+        if hasattr(self, '_pages'):
+            return self._pages
+        self._pages = math.ceil(len(self.data) / shared.config.getint('common', 'pagination'))
+        return self._pages
 
     def __repr__(self):
         return "taxonomy %s with %d items" % (self.taxonomy, len(self.data))
@@ -844,6 +890,39 @@ class Taxonomy(BaseIter):
             with open(target, "wt") as html:
                 html.write(r)
             os.utime(target, (self.mtime, self.mtime))
+
+        # ---
+        # this is a joke
+        # see http://indieweb.org/YAMLFeed
+        # don't do YAMLFeeds.
+        if 1 == page:
+            yml = {
+                'site': {
+                    'author': renderer.sitevars['author'],
+                    'url': renderer.sitevars['url'],
+                    'title': renderer.sitevars['title'],
+                },
+                'items': [],
+            }
+
+            for p in posttmpls:
+                yml['items'].append({
+                    'title': p['title'],
+                    'url': "%s/%s/" % ( renderer.sitevars['url'], p['slug']),
+                    'content': p['content'],
+                    'summary': p['summary'],
+                    'published': p['published'],
+                    'updated': p['updated'],
+                })
+
+            target = os.path.join(self.feedp, 'index.yml')
+            logging.info("rendering YAML feed to %s", target)
+            fm = frontmatter.loads('')
+            fm.metadata = yml
+            with open(target, "wt") as html:
+                html.write(frontmatter.dumps(fm))
+            os.utime(target, (self.mtime, self.mtime))
+        # ---
 
 class Content(BaseIter):
     def __init__(self, images, comments, extensions=['md']):
@@ -983,18 +1062,6 @@ class Singular(object):
                 self.photo
             )
 
-    #@property
-    #def isrepost(self):
-        #isrepost = False
-
-        #if len(self.reactions.keys()):
-            #isrepost = list(self.reactions.keys())[0]
-
-        #if isrepost:
-            #if len(self.reactions[isrepost]) == 1:
-                #linkto = self.reactions[isrepost][0]
-
-
     def __filter_images(self):
         linkto = False
         isrepost = None
@@ -1072,6 +1139,8 @@ class Singular(object):
 
     @property
     def reactions(self):
+        if hasattr(self, '_reactions'):
+            return self._reactions
         # getting rid of '-' to avoid css trouble and similar
         convert = {
             'bookmark-of': 'bookmark',
@@ -1088,10 +1157,14 @@ class Singular(object):
                 x = [x]
             reactions[v] = x
 
-        return reactions
+        self._reactions = reactions
+        return self._reactions
 
     @property
     def urls(self):
+        if hasattr(self, '_urls'):
+            return self._urls
+
         urls = shared.URLREGEX.findall(self.content)
 
         for reactionurls in self.reactions.values():
@@ -1106,10 +1179,14 @@ class Singular(object):
                 continue
             r.append(link)
 
-        return r
+        self._urls = r
+        return self._urls
 
     @property
     def lang(self):
+        if hasattr(self, '_lang'):
+            return self._lang
+
         lang = 'en'
         try:
             lang = langdetect.detect("\n".join([
@@ -1118,7 +1195,8 @@ class Singular(object):
             ]))
         except:
             pass
-        return lang
+        self._lang = lang
+        return self._lang
 
     @property
     def tags(self):
@@ -1182,11 +1260,16 @@ class Singular(object):
 
     @property
     def title(self):
+        if hasattr(self, '_title'):
+            return self._title
+
+        self._title = ''
         for maybe in ['title', 'bookmark-of', 'in-reply-to', 'repost-of']:
             maybe = self.meta.get(maybe, False)
             if maybe:
-                return maybe
-        return ''
+                self._title = maybe
+                break
+        return self._title
 
     @property
     def url(self):
@@ -1240,6 +1323,9 @@ class Singular(object):
         if not self.isphoto:
             return None
 
+        if hasattr(self, '_exif'):
+            return self._exif
+
         exif = {}
         mapping = {
             'camera': [
@@ -1286,7 +1372,8 @@ class Singular(object):
                         exif[ekey] = maybe
                     break
 
-        return exif
+        self._exif = exif
+        return self._exif
 
     @property
     def rssenclosure(self):
@@ -1343,10 +1430,18 @@ class Singular(object):
         )
 
     async def render(self, renderer):
+        # this is only when I want salmentions and I want to include all of the comments as well
+        # otherwise it affects both webmentions sending and search indexing
+        #if len(self.comments):
+            #lctime = self.comments[0].mtime
+            #if lctime > self.mtime:
+                #self.mtime = lctime
+
+        mtime = self.mtime
         if len(self.comments):
             lctime = self.comments[0].mtime
             if lctime > self.mtime:
-                self.mtime = lctime
+                mtime = lctime
 
         logging.info("rendering and saving %s", self.fname)
         targetdir = os.path.abspath(os.path.join(
@@ -1357,8 +1452,8 @@ class Singular(object):
 
         if not shared.config.getboolean('params', 'force') and os.path.isfile(target):
             ttime = int(os.path.getmtime(target))
-            logging.debug('ttime is %d mtime is %d', ttime, self.mtime)
-            if ttime == self.mtime:
+            logging.debug('ttime is %d mtime is %d', ttime, mtime)
+            if ttime == mtime:
                 logging.debug('%s exists and up-to-date (lastmod: %d)', target, ttime)
                 return
 
@@ -1375,7 +1470,7 @@ class Singular(object):
             logging.debug('writing %s', target)
             html.write(r)
             html.close()
-        os.utime(target, (self.mtime, self.mtime))
+        os.utime(target, (mtime, mtime))
 
 
     async def ping(self, pinger):
