@@ -467,8 +467,7 @@ input[type=submit]:hover {
 	margin: 1rem auto;
 }
 
-.h-entry,
-.comments {
+.h-entry {
 	font-size: 0.86rem;
 	padding: 0.6rem;
 	/*! margin: 0 0 1rem 0; */
@@ -584,6 +583,7 @@ input[type=submit]:hover {
 }
 
 .h-entry footer h6,
+.comments h6,
 .h-entry .footnotes hr:before {
 	font-size: 0.8rem;
 	margin: 1rem 0 0 0;
@@ -727,12 +727,15 @@ input[type=submit]:hover {
 	border-bottom: none;
 }
 
-.comments {
-  font-size: 0.9rem;
-}
 
 .comments ol li {
-	margin: 1rem 0 0 0;
+	margin: 0;
+	padding: 0.3rem;
+}
+
+.comments ol li .e-content {
+	padding: 0;
+	margin: 0;
 }
 
 .comments ol li .p-name {
@@ -758,19 +761,21 @@ input[type=submit]:hover {
 	visibility:hidden;
 }
 
-.comments dl dt {
-	display: inline-block;
-	clear: both;
-	float:left;
+.comments dl dt,
+.comments dl dd,
+.comments dl dd ul,
+.comments dl dd ul li {
+	display: inline;
 }
 
 .comments dl dd ul {
-	padding: 0 0 0 1rem;
+	padding: 0;
 	list-style-type: none;
-	display: inline-block;
 }
+
 .comments dl dd li {
-	display: inline-block;
+	padding: 0 0.3rem;
+	font-size: 0.8rem;
 }
 
 .comments dl dd time {

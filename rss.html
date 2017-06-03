@@ -26,7 +26,7 @@
 {% for post in posts %}
 	<item>
 		<title>{% if post.title %}{{ post.title }}{% endif%}</title>
-		<link>{{ site.url }}/{{ post.slug }}</link>
+		<link>{{ site.url }}/{{ post.slug }}/</link>
 		<pubDate>{{ post.published|date("%a, %d %b %Y %T %z") }}</pubDate>
 		<dc:creator><![CDATA[{{ post.author.name }}]]></dc:creator>
 		<guid isPermaLink="true">{{ site.url }}/{{ post.slug }}</guid>

@@ -11,7 +11,7 @@
 	<title>{{ post.name }} | {{ site.domain }}</title>
 	{% endif %}
 
-	<link rel="canonical" href="{{ site.url }}/{{ post.slug }}" />
+	<link rel="canonical" href="{{ site.url }}/{{ post.slug }}/" />
 	<link rel="shortlink" href="{{ site.url }}/{{ post.shortslug }}" />
 
 	<meta name="author" content="{{ post.author.name }}">
@@ -24,7 +24,7 @@
 	<meta property="og:title" content="{{ post.title }}" />
 	<meta property="og:type" content="blog" />
 	{% if post.modified %}<meta name="og:updated_time" content="{{ post.modified|date("c") }}" />{%endif%}
-	<meta property="og:url" content="{{ site.url }}/{{ post.shortslug }}" />
+	<meta property="og:url" content="{{ site.url }}/{{ post.shortslug }}/" />
 
 	<meta name="DC.Format" content="text/html" />
 	<meta name="DC.Title" content="{{ post.title }}">
@@ -32,8 +32,8 @@
 	<meta name="DC.Description" content="{{ post.excerpt|default(post.title) }}">
 	<meta name="DC.Date" content="{{ post.published|date("%Y-%m-%d") }}">
 	<meta name="DC.Type" content="{{ dctype }}">
-	<meta name="DC.Identifier" content="{{ site.url }}/{{ post.slug }}">
-	<meta name="DC.Source" content="{{ site.url }}/{{ post.slug }}">
+	<meta name="DC.Identifier" content="{{ site.url }}/{{ post.slug }}/">
+	<meta name="DC.Source" content="{{ site.url }}/{{ post.slug }}/">
 	<meta name="DC.Language" content="{{ post.lang|default(site.lang) }}">
 	<meta name="DC.Rights" content="Copyright {{ post.published|date("%Y") }}, {{ post.author.name }} <{{ post.author.email }}>. All rights reserved.">
 
@@ -46,7 +46,7 @@
 			<h1 class="reaction">{% include 'block_reaction.html' %}</h1>
 		{% elif post.title|length %}
 			<h1>
-				<a href="{{ site.url }}/{{ post.slug }}" title="{{ post.title }}">
+				<a href="{{ site.url }}/{{ post.slug }}/" title="{{ post.title }}">
 					<span class="p-name">{{ post.title }}</span>
 				</a>
 			</h1>
@@ -92,7 +92,7 @@
 				<h6 class="pubdate-title">Published</h6>
 				<p>
 					<a class="u-url u-uuid" href="{{ site.url}}/{{ post.slug }}/"></a>
-					<a title="{{ post.title }}" href="{{ site.url }}/{{ post.slug }}">
+					<a title="{{ post.title }}" href="{{ site.url }}/{{ post.slug }}/">
 						<time class="dt-published"
 							datetime="{{ post.published|date("c") }}">
 							{{ post.published|date("%Y-%m-%d %H:%M") }}
@@ -129,11 +129,12 @@
 				</p>
 			</aside>
 		</footer>
-	</article>
 
-	{% if ( post.comments ) %}
-		{% include 'block_comments.html'  %}
-	{% endif %}
+		{% if ( post.comments ) %}
+			{% include 'block_comments.html'  %}
+		{% endif %}
+
+	</article>
 
 	<aside class="content-note">
 		<hr />

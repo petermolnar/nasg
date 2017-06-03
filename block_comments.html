@@ -1,47 +1,59 @@
-<section class="comments">
+<section class="comments h-feed">
 	{% if post.replies|length > 0 %}
 	<h6 class="comments-replies"><a name="replies"></a>Replies</h6>
 	<ol>
 		{% for reply in post.replies %}
-			<li class="p-comment comment">
-				<div class="comment-author p-author h-card vcard">
-					{% if reply.author.url %}
-						<a class="url u-url" href="{{ reply.author.url }}">
+			<li class="h-entry p-comment">
+				<a class="u-url u-uuid" href="{{ site.url }}/{{ post.slug }}/#{{ reply.id }}" name="{{ reply.id }}"></a>
+				<header>
+					<div class="p-author h-card">
+						{% if reply.author.url %}
+							<a class="url u-url" href="{{ reply.author.url }}">
+								<span class="p-name fn">{{ reply.author.name }}</span>
+							</a>
+						{% else %}
 							<span class="p-name fn">{{ reply.author.name }}</span>
-						</a>
-					{% else %}
-						<span class="p-name fn">{{ reply.author.name }}</span>
-					{% endif %}
+						{% endif %}
+					</div>
 					<time class="dt-published" datetime="{{ reply.published|date("c") }}">
 						{{ reply.published|date("%Y-%m-%d %H:%M") }}
 					</time>
-				</div>
-				<div class="comment-content e-content">
+				</header>
+				<div class="e-content">
 					{{ reply.html }}
 				</div>
-				{% if reply.source|length > 0 %}
-				<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
-				{% endif %}
-				<a class="u-in-reply-to" href="{{ post.url }}"></a>
+				<footer>
+					{% if reply.source|length > 0 %}
+					<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
+					{% endif %}
+					<a class="u-in-reply-to" href="{{ post.url }}"></a>
+				</footer
 			</li>
 		{% endfor %}
 		</ol>
 	{% endif %}
 
 	{% if post.reacjis|length > 0 %}
-	<h6 class="comments-reacji"><a name="reacji"></a>Reacji</h6>
+	<h6 class="comments-reacji"><a name="reacji"></a>Reactions</h6>
 	<dl>
 	{% for reacji, replies in post.reacjis.items() %}
 		<dt><a name="{{ reacji }}"></a>{{ reacji }}</dt>
 		<dd>
 			<ul>
 			{% for reply in replies %}
-				<li class="p-comment comment reacji">
+				<li class="p-comment h-entry ">
+					<a class="u-url u-uuid" href="{{ site.url }}/{{ post.slug }}/#{{ reply.id }}" name="{{ reply.id }}"></a>
 					<time class="dt-published" datetime="{{ reply.published|date("c") }}">
 						{{ reply.published|date("%Y-%m-%d %H:%M") }}
 					</time>
-					<span class="comment-author p-author h-card vcard">
-						<a href="{{ reply.author.url }}" title="{{ reply.author.name }}">{{ reply.author.name }}</a>
+					<span class="p-author h-card">
+						{% if reply.author.url %}
+							<a class="url u-url" href="{{ reply.author.url }}">
+								<span class="p-name fn">{{ reply.author.name }}</span>
+							</a>
+						{% else %}
+							<span class="p-name fn">{{ reply.author.name }}</span>
+						{% endif %}
 					</span>
 					<a class="u-in-reply-to" href="{{ post.url }}"></a>
 				</li>
@@ -51,5 +63,4 @@
 		{% endfor %}
 	</dl>
 	{% endif %}
-
 </section>
