@@ -4,7 +4,7 @@
 	<ol>
 		{% for reply in post.replies %}
 			<li class="h-entry p-comment">
-				<a class="u-url u-uuid" href="{{ site.url }}/{{ post.slug }}/#{{ reply.id }}" name="{{ reply.id }}"></a>
+				<a class="u-url u-uuid" href="{{ site.url }}/{{ site.commentspath }}/{{ reply.fname }}/" name="{{ reply.fname }}"></a>
 				<header>
 					<div class="p-author h-card">
 						{% if reply.author.url %}
@@ -15,8 +15,8 @@
 							<span class="p-name fn">{{ reply.author.name }}</span>
 						{% endif %}
 					</div>
-					<time class="dt-published" datetime="{{ reply.published|date("c") }}">
-						{{ reply.published|date("%Y-%m-%d %H:%M") }}
+					<time class="dt-published" datetime="{{ reply.published|date('c') }}">
+						{{ reply.published|date('%Y-%m-%d %H:%M') }}
 					</time>
 				</header>
 				<div class="e-content">
@@ -42,9 +42,9 @@
 			<ul>
 			{% for reply in replies %}
 				<li class="p-comment h-entry ">
-					<a class="u-url u-uuid" href="{{ site.url }}/{{ post.slug }}/#{{ reply.id }}" name="{{ reply.id }}"></a>
-					<time class="dt-published" datetime="{{ reply.published|date("c") }}">
-						{{ reply.published|date("%Y-%m-%d %H:%M") }}
+					<a class="u-url u-uuid" href="{{ site.url }}/{{ site.commentspath }}/{{ reply.fname }}/" name="{{ reply.fname }}"></a>
+					<time class="dt-published" datetime="{{ reply.published|date('c') }}">
+						{{ reply.published|date('%Y-%m-%d %H:%M') }}
 					</time>
 					<span class="p-author h-card">
 						{% if reply.author.url %}

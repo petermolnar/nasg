@@ -9,19 +9,25 @@
 	>
 
 {%- if taxonomy.name -%}
-{%- set title = taxonomy.name ~ ' | ' ~ site.name -%}
+{%- set title = taxonomy.name ~ ' | ' ~ site.title -%}
 {%- else -%}
-{%- set title = site.name -%}
+{%- set title = site.title -%}
 {%- endif -%}
 
 <channel>
 	<title>{{ title }}</title>
-	<atom:link href="{{ site.url}}{{ taxonomy.url }}feed" rel="self" type="application/rss+xml" />
-	<link>{{ site.url}}{{ taxonomy.url }}feed</link>
+	<atom:link href="{{ site.url}}{{ taxonomy.url }}feed/" rel="self" type="application/rss+xml" />
+	<link>{{ site.url }}{{ taxonomy.url }}feed/</link>
 	<description>{{ description }}</description>
 	<language>{{ site.lang }}</language>
 	<sy:updatePeriod>daily</sy:updatePeriod>
 	<sy:updateFrequency>1</sy:updateFrequency>
+	{% if taxonomy.url|length > 0 %}
+	<!-- PubSubHubbub Discovery -->
+	<link rel="hub"  href="{{ site.websuburl }}" xmlns="http://www.w3.org/2005/Atom" />
+	<link rel="self" href="{{ site.url }}{{ taxonomy.url }}feed/" xmlns="http://www.w3.org/2005/Atom" />
+	<!-- End Of PubSubHubbub Discovery -->
+	{% endif %}
 
 {% for post in posts %}
 	<item>
