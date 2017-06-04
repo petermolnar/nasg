@@ -19,6 +19,10 @@ def __expandconfig(config):
         config.get('target', 'builddir'),
         config.get('source', 'files'),
     ))
+    config.set('target', 'commentsdir', os.path.join(
+        config.get('target', 'builddir'),
+        config.get('site', 'commentspath'),
+    ))
     return config
 
 ARROWISO = 'YYYY-MM-DDTHH:mm:ssZ'

@@ -44,6 +44,21 @@ def splitpath(path):
     return parts
 
 
+class BaseRenderable(object):
+    def __init__(self):
+        return
+
+    def writerendered(self, target, content, mtime):
+        d = os.path.dirname(target)
+        if not os.path.isdir(d):
+            os.mkdir(d)
+
+        with open(target, "w") as html:
+            logging.debug('writing %s', target)
+            html.write(content)
+            html.close()
+        os.utime(target, (mtime, mtime))
+
 class Indexer(object):
 
     def __init__(self):
@@ -314,7 +329,7 @@ class ExifTool(shared.CMDLine):
             *filenames))
 
 
-class Comment(object):
+class Comment(BaseRenderable):
     def __init__(self, path):
         logging.debug("initiating comment object from %s", path)
         self.path = path
@@ -322,6 +337,7 @@ class Comment(object):
         self.mtime = int(os.path.getmtime(self.path))
         self.meta = {}
         self.content = ''
+        self.tmplfile = 'comment.html'
         self.__parse()
 
     def __repr__(self):
@@ -355,19 +371,6 @@ class Comment(object):
         return self._reacji
 
     @property
-    def h(self):
-        if hasattr(self, '_h'):
-            return self._h
-        record = {
-            'mtime': self.mtime,
-            'source': self.source,
-            'target': self.target
-        }
-        h = json.dumps(record, sort_keys=True)
-        self._h = hashlib.sha1(h.encode('utf-8')).hexdigest()
-        return self._h
-
-    @property
     def html(self):
         if hasattr(self, '_html'):
             return self._html
@@ -389,7 +392,7 @@ class Comment(object):
             'target': self.target,
             'type': self.meta.get('type', 'webmention'),
             'reacji': self.reacji,
-            'id': self.h
+            'fname': self.fname
         }
         return self._tmplvars
 
@@ -423,6 +426,38 @@ class Comment(object):
         t = self.meta.get('target', shared.config.get('site', 'url'))
         self._target = '{p.path}'.format(p=urllib.parse.urlparse(t)).strip('/')
         return self._target
+
+    async def render(self, renderer):
+        logging.info("rendering and saving comment %s", self.fname)
+        targetdir = os.path.abspath(os.path.join(
+            shared.config.get('target', 'builddir'),
+            shared.config.get('site', 'commentspath'),
+            self.fname
+        ))
+        target = os.path.join(targetdir, 'index.html')
+
+        if not shared.config.getboolean('params', 'force') and os.path.isfile(target):
+            ttime = int(os.path.getmtime(target))
+            logging.debug('ttime is %d mtime is %d', ttime, self.mtime)
+            if ttime == self.mtime:
+                logging.debug('%s exists and up-to-date (lastmod: %d)', target, ttime)
+                return
+
+        #if not os.path.isdir(targetdir):
+            #os.mkdir(targetdir)
+
+        tmplvars = {
+            'reply': self.tmplvars,
+            'site': renderer.sitevars,
+            'taxonomy': {},
+        }
+        r = renderer.j2.get_template(self.tmplfile).render(tmplvars)
+        self.writerendered(target, r, self.mtime)
+        #with open(target, "w") as html:
+            #logging.debug('writing %s', target)
+            #html.write(r)
+            #html.close()
+        #os.utime(target, (self.mtime, self.mtime))
 
 
 class Comments(object):
@@ -592,7 +627,7 @@ class WebImage(object):
         self._rssenclosure = {
             'mime': magic.Magic(mime=True).from_file(target['fpath']),
             'url': target['url'],
-            'bytes':  os.path.getsize(target['fpath'])
+            'size':  os.path.getsize(target['fpath'])
         }
         return self._rssenclosure
 
@@ -884,19 +919,31 @@ class Taxonomy(BaseIter):
         os.utime(target, (self.mtime, self.mtime))
 
         if 1 == page:
-            target = os.path.join(self.feedp, 'index.xml')
+            target = os.path.join(self.feedp, 'index.rss')
             logging.info("rendering RSS feed to %s", target)
             r = renderer.j2.get_template('rss.html').render(tmplvars)
             with open(target, "wt") as html:
                 html.write(r)
             os.utime(target, (self.mtime, self.mtime))
 
+            if not self.taxonomy or self.taxonomy == 'category':
+                t = shared.config.get('site', 'websuburl')
+                data = {
+                    'hub.mode': 'publish',
+                    'hub.url': "%s%s" % (
+                        shared.config.get('site', 'url'), self.baseurl
+                    )
+                }
+                logging.info("pinging %s with data %s", t, data)
+                requests.post(t, data=data)
+
         # ---
         # this is a joke
         # see http://indieweb.org/YAMLFeed
         # don't do YAMLFeeds.
         if 1 == page:
-            yml = {
+            fm = frontmatter.loads('')
+            fm.metadata = {
                 'site': {
                     'author': renderer.sitevars['author'],
                     'url': renderer.sitevars['url'],
@@ -906,7 +953,7 @@ class Taxonomy(BaseIter):
             }
 
             for p in posttmpls:
-                yml['items'].append({
+                fm.metadata['items'].append({
                     'title': p['title'],
                     'url': "%s/%s/" % ( renderer.sitevars['url'], p['slug']),
                     'content': p['content'],
@@ -917,8 +964,6 @@ class Taxonomy(BaseIter):
 
             target = os.path.join(self.feedp, 'index.yml')
             logging.info("rendering YAML feed to %s", target)
-            fm = frontmatter.loads('')
-            fm.metadata = yml
             with open(target, "wt") as html:
                 html.write(frontmatter.dumps(fm))
             os.utime(target, (self.mtime, self.mtime))
@@ -1033,7 +1078,7 @@ class Content(BaseIter):
             html.write(r)
             html.close()
 
-class Singular(object):
+class Singular(BaseRenderable):
     def __init__(self, path, images, comments):
         logging.debug("initiating singular object from %s", path)
         self.path = path
@@ -1429,6 +1474,10 @@ class Singular(object):
             ).lstrip(numerals[0]) + numerals[num % b]
         )
 
+    async def rendercomments(self, renderer):
+        for comment in self.comments:
+            await comment.render(renderer)
+
     async def render(self, renderer):
         # this is only when I want salmentions and I want to include all of the comments as well
         # otherwise it affects both webmentions sending and search indexing
@@ -1436,6 +1485,7 @@ class Singular(object):
             #lctime = self.comments[0].mtime
             #if lctime > self.mtime:
                 #self.mtime = lctime
+        await self.rendercomments(renderer)
 
         mtime = self.mtime
         if len(self.comments):
@@ -1457,8 +1507,8 @@ class Singular(object):
                 logging.debug('%s exists and up-to-date (lastmod: %d)', target, ttime)
                 return
 
-        if not os.path.isdir(targetdir):
-            os.mkdir(targetdir)
+        #if not os.path.isdir(targetdir):
+            #os.mkdir(targetdir)
 
         tmplvars = {
             'post': self.tmplvars,
@@ -1466,11 +1516,12 @@ class Singular(object):
             'taxonomy': {},
         }
         r = renderer.j2.get_template(self.tmplfile).render(tmplvars)
-        with open(target, "w") as html:
-            logging.debug('writing %s', target)
-            html.write(r)
-            html.close()
-        os.utime(target, (mtime, mtime))
+        self.writerendered(target, r, mtime)
+        #with open(target, "w") as html:
+            #logging.debug('writing %s', target)
+            #html.write(r)
+            #html.close()
+        #os.utime(target, (mtime, mtime))
 
 
     async def ping(self, pinger):
