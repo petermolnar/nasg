@@ -92,8 +92,7 @@ class Fav(object):
 
     @property
     def exists(self):
-        return False
-        #return os.path.isfile(self.target)
+        return os.path.isfile(self.target)
 
     @property
     def imgname(self):
@@ -220,8 +219,6 @@ class Favs(object):
 
     @property
     def lastpulled(self):
-        return 0
-
         mtime = 0
         d = os.path.join(
             shared.config.get('source', 'contentdir'),

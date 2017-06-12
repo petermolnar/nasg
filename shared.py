@@ -7,6 +7,7 @@ import subprocess
 from whoosh import fields
 from whoosh import analysis
 
+
 def __expandconfig(config):
     """ add the dirs to the config automatically """
     basepath = os.path.expanduser(config.get('common','base'))
@@ -25,8 +26,9 @@ def __expandconfig(config):
     ))
     return config
 
+
 def baseN(num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
-    """ Used to create short, lowecase slug for a number (an epoch) passed """
+    """ Used to create short, lowercase slug for a number (an epoch) passed """
     num = int(num)
     return ((num == 0) and numerals[0]) or (
         baseN(
@@ -101,12 +103,14 @@ config = configparser.ConfigParser(
 config.read('config.ini')
 config = __expandconfig(config)
 
+
 class CMDLine(object):
     def __init__(self, executable):
         self.executable = self._which(executable)
         if self.executable is None:
             raise OSError('No %s found in PATH!' % executable)
             return
+
 
     @staticmethod
     def _which(name):
@@ -115,6 +119,7 @@ class CMDLine(object):
             if which:
                 return which.pop()
         return None
+
 
     def __enter__(self):
         self.process = subprocess.Popen(
@@ -126,9 +131,11 @@ class CMDLine(object):
         )
         return self
 
+
     def  __exit__(self, exc_type, exc_value, traceback):
         self.process.stdin.write("-stay_open\nFalse\n")
         self.process.stdin.flush()
+
 
     def execute(self, *args):
         args = args + ("-execute\n",)
@@ -140,8 +147,10 @@ class CMDLine(object):
             output += os.read(fd, 4096).decode('utf-8', errors='ignore')
         return output[:-len(self.sentinel)]
 
+
 class Pandoc(CMDLine):
     """ Pandoc command line call with piped in- and output """
+
     def __init__(self, md2html=True):
         super().__init__('pandoc')
         if md2html:
@@ -171,6 +180,7 @@ class Pandoc(CMDLine):
                 'native_spans',
             ])
             self.i = 'html'
+
 
     def convert(self, text):
         cmd = (

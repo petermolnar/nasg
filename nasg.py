@@ -25,17 +25,15 @@ import frontmatter
 from slugify import slugify
 import langdetect
 import requests
-#from breadability.readable import Article
-from newspaper import Article as newspaper3k
 from whoosh import index
 from whoosh import qparser
 import jinja2
 import urllib.parse
-import shared
 from webmentiontools.send import WebmentionSend
 from bleach import clean
 from emoji import UNICODE_EMOJI
 from bs4 import BeautifulSoup
+import shared
 
 def splitpath(path):
     parts = []
@@ -46,23 +44,64 @@ def splitpath(path):
     return parts
 
 
+class BaseIter(object):
+    def __init__(self):
+        self.data = {}
+
+    def append(self, key, value):
+        if key in self.data:
+            logging.warning("duplicate key: %s, using existing instead", key)
+            existing = self.data.get(key)
+            if hasattr(value, 'fname') and hasattr(existing, 'fname'):
+                logging.warning(
+                    "%s collides with existing %s",
+                    value.fname,
+                    existing.fname
+                )
+            return
+        self.data[key] = value
+
+
+    def __getitem__(self, key):
+        return self.data.get(key, {})
+
+
+    def __repr__(self):
+        return json.dumps(list(self.data.values()))
+
+
+    def __next__(self):
+        try:
+            r = self.data.next()
+        except:
+            raise StopIteration()
+        return r
+
+
+    def __iter__(self):
+        for k, v in self.data.items():
+            yield (k, v)
+        return
+
+
 class BaseRenderable(object):
     def __init__(self):
         return
 
-    def writerendered(self, target, content, mtime):
-        d = os.path.dirname(target)
+
+    def writerendered(self, content):
+        d = os.path.dirname(self.target)
         if not os.path.isdir(d):
             os.mkdir(d)
 
-        with open(target, "w") as html:
-            logging.debug('writing %s', target)
+        with open(self.target, "w") as html:
+            logging.debug('writing %s', self.target)
             html.write(content)
             html.close()
-        os.utime(target, (mtime, mtime))
+        os.utime(self.target, (self.mtime, self.mtime))
+
 
 class Indexer(object):
-
     def __init__(self):
         self.target = os.path.abspath(os.path.join(
             shared.config.get('target', 'builddir'),
@@ -153,6 +192,7 @@ class Indexer(object):
                 mtime=singular.mtime
             )
 
+
     def finish(self):
         self.writer.commit()
 
@@ -187,6 +227,7 @@ class OfflineCopy(object):
         with open(self.target, 'wt') as f:
             f.write(frontmatter.dumps(self.fm))
 
+
     @property
     def archiveorgurl(self):
         a = self.fetch(
@@ -208,6 +249,7 @@ class OfflineCopy(object):
             logging.error("archive.org parsing failed: %s", e)
             return None
 
+
     def fetch(self, url):
         try:
             r = requests.get(
@@ -220,7 +262,6 @@ class OfflineCopy(object):
                 return r
         except Exception as e:
             return None
-
 
 
     def run(self):
@@ -257,6 +298,7 @@ class Renderer(object):
         self.j2.filters['search'] = Renderer.jinja_filter_search
         self.j2.filters['slugify'] = Renderer.jinja_filter_slugify
 
+
     @staticmethod
     def jinja_filter_date(d, form='%Y-%m-%d %H:%m:%S'):
         if d == 'now':
@@ -265,9 +307,11 @@ class Renderer(object):
             form = '%Y-%m-%dT%H:%M:%S%z'
         return d.strftime(form)
 
+
     @staticmethod
     def jinja_filter_slugify(s):
         return slugify(s, only_ascii=True, lower=True)
+
 
     @staticmethod
     def jinja_filter_search(s, r):
@@ -276,50 +320,17 @@ class Renderer(object):
         return False
 
 
-class BaseIter(object):
-    def __init__(self):
-        self.data = {}
-
-    def append(self, key, value):
-        if key in self.data:
-            logging.warning("duplicate key: %s, using existing instead", key)
-            existing = self.data.get(key)
-            if hasattr(value, 'fname') and hasattr(existing, 'fname'):
-                logging.warning(
-                    "%s collides with existing %s",
-                    value.fname,
-                    existing.fname
-                )
-            return
-        self.data[key] = value
-
-    def __getitem__(self, key):
-        return self.data.get(key, {})
-
-    def __repr__(self):
-        return json.dumps(list(self.data.values()))
-
-    def __next__(self):
-        try:
-            r = self.data.next()
-        except:
-            raise StopIteration()
-        return r
-
-    def __iter__(self):
-        for k, v in self.data.items():
-            yield (k, v)
-        return
-
 # based on http://stackoverflow.com/a/10075210
 class ExifTool(shared.CMDLine):
     """ Handles calling external binary `exiftool` in an efficient way """
     sentinel = "{ready}\n"
 
+
     def __init__(self):
         super().__init__('exiftool')
 
-    def get_metadata(self, *filenames):
+
+    def run(self, *filenames):
         return json.loads(self.execute(
             '-sort',
             '-json',
@@ -358,8 +369,10 @@ class Comment(BaseRenderable):
         self.tmplfile = 'comment.html'
         self.__parse()
 
+
     def __repr__(self):
         return "%s" % (self.path)
+
 
     def __parse(self):
         with open(self.path, mode='rt') as f:
@@ -388,6 +401,7 @@ class Comment(BaseRenderable):
 
         return self._reacji
 
+
     @property
     def html(self):
         if hasattr(self, '_html'):
@@ -395,6 +409,7 @@ class Comment(BaseRenderable):
 
         self._html = shared.Pandoc().convert(self.content)
         return self._html
+
 
     @property
     def tmplvars(self):
@@ -414,6 +429,7 @@ class Comment(BaseRenderable):
         }
         return self._tmplvars
 
+
     @property
     def published(self):
         if hasattr(self, '_published'):
@@ -421,9 +437,11 @@ class Comment(BaseRenderable):
         self._published = arrow.get(self.meta.get('date', self.mtime))
         return self._published
 
+
     @property
     def pubtime(self):
         return int(self.published.timestamp)
+
 
     @property
     def source(self):
@@ -437,6 +455,7 @@ class Comment(BaseRenderable):
                 self._source = ''
         return self._source
 
+
     @property
     def target(self):
         if hasattr(self, '_target'):
@@ -444,6 +463,7 @@ class Comment(BaseRenderable):
         t = self.meta.get('target', shared.config.get('site', 'url'))
         self._target = '{p.path}'.format(p=urllib.parse.urlparse(t)).strip('/')
         return self._target
+
 
     async def render(self, renderer):
         logging.info("rendering and saving comment %s", self.fname)
@@ -470,12 +490,7 @@ class Comment(BaseRenderable):
             'taxonomy': {},
         }
         r = renderer.j2.get_template(self.tmplfile).render(tmplvars)
-        self.writerendered(target, r, self.mtime)
-        #with open(target, "w") as html:
-            #logging.debug('writing %s', target)
-            #html.write(r)
-            #html.close()
-        #os.utime(target, (self.mtime, self.mtime))
+        self.writerendered(r)
 
 
 class Comments(object):
@@ -486,8 +501,10 @@ class Comments(object):
         ))
         self.bytarget = {}
 
+
     def __getitem__(self, key):
         return self.bytarget.get(key, BaseIter())
+
 
     def populate(self):
         for fpath in self.files:
@@ -519,7 +536,7 @@ class Images(BaseIter):
 
     def populate(self):
         with ExifTool() as e:
-            _meta = e.get_metadata(*self.files)
+            _meta = e.run(*self.files)
             # parsing the returned meta into a dict of [filename]={meta}
             for e in _meta:
                 if 'FileName' not in e:
@@ -536,6 +553,7 @@ class Images(BaseIter):
                     e[k] = self.exifdate(v)
 
                 self.data[fname] = WebImage(fname, e)
+
 
     def exifdate(self, value):
         """ converts and EXIF date string to ISO 8601 format
@@ -556,6 +574,7 @@ class Images(BaseIter):
             match.group('day'),
             match.group('time')
         )
+
 
 class WebImage(object):
     def __init__(self, fname, meta):
@@ -604,6 +623,7 @@ class WebImage(object):
                 "%s%s" % (self.fname, self.ext)
             )
 
+
     def __str__(self):
         if self.is_downsizeable:
             if self.singleimage and not self.cl:
@@ -629,6 +649,7 @@ class WebImage(object):
                 self.ext,
                 self.cl
             )
+
 
     @property
     def exif(self):
@@ -687,36 +708,6 @@ class WebImage(object):
         self._exif = exif
         return self._exif
 
-    #def __str__(self):
-        #if self.is_downsizeable and not self.cl:
-            #uphoto = ''
-            #if self.singleimage:
-                #uphoto = ' u-photo'
-            #return '\n<figure class="photo"><a target="_blank" class="adaptive%s" href="%s"><img src="%s" class="adaptimg" alt="%s" /></a><figcaption class=\"caption\">%s%s</figcaption></figure>\n' % (
-                #uphoto,
-                #self.target,
-                #self.fallback,
-                #self.alttext,
-                #self.fname,
-                #self.ext
-            #)
-        #elif self.cl:
-            #self.cl = self.cl.replace('.', ' ')
-            #return '<img src="%s" class="%s" alt="%s" title="%s%s" />' % (
-                #self.fallback,
-                #self.cl,
-                #self.alttext,
-                #self.fname,
-                #self.ext
-            #)
-
-        #else:
-            #return '<img src="%s" class="aligncenter" alt="%s" title="%s%s" />' % (
-                #self.fallback,
-                #self.alttext,
-                #self.fname,
-                #self.ext
-            #)
 
     @property
     def rssenclosure(self):
@@ -731,6 +722,7 @@ class WebImage(object):
             'size':  os.path.getsize(target['fpath'])
         }
         return self._rssenclosure
+
 
     @property
     def is_photo(self):
@@ -753,6 +745,7 @@ class WebImage(object):
 
         return self._is_photo
 
+
     @property
     def is_downsizeable(self):
         if hasattr(self, '_is_downsizeable'):
@@ -773,6 +766,7 @@ class WebImage(object):
 
         return self._is_downsizeable
 
+
     def _copy(self):
         target = os.path.join(
             shared.config.get('target', 'filesdir'),
@@ -781,6 +775,7 @@ class WebImage(object):
         if not os.path.isfile(target):
             logging.debug("can't downsize %s, copying instead" % self.fname)
             shutil.copy(self.fpath, target)
+
 
     def _watermark(self, img):
         """ Composite image by adding watermark file over it """
@@ -890,6 +885,7 @@ class WebImage(object):
             for (size, meta) in self.sizes:
                 self._intermediate(img, size, meta, existing)
 
+
 class Taxonomy(BaseIter):
     def __init__(self, name = None, taxonomy = None, slug = None):
         super(Taxonomy, self).__init__()
@@ -899,6 +895,7 @@ class Taxonomy(BaseIter):
         else:
             self.slug = slug
         self.taxonomy = taxonomy
+
 
     @property
     def pages(self):
@@ -910,12 +907,14 @@ class Taxonomy(BaseIter):
     def __repr__(self):
         return "taxonomy %s with %d items" % (self.taxonomy, len(self.data))
 
+
     @property
     def basep(self):
         p = shared.config.get('target', 'builddir')
         if self.taxonomy:
             p = os.path.join(p, self.taxonomy)
         return p
+
 
     @property
     def myp(self):
@@ -924,13 +923,16 @@ class Taxonomy(BaseIter):
             return os.path.join(p,self.slug)
         return p
 
+
     @property
     def feedp(self):
         return os.path.join(self.myp, 'feed')
 
+
     @property
     def pagep(self):
         return os.path.join(self.myp, 'page')
+
 
     @property
     def baseurl(self):
@@ -939,12 +941,14 @@ class Taxonomy(BaseIter):
         else:
             return '/'
 
+
     @property
     def mtime(self):
         if hasattr(self, '_mtime'):
             return self._mtime
         self._mtime = int(list(sorted(self.data.keys(), reverse=True))[0])
         return self._mtime
+
 
     def __mkdirs(self):
         check = [self.basep, self.myp, self.feedp]
@@ -963,11 +967,13 @@ class Taxonomy(BaseIter):
                 logging.debug("creating dir %s", p)
                 os.mkdir(p)
 
+
     def tpath(self, page):
         if page == 1:
             return "%s/index.html" % (self.myp)
         else:
             return "%s/%d/index.html" % (self.pagep, page)
+
 
     async def render(self, renderer):
         if not self.slug or self.slug is 'None':
@@ -993,6 +999,7 @@ class Taxonomy(BaseIter):
         while page <= self.pages:
             self.renderpage(renderer, page)
             page = page+1
+
 
     def renderpage(self, renderer, page):
         pagination = int(shared.config.get('common', 'pagination'))
@@ -1074,6 +1081,7 @@ class Taxonomy(BaseIter):
             os.utime(target, (self.mtime, self.mtime))
         # ---
 
+
 class Content(BaseIter):
     def __init__(self, images, comments, extensions=['md']):
         super(Content, self).__init__()
@@ -1087,6 +1095,7 @@ class Content(BaseIter):
         self.categories = {}
         self.front = Taxonomy()
         self.shortslugmap = {}
+
 
     def populate(self):
         now = arrow.utcnow().timestamp
@@ -1114,6 +1123,7 @@ class Content(BaseIter):
                 self.tags[tslug].append(item.pubtime, item)
                 self.symlinktag(tslug, item.path)
 
+
     def symlinktag(self, tslug, fpath):
         fdir, fname = os.path.split(fpath)
         tagpath = os.path.join(shared.config.get('source', 'tagsdir'), tslug)
@@ -1124,6 +1134,7 @@ class Content(BaseIter):
         src = os.path.join(sympath, fname)
         if not os.path.islink(dst):
             os.symlink(src, dst)
+
 
     def sitemap(self):
         target = os.path.join(
@@ -1140,6 +1151,7 @@ class Content(BaseIter):
         with open(target, "wt") as f:
             logging.info("writing sitemap to %s" % (target))
             f.write("\n".join(urls))
+
 
     def magicphp(self, renderer):
         redirects = []
@@ -1183,6 +1195,7 @@ class Content(BaseIter):
             html.write(r)
             html.close()
 
+
 class Singular(BaseRenderable):
     def __init__(self, path, images, comments):
         logging.debug("initiating singular object from %s", path)
@@ -1199,8 +1212,10 @@ class Singular(BaseRenderable):
             self.photo.singleimage = True
         self.__parse()
 
+
     def __repr__(self):
         return "%s (lastmod: %s)" % (self.fname, self.published)
+
 
     def __parse(self):
         with open(self.path, mode='rt') as f:
@@ -1214,6 +1229,7 @@ class Singular(BaseRenderable):
             )
         # REMOVE THIS
         trigger = self.offlinecopies
+
 
     def __filter_favs(self):
         url = self.meta.get('favorite-of',
@@ -1240,6 +1256,7 @@ class Singular(BaseRenderable):
             c = "%s\n\n%s" % (c, self.content)
 
         self.content = c
+
 
     def __filter_images(self):
         linkto = False
@@ -1275,6 +1292,7 @@ class Singular(BaseRenderable):
                 "%s" % image
             )
 
+
     @property
     def comments(self):
         if hasattr(self, '_comments'):
@@ -1289,12 +1307,14 @@ class Singular(BaseRenderable):
         self._comments = [c[k] for k in list(sorted(c.keys(), reverse=True))]
         return self._comments
 
+
     @property
     def replies(self):
         if hasattr(self, '_replies'):
             return self._replies
         self._replies = [c.tmplvars for c in self.comments if not len(c.reacji)]
         return self._replies
+
 
     @property
     def reacjis(self):
@@ -1341,6 +1361,7 @@ class Singular(BaseRenderable):
         self._reactions = reactions
         return self._reactions
 
+
     @property
     def urls(self):
         if hasattr(self, '_urls'):
@@ -1363,6 +1384,7 @@ class Singular(BaseRenderable):
         self._urls = r
         return self._urls
 
+
     @property
     def lang(self):
         if hasattr(self, '_lang'):
@@ -1379,9 +1401,11 @@ class Singular(BaseRenderable):
         self._lang = lang
         return self._lang
 
+
     @property
     def tags(self):
         return list(self.meta.get('tags', []))
+
 
     @property
     def published(self):
@@ -1391,6 +1415,7 @@ class Singular(BaseRenderable):
             self.meta.get('published', self.mtime)
         )
         return self._published
+
 
     @property
     def updated(self):
@@ -1403,9 +1428,11 @@ class Singular(BaseRenderable):
         )
         return self._updated
 
+
     @property
     def pubtime(self):
         return int(self.published.timestamp)
+
 
     @property
     def isphoto(self):
@@ -1413,18 +1440,22 @@ class Singular(BaseRenderable):
             return False
         return self.photo.is_photo
 
+
     @property
     def isbookmark(self):
         return self.meta.get('bookmark-of', False)
+
 
     @property
     def isreply(self):
         return self.meta.get('in-reply-to', False)
 
+
     # TODO
     #@property
     #def isrvsp(self):
     # r'<data class="p-rsvp" value="([^"])">([^<]+)</data>'
+
 
     @property
     def isfav(self):
@@ -1436,11 +1467,13 @@ class Singular(BaseRenderable):
                 break
         return r
 
+
     @property
     def ispage(self):
         if not self.meta:
             return True
         return False
+
 
     @property
     def isonfront(self):
@@ -1452,15 +1485,18 @@ class Singular(BaseRenderable):
             return False
         return True
 
+
     @property
     def iscategorised(self):
         if self.ispage:
             return False
         return True
 
+
     @property
     def summary(self):
         return self.meta.get('summary', '')
+
 
     @property
     def title(self):
@@ -1475,9 +1511,11 @@ class Singular(BaseRenderable):
                 break
         return self._title
 
+
     @property
     def url(self):
         return "%s/%s/" % (shared.config.get('site', 'url'), self.fname)
+
 
     @property
     def tmplfile(self):
@@ -1486,12 +1524,14 @@ class Singular(BaseRenderable):
         else:
             return 'singular.html'
 
+
     @property
     def html(self):
         if hasattr(self, '_html'):
             return self._html
         self._html = shared.Pandoc().convert(self.content)
         return self._html
+
 
     @property
     def sumhtml(self):
@@ -1501,6 +1541,7 @@ class Singular(BaseRenderable):
         if len(self._sumhtml):
             self._sumhtml = shared.Pandoc().convert(self.summary)
         return self._sumhtml
+
 
     @property
     def offlinecopies(self):
@@ -1522,18 +1563,20 @@ class Singular(BaseRenderable):
         self.copies = copies
         return copies
 
+
     @property
     def exif(self):
         if not self.isphoto:
             return {}
-
         return self.photo.exif
+
 
     @property
     def rssenclosure(self):
         if not self.isphoto:
             return {}
         return self.photo.rssenclosure
+
 
     @property
     def tmplvars(self):
@@ -1565,6 +1608,7 @@ class Singular(BaseRenderable):
         }
         return self._tmplvars
 
+
     @property
     def shortslug(self):
         if hasattr(self, '_shortslug'):
@@ -1572,9 +1616,11 @@ class Singular(BaseRenderable):
         self._shortslug = shared.baseN(self.pubtime)
         return self._shortslug
 
+
     async def rendercomments(self, renderer):
         for comment in self.comments:
             await comment.render(renderer)
+
 
     async def render(self, renderer):
         # this is only when I want salmentions and I want to include all of the comments as well
@@ -1639,6 +1685,7 @@ class Singular(BaseRenderable):
 
             pinger.db[h] = record
 
+
 class Webmentioner(object):
     def __init__(self):
         self.dbpath = os.path.abspath(os.path.join(
@@ -1651,6 +1698,7 @@ class Webmentioner(object):
                 self.db = json.loads(f.read())
         else:
             self.db = {}
+
 
     def finish(self):
         with open(self.dbpath, 'wt') as f:
@@ -1745,6 +1793,7 @@ class NASG(object):
     async def __aping(self, content, pinger):
         for (pubtime, singular) in content:
             await singular.ping(pinger)
+
 
     def run(self):
         if os.path.isfile(self.lockfile):
