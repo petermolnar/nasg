@@ -33,11 +33,11 @@
 	<meta name="DC.Title" content="{{ title }}" />
 	<meta name="DC.Creator" content="{{ site.author.name }}" />
 	<meta name="DC.Description" content="{{ taxonomy.description|default(title) }}" />
-	<meta name="DC.Date" content="{{ posts[0].published|date("%Y-%m-%d") }}" />
+	<meta name="DC.Date" content="{{ posts[0].published|date('%Y-%m-%d') }}" />
 	<meta name="DC.Type" content="collection" />
 	<meta name="DC.Language" content="{{ site.lang }}" />
 	<meta name="DC.Source" content="{{ turl }}" />
-	<meta name="DC.Rights" content="Copyright {{ posts[0].published|date("%Y") }}, {{ site.author.name }} <{{ site.author.email }}>. All rights reserved.">
+	<meta name="DC.Rights" content="Copyright {{ posts[0].published|date('%Y') }}, {{ site.author.name }} <{{ site.author.email }}>. All rights reserved.">
 
 {% include 'block_header_close.html' %}
 
@@ -95,8 +95,8 @@
 				<aside class="pubdate{% if post.bookmark or post.repost %} hide{% endif %}">
 					<a class="u-url u-uuid" href="{{ site.url}}/{{ post.slug }}/"></a>
 					<a title="{{ post.title }}" href="{{ site.url }}/{{ post.slug }}">
-						<time class="dt-published" datetime="{{ post.published|date("c") }}">
-							{{ post.published|date("%Y-%m-%d %H:%M") }}
+						<time class="dt-published" datetime="{{ post.published|date('c') }}">
+							{{ post.published|date('%Y-%m-%d %H:%M') }}
 						</time>
 					</a>
 				</aside>
@@ -109,7 +109,7 @@
 						<img src="{{ post.thumbnail }}" alt="{{ post.title }}" class="alignleft" />
 					{% else %}
 						<svg class="icon large"><use xlink:href="#icon-{{ post.category }}" /></svg>
-					{% endif %} {{ post.summary }}
+					{% endif %} {{ post.sumhtml }}
 					<span class="more">
 						<a href="{{ site.url }}/{{ post.slug }}" title="{{ post.title }}"></a>
 					</span>

@@ -1,10 +1,8 @@
-
-		* {
+* {
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 	box-sizing: border-box;
 }
-
 
 html, body, div, span, applet, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
@@ -593,6 +591,7 @@ input[type=submit]:hover {
 	font-size: 0.8rem;
 }
 
+.favurl img,
 .adaptimg {
 	display: block;
 	max-height: 98vh;
@@ -603,6 +602,38 @@ input[type=submit]:hover {
 	padding: 0;
 	outline: 1px solid #333;
 }
+
+.favurl,
+.favurl:hover {
+	border: none;
+	position: relative;
+	display: block;
+}
+
+.favurl img {
+	z-index:1;
+	opacity: 0.7;
+}
+
+.favurl::after,
+.favurl:hover::after {
+	display: block;
+	position: absolute;
+	opacity: 0.6;
+	right: 0;
+	left: 0;
+	bottom: 1rem;
+	content:attr(href);
+	padding: 0.5rem 1rem;
+	font-weight: bold;
+	color: #fff;
+	background-color: #000;
+}
+
+.favurl:hover::after {
+  opacity: 0.8;
+}
+
 
 .w25,
 .w33 {
@@ -637,14 +668,15 @@ input[type=submit]:hover {
 	font-size: 0.7rem;
 	text-align:center;
 }
-.exif ul {
-	list-style-type: none;
+.exif dt {
+	display: none;
+	visibility: hidden;
 }
-.exif ul li {
+.exif dd {
 	display: inline-block;
 	margin: 0 0.3rem;
 }
-.exif ul li i {
+.exif dd i {
 	margin-right: 0.3rem;
 }
 
@@ -912,4 +944,3 @@ input[type=submit]:hover {
 	}
 
 }
-	
