@@ -25,7 +25,8 @@ import frontmatter
 from slugify import slugify
 import langdetect
 import requests
-from breadability.readable import Article
+#from breadability.readable import Article
+from newspaper import Article as newspaper3k
 from whoosh import index
 from whoosh import qparser
 import jinja2
@@ -34,6 +35,7 @@ import shared
 from webmentiontools.send import WebmentionSend
 from bleach import clean
 from emoji import UNICODE_EMOJI
+from bs4 import BeautifulSoup
 
 def splitpath(path):
     parts = []
@@ -114,8 +116,8 @@ class Indexer(object):
         ]
 
         content_remote = []
-        for url, offlinecopy in singular.offlinecopies.items():
-            content_remote.append("%s" % offlinecopy)
+        #for url, offlinecopy in singular.offlinecopies.items():
+            #content_remote.append("%s" % offlinecopy)
 
         weight = 1
         if singular.isbookmark:
@@ -154,15 +156,13 @@ class Indexer(object):
     def finish(self):
         self.writer.commit()
 
+
 class OfflineCopy(object):
     def __init__(self, url):
         self.url = url
-        self.fname = hashlib.sha1(url.encode('utf-8')).hexdigest()
-        self.targetdir = os.path.abspath(
-            shared.config.get('source', 'offlinecopiesdir')
-        )
+        self.fname = "%s.md" % slugify(re.sub(r"^https?://", "", url))[:200]
         self.target = os.path.join(
-            self.targetdir,
+            shared.config.get('source', 'offlinecopiesdir'),
             self.fname
         )
         self.fm = frontmatter.loads('')
@@ -170,6 +170,10 @@ class OfflineCopy(object):
             'url': self.url,
             'date': arrow.utcnow().format("YYYY-MM-DDTHH:mm:ssZ"),
         }
+        self.headers = requests.utils.default_headers()
+        self.headers.update({
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0',
+        })
 
     def __repr__(self):
         return self.fm.content
@@ -183,6 +187,42 @@ class OfflineCopy(object):
         with open(self.target, 'wt') as f:
             f.write(frontmatter.dumps(self.fm))
 
+    @property
+    def archiveorgurl(self):
+        a = self.fetch(
+            "http://archive.org/wayback/available?url=%s" % self.url,
+        )
+        if not a:
+            return None
+
+        try:
+            a = json.loads(a.text)
+            return a.get(
+                'archived_snapshots', {}
+            ).get(
+                'closest', {}
+            ).get(
+                'url', None
+            )
+        except Exception as e:
+            logging.error("archive.org parsing failed: %s", e)
+            return None
+
+    def fetch(self, url):
+        try:
+            r = requests.get(
+                self.url,
+                allow_redirects=True,
+                timeout=60,
+                headers=self.headers
+            )
+            if r.status_code == requests.codes.ok:
+                return r
+        except Exception as e:
+            return None
+
+
+
     def run(self):
         if os.path.isfile(self.target):
             with open(self.target) as f:
@@ -190,39 +230,17 @@ class OfflineCopy(object):
                 return
 
         logging.info("prepairing offline copy of %s", self.url)
-        headers = requests.utils.default_headers()
-        headers.update({
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        })
+        r = self.fetch(self.url)
+        if not r:
+            r = self.fetch(self.archiveorgurl)
 
-        try:
-            r = requests.get(
-                self.url,
-                allow_redirects=True,
-                timeout=60,
-                headers=headers
-            )
-        except Exception as e:
-            logging.error("%s failed:\n%s", self.url, e)
-            self.write()
-            return
+        if r:
+            if r.url != self.url:
+                self.fm.metadata['realurl'] = r.url
+            self.fm.content = r.text
 
-        if r.status_code != requests.codes.ok:
-            logging.warning("%s returned %s", self.url, r.status_code)
-            self.write()
-            return
-
-        if not len(r.text):
-            logging.warning("%s was empty", self.url)
-            self.write()
-            return
-
-        doc = Article(r.text, url=self.url)
-        self.fm.metadata['title'] = doc._original_document.title
-        self.fm.metadata['realurl'] = r.url
-        self.fm.content = shared.Pandoc(False).convert(doc.readable)
         self.write()
+        return
 
 
 class Renderer(object):
@@ -551,7 +569,7 @@ class WebImage(object):
         self.alttext = ''
         self.sizes = []
         self.fallbacksize = int(shared.config.get('common','fallbackimg', fallback='720'))
-        self.cl = None
+        self.cl = ''
         self.singleimage = False
 
         for size in shared.config.options('downsize'):
@@ -587,35 +605,118 @@ class WebImage(object):
             )
 
     def __str__(self):
-        if self.is_downsizeable and not self.cl:
-            uphoto = ''
-            if self.singleimage:
-                uphoto = ' u-photo'
-            return '\n<figure class="photo"><a target="_blank" class="adaptive%s" href="%s"><img src="%s" class="adaptimg" alt="%s" /></a><figcaption class=\"caption\">%s%s</figcaption></figure>\n' % (
-                uphoto,
+        if self.is_downsizeable:
+            if self.singleimage and not self.cl:
+                self.cl = '.u-photo'
+            elif self.singleimage:
+                self.cl = '.u-photo %s' % self.cl
+
+            return '[![%s](%s "%s%s"){.adaptimg}](%s){.adaptive %s}' % (
+                self.alttext,
+                self.fallback,
+                self.fname,
+                self.ext,
                 self.target,
-                self.fallback,
-                self.alttext,
-                self.fname,
-                self.ext
+                self.cl
             )
-        elif self.cl:
-            self.cl = self.cl.replace('.', ' ')
-            return '<img src="%s" class="%s" alt="%s" title="%s%s" />' % (
-                self.fallback,
-                self.cl,
+        else:
+            if not self.cl:
+                self.cl = '.aligncenter'
+            return '![%s](%s "%s%s"){%s}' % (
                 self.alttext,
+                self.fallback,
                 self.fname,
-                self.ext
+                self.ext,
+                self.cl
             )
 
-        else:
-            return '<img src="%s" class="aligncenter" alt="%s" title="%s%s" />' % (
-                self.fallback,
-                self.alttext,
-                self.fname,
-                self.ext
-            )
+    @property
+    def exif(self):
+        if not self.is_photo:
+            return {}
+
+        if hasattr(self, '_exif'):
+            return self._exif
+
+        exif = {}
+        mapping = {
+            'camera': [
+                'Model'
+            ],
+            'aperture': [
+                'FNumber',
+                'Aperture'
+            ],
+            'shutter_speed': [
+                'ExposureTime'
+            ],
+            'focallength35mm': [
+                'FocalLengthIn35mmFormat',
+            ],
+            'focallength': [
+                'FocalLength',
+            ],
+            'iso': [
+                'ISO'
+            ],
+            'lens': [
+                'LensID',
+            ],
+            'date': [
+                'CreateDate',
+                'DateTimeOriginal',
+            ],
+            'geo_latitude': [
+                'GPSLatitude'
+            ],
+            'geo_longitude': [
+                'GPSLongitude'
+            ],
+        }
+
+        for ekey, candidates in mapping.items():
+            for candidate in candidates:
+                maybe = self.meta.get(candidate, None)
+                if maybe:
+                    if 'geo_' in ekey:
+                        exif[ekey] = round(float(maybe), 5)
+                    else:
+                        exif[ekey] = maybe
+                    break
+
+        self._exif = exif
+        return self._exif
+
+    #def __str__(self):
+        #if self.is_downsizeable and not self.cl:
+            #uphoto = ''
+            #if self.singleimage:
+                #uphoto = ' u-photo'
+            #return '\n<figure class="photo"><a target="_blank" class="adaptive%s" href="%s"><img src="%s" class="adaptimg" alt="%s" /></a><figcaption class=\"caption\">%s%s</figcaption></figure>\n' % (
+                #uphoto,
+                #self.target,
+                #self.fallback,
+                #self.alttext,
+                #self.fname,
+                #self.ext
+            #)
+        #elif self.cl:
+            #self.cl = self.cl.replace('.', ' ')
+            #return '<img src="%s" class="%s" alt="%s" title="%s%s" />' % (
+                #self.fallback,
+                #self.cl,
+                #self.alttext,
+                #self.fname,
+                #self.ext
+            #)
+
+        #else:
+            #return '<img src="%s" class="aligncenter" alt="%s" title="%s%s" />' % (
+                #self.fallback,
+                #self.alttext,
+                #self.fname,
+                #self.ext
+            #)
 
     @property
     def rssenclosure(self):
@@ -869,6 +970,9 @@ class Taxonomy(BaseIter):
             return "%s/%d/index.html" % (self.pagep, page)
 
     async def render(self, renderer):
+        if not self.slug or self.slug is 'None':
+            return
+
         self.__mkdirs()
         page = 1
         testpath = self.tpath(page)
@@ -907,7 +1011,8 @@ class Taxonomy(BaseIter):
                 'taxonomy': self.taxonomy,
                 'paged': page,
                 'total': self.pages,
-                'perpage': pagination
+                'perpage': pagination,
+                'lastmod': arrow.get(self.mtime).datetime
             },
             'site': renderer.sitevars,
             'posts': posttmpls,
@@ -1100,12 +1205,41 @@ class Singular(BaseRenderable):
     def __parse(self):
         with open(self.path, mode='rt') as f:
             self.meta, self.content = frontmatter.parse(f.read())
-            self.__filter_images()
+        self.__filter_favs()
+        self.__filter_images()
         if self.isphoto:
             self.content = "%s\n%s" % (
                 self.content,
                 self.photo
             )
+        # REMOVE THIS
+        trigger = self.offlinecopies
+
+    def __filter_favs(self):
+        url = self.meta.get('favorite-of',
+            self.meta.get('like-of',
+                self.meta.get('bookmark-of',
+                    False
+                )
+            )
+        )
+        img = self.meta.get('image', False)
+        if not img:
+            return
+        if not url:
+            return
+
+        c = '[![%s](/%s/%s)](%s){.favurl}' % (
+            self.title,
+            shared.config.get('source', 'files'),
+            img,
+            url
+        )
+
+        if self.isbookmark:
+            c = "%s\n\n%s" % (c, self.content)
+
+        self.content = c
 
     def __filter_images(self):
         linkto = False
@@ -1191,6 +1325,8 @@ class Singular(BaseRenderable):
             'bookmark-of': 'bookmark',
             'repost-of': 'repost',
             'in-reply-to': 'reply',
+            'favorite-of': 'fav',
+            'like-of': 'like',
         }
         reactions = {}
 
@@ -1282,6 +1418,25 @@ class Singular(BaseRenderable):
         return self.meta.get('bookmark-of', False)
 
     @property
+    def isreply(self):
+        return self.meta.get('in-reply-to', False)
+
+    # TODO
+    #@property
+    #def isrvsp(self):
+    # r'<data class="p-rsvp" value="([^"])">([^<]+)</data>'
+
+    @property
+    def isfav(self):
+        r = False
+        for maybe in ['like-of', 'favorite-of']:
+            maybe = self.meta.get(maybe, False)
+            if maybe:
+                r = maybe
+                break
+        return r
+
+    @property
     def ispage(self):
         if not self.meta:
             return True
@@ -1289,7 +1444,11 @@ class Singular(BaseRenderable):
 
     @property
     def isonfront(self):
-        if self.ispage or self.isbookmark:
+        if self.ispage:
+            return False
+        if self.isbookmark:
+            return False
+        if self.isfav:
             return False
         return True
 
@@ -1366,59 +1525,9 @@ class Singular(BaseRenderable):
     @property
     def exif(self):
         if not self.isphoto:
-            return None
+            return {}
 
-        if hasattr(self, '_exif'):
-            return self._exif
-
-        exif = {}
-        mapping = {
-            'camera': [
-                'Model'
-            ],
-            'aperture': [
-                'FNumber',
-                'Aperture'
-            ],
-            'shutter_speed': [
-                'ExposureTime'
-            ],
-            'focallength35mm': [
-                'FocalLengthIn35mmFormat',
-            ],
-            'focallength': [
-                'FocalLength',
-            ],
-            'iso': [
-                'ISO'
-            ],
-            'lens': [
-                'LensID',
-            ],
-            'date': [
-                'CreateDate',
-                'DateTimeOriginal',
-            ],
-            'geo_latitude': [
-                'GPSLatitude'
-            ],
-            'geo_longitude': [
-                'GPSLongitude'
-            ],
-        }
-
-        for ekey, candidates in mapping.items():
-            for candidate in candidates:
-                maybe = self.photo.meta.get(candidate, None)
-                if maybe:
-                    if 'geo_' in ekey:
-                        exif[ekey] = round(float(maybe), 5)
-                    else:
-                        exif[ekey] = maybe
-                    break
-
-        self._exif = exif
-        return self._exif
+        return self.photo.exif
 
     @property
     def rssenclosure(self):
@@ -1441,7 +1550,8 @@ class Singular(BaseRenderable):
             'category': self.category,
             'reactions': self.reactions,
             'updated': self.updated.datetime,
-            'summary': self.sumhtml,
+            'summary': self.summary,
+            'sumhtml': self.sumhtml,
             'exif': self.exif,
             'lang': self.lang,
             'syndicate': '',
@@ -1459,20 +1569,8 @@ class Singular(BaseRenderable):
     def shortslug(self):
         if hasattr(self, '_shortslug'):
             return self._shortslug
-        self._shortslug = self.baseN(self.pubtime)
+        self._shortslug = shared.baseN(self.pubtime)
         return self._shortslug
-
-    @staticmethod
-    def baseN(num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
-        """ Used to create short, lowecase slug for a number (an epoch) passed """
-        num = int(num)
-        return ((num == 0) and numerals[0]) or (
-            Singular.baseN(
-                num // b,
-                b,
-                numerals
-            ).lstrip(numerals[0]) + numerals[num % b]
-        )
 
     async def rendercomments(self, renderer):
         for comment in self.comments:
@@ -1507,9 +1605,6 @@ class Singular(BaseRenderable):
                 logging.debug('%s exists and up-to-date (lastmod: %d)', target, ttime)
                 return
 
-        #if not os.path.isdir(targetdir):
-            #os.mkdir(targetdir)
-
         tmplvars = {
             'post': self.tmplvars,
             'site': renderer.sitevars,
@@ -1517,11 +1612,6 @@ class Singular(BaseRenderable):
         }
         r = renderer.j2.get_template(self.tmplfile).render(tmplvars)
         self.writerendered(target, r, mtime)
-        #with open(target, "w") as html:
-            #logging.debug('writing %s', target)
-            #html.write(r)
-            #html.close()
-        #os.utime(target, (mtime, mtime))
 
 
     async def ping(self, pinger):
@@ -1542,7 +1632,11 @@ class Singular(BaseRenderable):
 
             logging.info("sending webmention from %s to %s", self.url, target)
             ws = WebmentionSend(self.url, target)
-            ws.send(allow_redirects=True, timeout=30)
+            try:
+                ws.send(allow_redirects=True, timeout=30)
+            except Exception as e:
+                logging.error('ping failed to %s', target)
+
             pinger.db[h] = record
 
 class Webmentioner(object):

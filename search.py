@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import os
+#import sys
+#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import asyncio
 import uvloop
-import os
-
 from sanic import Sanic
 import sanic.response
 from sanic.log import log as logging
@@ -66,8 +68,8 @@ if __name__ == '__main__':
     jenv = jinja2.Environment(loader=jldr)
     tmpl = jenv.get_template('searchresults.html')
 
-    @app.route("/search")
-    async def search(request, methods=["GET"]):
+    @app.route("/search", methods=["GET"])
+    async def search(request):
         query = request.args.get('s')
         r = SearchHandler(query, tmpl)
         return r

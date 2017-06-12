@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import asyncio
 import uvloop
 import os
@@ -111,8 +113,7 @@ class WebmentionHandler(object):
     def _save(self):
         target = os.path.join(
             shared.config.get('source', 'commentsdir'),
-            self.mhash,
-            '.md'
+            "%s.md" % self.mhash
         )
 
         if os.path.isfile(target):

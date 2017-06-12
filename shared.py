@@ -25,6 +25,18 @@ def __expandconfig(config):
     ))
     return config
 
+def baseN(num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
+    """ Used to create short, lowecase slug for a number (an epoch) passed """
+    num = int(num)
+    return ((num == 0) and numerals[0]) or (
+        baseN(
+            num // b,
+            b,
+            numerals
+        ).lstrip(numerals[0]) + numerals[num % b]
+    )
+
+
 ARROWISO = 'YYYY-MM-DDTHH:mm:ssZ'
 STRFISO = '%Y-%m-%dT%H:%M:%S%z'
 

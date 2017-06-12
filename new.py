@@ -9,8 +9,6 @@ import glob
 import sys
 import tempfile
 from slugify import slugify
-
-import nasg
 import shared
 
 if __name__ == '__main__':
@@ -78,7 +76,7 @@ if __name__ == '__main__':
             elif args['repost']:
                 slug = slugify("re: %s" % (args['repost']), only_ascii=True, lower=True)
             else:
-                slug = nasg.Singular.baseN(now.timestamp)
+                slug = shared.baseN(now.timestamp)
             args['slug'] = input('Slug [%s]: ' % (slug)) or slug
 
             if args['slug'] in slugs:
