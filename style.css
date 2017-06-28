@@ -847,9 +847,11 @@ input[type=submit]:hover {
 
 @media print {
 
+
 	html, body {
 		font-size:10pt !important;
 		text-shadow:unset !important;
+		background-color: transparent;
 	}
 
 	@page {
@@ -862,6 +864,7 @@ input[type=submit]:hover {
 	.content-body {
 		max-width: 100% !important;
 		margin: 0 !important;
+		background-color: transparent;
 	}
 
 	h1,
@@ -884,13 +887,13 @@ input[type=submit]:hover {
 	}
 
 	.h-entry {
-    -webkit-columns: 2 20rem;
-    -moz-columns: 2 20rem;
-    columns: 2 20rem;
+	-webkit-columns: 2 20rem;
+	-moz-columns: 2 20rem;
+	columns: 2 20rem;
 
-    -webkit-column-gap: 1rem;
-    -moz-column-gap: 1rem;
-    column-gap: 1rem;
+	-webkit-column-gap: 1rem;
+	-moz-column-gap: 1rem;
+	column-gap: 1rem;
 	}
 
 	.e-content .photo {
@@ -932,9 +935,9 @@ input[type=submit]:hover {
 	}
 
   .footnotes ol li a {
-    display: block;
-    overflow: visible;
-    white-space: normal;
+	display: block;
+	overflow: visible;
+	white-space: normal;
   }
 
 	.footnotes ol li a[href^="#"],
