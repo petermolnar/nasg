@@ -119,7 +119,7 @@ if __name__ == '__main__':
         doc.content = content
 
         tmpsave = os.path.join(tempfile.gettempdir(), "%s.md" % slug)
-        saveto = input('Save to: [%s]: ' % categories) or tmpsave
+        saveto = input('Save to: [%s]: ' % categories) or 'bookmark'
 
         if tmpsave != saveto:
             saveto = os.path.join(shared.config.get('source', 'contentdir'), saveto, "%s.md" % slug)

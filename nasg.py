@@ -16,6 +16,9 @@ import math
 import asyncio
 import csv
 import getpass
+import quopri
+import base64
+import mimetypes
 
 import magic
 import arrow
@@ -33,6 +36,7 @@ from webmentiontools.send import WebmentionSend
 from bleach import clean
 from emoji import UNICODE_EMOJI
 from bs4 import BeautifulSoup
+from readability.readability import Document
 import shared
 
 def splitpath(path):
@@ -89,7 +93,8 @@ class BaseRenderable(object):
         return
 
 
-    def writerendered(self, content):
+    def writerendered(self, content, mtime=None):
+        mtime = mtime or self.mtime
         d = os.path.dirname(self.target)
         if not os.path.isdir(d):
             os.mkdir(d)
@@ -98,7 +103,7 @@ class BaseRenderable(object):
             logging.debug('writing %s', self.target)
             html.write(content)
             html.close()
-        os.utime(self.target, (self.mtime, self.mtime))
+        os.utime(self.target, (mtime, mtime))
 
 
 class Indexer(object):
@@ -197,14 +202,25 @@ class Indexer(object):
         self.writer.commit()
 
 
-class OfflineCopy(object):
-    def __init__(self, url):
+class OfflineArchive(object):
+    # keep in mind that these are frontmattered HTML files with full HTML and embedded images
+    # they can get VERY large
+    def __init__(self, url, content=None, decode_email=False):
         self.url = url
-        self.fname = "%s.md" % slugify(re.sub(r"^https?://", "", url))[:200]
+        self.parsed = urllib.parse.urlparse(url)
+        self.fbase = shared.slugfname(url)
+        self.fname = "%s.md" % self.fbase
         self.target = os.path.join(
             shared.config.get('source', 'offlinecopiesdir'),
             self.fname
         )
+        self.targetd = os.path.join(
+            shared.config.get('source', 'offlinecopiesdir'),
+            self.fbase
+        )
+        if not os.path.isdir(self.targetd):
+            os.mkdir(self.targetd)
+
         self.fm = frontmatter.loads('')
         self.fm.metadata = {
             'url': self.url,
@@ -215,36 +231,152 @@ class OfflineCopy(object):
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0',
         })
 
-    def __repr__(self):
-        return self.fm.content
+        self.skip_fetch = False
+        if content:
+            self.skip_fetch = True
+            if decode_email:
+                content = quopri.decodestring(content)
+                content = str(content, 'utf-8', errors='replace')
+            self.fm.content = content
+        #self.tmp = tempfile.mkdtemp(
+            #'offlinearchive_',
+            #dir=tempfile.gettempdir()
+        #)
+        #atexit.register(
+            #shutil.rmtree,
+            #os.path.abspath(self.tmp)
+        #)
+        #self.images = []
 
-    def write(self):
+        self.exists = os.path.isfile(self.target)
+
+    def _getimage(self, src):
+        imgname, imgext = os.path.splitext(os.path.basename(src))
+        imgtarget = os.path.join(
+            self.targetd,
+            "%s%s" % (slugify(imgname, only_ascii=True, lower=True), imgext)
+        )
+        try:
+            logging.debug('donwloading image %s', src)
+            r = requests.get(
+                src,
+                allow_redirects=True,
+                timeout=60,
+                stream=True
+            )
+            with open(imgtarget, 'wb') as f:
+                for chunk in r.iter_content():
+                    if chunk:
+                        f.write(chunk)
+
+            self.fm.content = self.fm.content.replace(
+                src,
+                '%s/%s' % (self.fbase, imgname)
+            )
+        except Exception as e:
+            logging.error('pulling image %s failed: %s', src, e)
+            return
+
+    def _get_images(self):
+        logging.debug("trying to save images")
+        soup = BeautifulSoup(self.fm.content, 'lxml')
+
+        embedded = re.compile(r'^data:.*')
+        for img in soup.find_all('img'):
+            src = img.get('src')
+            if not src:
+                continue
+            if embedded.match(src):
+                continue
+
+            im = urllib.parse.urlparse(src)
+            if not im.scheme:
+                im = im._replace(scheme=self.parsed.scheme)
+            if not im.netloc:
+                im = im._replace(netloc=self.parsed.netloc)
+
+            self._getimage(im.geturl())
+
+
+    #def _getimage(self, src):
+        #tmp = os.path.join(self.tmp, "%s" % slugify(os.path.basename(src))[:200])
+        #try:
+            #r = requests.get(
+                #src,
+                #allow_redirects=True,
+                #timeout=60,
+                #stream=True
+            #)
+            #with open(tmp, 'wb') as f:
+                #for chunk in r.iter_content():
+                    #if chunk:
+                        #f.write(chunk)
+
+            #logging.debug('trying to embed %s', src)
+            #with open(tmp, 'rb') as imgdata:
+                #data = str(base64.b64encode(imgdata.read()), 'ascii')
+                #mimetype, encoding = mimetypes.guess_type(tmp)
+                #self.fm.content = self.fm.content.replace(
+                    #src,
+                    #"data:%s;base64,%s" % (mimetype, data)
+                #)
+        #except Exception as e:
+            #logging.error('pulling image %s failed: %s', src, e)
+            #return
+
+    #def _embed_images(self):
+        #logging.debug("trying to embed images")
+        #soup = BeautifulSoup(self.fm.content, 'lxml')
+
+        #embedded = re.compile(r'^data:.*')
+        #for img in soup.find_all('img'):
+            #src = img.get('src')
+            #if not src:
+                #continue
+            #if embedded.match(src):
+                #continue
+
+            #im = urllib.parse.urlparse(src)
+            #if not im.scheme:
+                #im = im._replace(scheme=self.parsed.scheme)
+            #if not im.netloc:
+                #im = im._replace(netloc=self.parsed.netloc)
+
+            #self._getimage(im.geturl())
+
+
+    def save(self):
         logging.info(
             "savig offline copy of\n\t%s to:\n\t%s",
             self.url,
             self.target
         )
+
         with open(self.target, 'wt') as f:
             f.write(frontmatter.dumps(self.fm))
 
-
     @property
     def archiveorgurl(self):
+        logging.debug("trying archive.org for %s", self.url)
         a = self.fetch(
             "http://archive.org/wayback/available?url=%s" % self.url,
         )
         if not a:
+            logging.debug("no entry for %s on archive.org", self.url)
             return None
 
         try:
             a = json.loads(a.text)
-            return a.get(
+            aurl = a.get(
                 'archived_snapshots', {}
             ).get(
                 'closest', {}
             ).get(
                 'url', None
             )
+            logging.debug("found %s in archive.org for %s", aurl, self.url)
+            self.updateurl(aurl)
+            return self.fetch(aurl)
         except Exception as e:
             logging.error("archive.org parsing failed: %s", e)
             return None
@@ -264,24 +396,40 @@ class OfflineCopy(object):
             return None
 
 
-    def run(self):
+    def read():
         if os.path.isfile(self.target):
             with open(self.target) as f:
                 self.fm = frontmatter.loads(f.read())
                 return
 
-        logging.info("prepairing offline copy of %s", self.url)
-        r = self.fetch(self.url)
-        if not r:
-            r = self.fetch(self.archiveorgurl)
 
-        if r:
-            if r.url != self.url:
-                self.fm.metadata['realurl'] = r.url
+    def run(self):
+        if self.exists:
+            logging.info("offline archive for %s already exists", self.url)
+            return
+
+        logging.info("prepairing offline copy of %s", self.url)
+
+        if not self.skip_fetch:
+            r = self.fetch(self.url)
+
+            # in case it's not, try to look for an archive.org url:
+            if not r:
+                logging.warning("couldn't get live version of %s, trying archive.org", self.url)
+                r = self.fetch(self.archiveorgurl)
+
+            # no live and no archive.org entry :((
+            # howver, by miracle, I may already have a copy, so skip if it's there already
+            if not r:
+                logging.error("no live or archive version of %s found :((", self.url)
+                if not self.exists:
+                    self.save()
+                return
+
             self.fm.content = r.text
 
-        self.write()
-        return
+        self._get_images()
+        self.save()
 
 
 class Renderer(object):
@@ -302,9 +450,10 @@ class Renderer(object):
     @staticmethod
     def jinja_filter_date(d, form='%Y-%m-%d %H:%m:%S'):
         if d == 'now':
-            return arrow.now().strftime(form)
+            d = arrow.now().datetime
         if form == 'c':
-            form = '%Y-%m-%dT%H:%M:%S%z'
+            return d.isoformat()
+            #form = '%Y-%m-%dT%H:%M:%S%z'
         return d.strftime(form)
 
 
@@ -422,7 +571,7 @@ class Comment(BaseRenderable):
             'content': self.content,
             'html': self.html,
             'source': self.source,
-            'target': self.target,
+            'target': self.targeturl,
             'type': self.meta.get('type', 'webmention'),
             'reacji': self.reacji,
             'fname': self.fname
@@ -457,32 +606,41 @@ class Comment(BaseRenderable):
 
 
     @property
+    def targeturl(self):
+        if hasattr(self, '_targeturl'):
+            return self._targeturl
+        t = self.meta.get('target', shared.config.get('site', 'url'))
+        self._targeturl = '{p.path}'.format(p=urllib.parse.urlparse(t)).strip('/')
+        return self._targeturl
+
+    @property
     def target(self):
         if hasattr(self, '_target'):
             return self._target
-        t = self.meta.get('target', shared.config.get('site', 'url'))
-        self._target = '{p.path}'.format(p=urllib.parse.urlparse(t)).strip('/')
-        return self._target
 
-
-    async def render(self, renderer):
-        logging.info("rendering and saving comment %s", self.fname)
         targetdir = os.path.abspath(os.path.join(
             shared.config.get('target', 'builddir'),
             shared.config.get('site', 'commentspath'),
             self.fname
         ))
-        target = os.path.join(targetdir, 'index.html')
 
-        if not shared.config.getboolean('params', 'force') and os.path.isfile(target):
-            ttime = int(os.path.getmtime(target))
+        self._target = os.path.join(targetdir, 'index.html')
+        return self._target
+
+
+    async def render(self, renderer):
+        logging.info("rendering and saving comment %s", self.fname)
+
+        if not shared.config.getboolean('params', 'force') and os.path.isfile(self.target):
+            ttime = int(os.path.getmtime(self.target))
             logging.debug('ttime is %d mtime is %d', ttime, self.mtime)
             if ttime == self.mtime:
-                logging.debug('%s exists and up-to-date (lastmod: %d)', target, ttime)
+                logging.debug(
+                    '%s exists and up-to-date (lastmod: %d)',
+                    self.target,
+                    ttime
+                )
                 return
-
-        #if not os.path.isdir(targetdir):
-            #os.mkdir(targetdir)
 
         tmplvars = {
             'reply': self.tmplvars,
@@ -719,7 +877,8 @@ class WebImage(object):
         self._rssenclosure = {
             'mime': magic.Magic(mime=True).from_file(target['fpath']),
             'url': target['url'],
-            'size':  os.path.getsize(target['fpath'])
+            'size':  os.path.getsize(target['fpath']),
+            'fname':  self.fname
         }
         return self._rssenclosure
 
@@ -976,8 +1135,8 @@ class Taxonomy(BaseIter):
 
 
     async def render(self, renderer):
-        if not self.slug or self.slug is 'None':
-            return
+        #if not self.slug or self.slug is 'None':
+            #return
 
         self.__mkdirs()
         page = 1
@@ -1031,23 +1190,19 @@ class Taxonomy(BaseIter):
         os.utime(target, (self.mtime, self.mtime))
 
         if 1 == page:
-            target = os.path.join(self.feedp, 'index.rss')
-            logging.info("rendering RSS feed to %s", target)
-            r = renderer.j2.get_template('rss.html').render(tmplvars)
+            #target = os.path.join(self.feedp, 'index.rss')
+            #logging.info("rendering RSS feed to %s", target)
+            #r = renderer.j2.get_template('rss.html').render(tmplvars)
+            #with open(target, "wt") as html:
+                #html.write(r)
+            #os.utime(target, (self.mtime, self.mtime))
+
+            target = os.path.join(self.feedp, 'index.atom')
+            logging.info("rendering Atom feed to %s", target)
+            r = renderer.j2.get_template('atom.html').render(tmplvars)
             with open(target, "wt") as html:
                 html.write(r)
             os.utime(target, (self.mtime, self.mtime))
-
-            if not self.taxonomy or self.taxonomy == 'category':
-                t = shared.config.get('site', 'websuburl')
-                data = {
-                    'hub.mode': 'publish',
-                    'hub.url': "%s%s" % (
-                        shared.config.get('site', 'url'), self.baseurl
-                    )
-                }
-                logging.info("pinging %s with data %s", t, data)
-                requests.post(t, data=data)
 
         # ---
         # this is a joke
@@ -1080,6 +1235,18 @@ class Taxonomy(BaseIter):
                 html.write(frontmatter.dumps(fm))
             os.utime(target, (self.mtime, self.mtime))
         # ---
+
+        if 1 == page:
+            if not self.taxonomy or self.taxonomy == 'category':
+                t = shared.config.get('site', 'websuburl')
+                data = {
+                    'hub.mode': 'publish',
+                    'hub.url': "%s%s" % (
+                        shared.config.get('site', 'url'), self.baseurl
+                    )
+                }
+                logging.info("pinging %s with data %s", t, data)
+                requests.post(t, data=data)
 
 
 class Content(BaseIter):
@@ -1557,7 +1724,7 @@ class Singular(BaseRenderable):
             if not isinstance(maybe, list):
                 maybe = [maybe]
             for url in maybe:
-                copies[url] = OfflineCopy(url)
+                copies[url] = OfflineArchive(url)
                 copies[url].run()
 
         self.copies = copies
@@ -1601,7 +1768,8 @@ class Singular(BaseRenderable):
             'slug': self.fname,
             'shortslug': self.shortslug,
             'rssenclosure': self.rssenclosure,
-            'copies': self.offlinecopies,
+            #'copies': self.offlinecopies,
+            'copies': [],
             'comments': self.comments,
             'replies': self.replies,
             'reacjis': self.reacjis,
@@ -1615,6 +1783,15 @@ class Singular(BaseRenderable):
             return self._shortslug
         self._shortslug = shared.baseN(self.pubtime)
         return self._shortslug
+
+
+    @property
+    def target(self):
+        targetdir = os.path.abspath(os.path.join(
+            shared.config.get('target', 'builddir'),
+            self.fname
+        ))
+        return os.path.join(targetdir, 'index.html')
 
 
     async def rendercomments(self, renderer):
@@ -1638,17 +1815,15 @@ class Singular(BaseRenderable):
                 mtime = lctime
 
         logging.info("rendering and saving %s", self.fname)
-        targetdir = os.path.abspath(os.path.join(
-            shared.config.get('target', 'builddir'),
-            self.fname
-        ))
-        target = os.path.join(targetdir, 'index.html')
-
-        if not shared.config.getboolean('params', 'force') and os.path.isfile(target):
-            ttime = int(os.path.getmtime(target))
+        if not shared.config.getboolean('params', 'force') and os.path.isfile(self.target):
+            ttime = int(os.path.getmtime(self.target))
             logging.debug('ttime is %d mtime is %d', ttime, mtime)
             if ttime == mtime:
-                logging.debug('%s exists and up-to-date (lastmod: %d)', target, ttime)
+                logging.debug(
+                    '%s exists and up-to-date (lastmod: %d)',
+                    self.target,
+                    ttime
+                )
                 return
 
         tmplvars = {
@@ -1657,7 +1832,7 @@ class Singular(BaseRenderable):
             'taxonomy': {},
         }
         r = renderer.j2.get_template(self.tmplfile).render(tmplvars)
-        self.writerendered(target, r, mtime)
+        self.writerendered(r, mtime)
 
 
     async def ping(self, pinger):
@@ -1745,6 +1920,12 @@ class NASG(object):
             action='store_true',
             default=False,
             help='skip rendering'
+        )
+        parser.add_argument(
+            '--refetch',
+            action='store_true',
+            default=False,
+            help='force re-fetching offline archives'
         )
 
         params = vars(parser.parse_args())

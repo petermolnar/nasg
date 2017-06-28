@@ -14,6 +14,22 @@ from slugify import slugify
 
 from pprint import pprint
 
+""" TODO
+
+- following from:
+    - tumblr
+    - deviantart
+    - flickr
+    - wordpress.com
+    - twitter
+    - 500px
+
+
+"""
+
+
+
+
 class Bookmark(object):
     def __init__(self, title, url, fname=None):
         self.fm = frontmatter.loads('')
@@ -124,6 +140,37 @@ class Fav(object):
         with open(self.target, 'wt') as t:
             t.write(frontmatter.dumps(self.fm))
         os.utime(self.target, (self.arrow.timestamp, self.arrow.timestamp))
+
+
+class PinterestFav(Fav):
+    def __init__(self, url):
+        super(PinterestFav, self).__init__()
+        self.url = url
+        self.fname = "pinterest-%s.md" % (list(filter(None, url.split('/')))[-1])
+
+    def run(self):
+        try:
+            r = requests.get(self.url)
+            soup = bs4.BeautifulSoup(r.text, 'lxml')
+            ld = json.loads(soup.find('script', type='application/ld+json').text)
+            imgurl = ld.get('image')
+            self.saveimg(imgurl)
+
+            self.fm.metadata = {
+                'published': arrow.get(
+                    ld.get('datePublished', arrow.utcnow().timestamp)
+                ).format(shared.ARROWISO),
+                'title': ld.get('headline', self.url),
+                'favorite-of': self.url,
+                'image': self.imgname
+            }
+            content = ld.get('articleBody', '')
+            content = shared.Pandoc(False).convert(content)
+            self.fm.content = content
+
+        except Exception as e:
+            logging.error('saving pinterest fav %s failed: %s', self.url, e)
+            return
 
 
 class FlickrFav(Fav):
@@ -280,6 +327,31 @@ class FivehpxFavs(Favs):
                 fav.write()
 
 
+#class Following(object):
+    #def __init__(self, confgroup):
+        #self.confgroup = confgroup
+        #self.url = shared.config.get(confgroup, 'fav_api')
+
+
+#class FlickrFollowing(Following):
+    #def __init__(self):
+        #super(FlickrFollowing, self).__init__('flickr')
+        #self.params = {
+            #'method': 'flickr.contacts.getList',
+            #'api_key': shared.config.get('flickr', 'api_key'),
+            #'format': 'json',
+            #'nojsoncallback': '1',
+        #}
+
+    #def run(self):
+        #r = requests.get(self.url,params=self.params)
+        #js = json.loads(r.text)
+        #pprint(js)
+        #for contact in js.get('contacts', {}).get('contact', []):
+            #pprint(contact)
+
+
+
 if __name__ == '__main__':
     while len(logging.root.handlers) > 0:
         logging.root.removeHandler(logging.root.handlers[-1])
@@ -297,3 +369,6 @@ if __name__ == '__main__':
 
     fivehpx = FivehpxFavs()
     fivehpx.run()
+
+    #flickrfollow = FlickrFollowing()
+    #flickrfollow.run()
