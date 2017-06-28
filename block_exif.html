@@ -42,15 +42,5 @@
 			{{ post.exif.lens }}
 		</dd>
 {% endif %}
-{% if (post.exif.geo_latitude) and (post.exif.geo_longitude) %}
-		<dt>Coordinates</dt>
-		<dd>
-			<svg class="icon"><use xlink:href="#icon-location" /></svg>
-			<a class="h-geo geo p-location" href="https://www.bing.com/maps?cp={{ post.exif.geo_latitude}}~{{ post.exif.geo_longitude }}&v=2&lvl=16&sty=a&sp=point.{{ post.exif.geo_latitude}}_{{ post.exif.geo_longitude }}_{{ site.url|urlencode() ~ '/' ~ post.slug|urlencode() }}">
-				<span class="p-latitude">{{ post.exif.geo_latitude }}</span>
-				<span class="p-longitude">{{ post.exif.geo_longitude }}</span>
-			</a>
-		</dd>
-{% endif %}
 	</dl>
 </aside>
