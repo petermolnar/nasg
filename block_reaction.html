@@ -36,3 +36,18 @@
 		{% endif %}
 	{% endfor %}
 {% endif %}
+
+{% if post.reactions.fav %}
+	{% for reaction in post.reactions.fav %}
+		{% if post.title|length %}
+			<span class="p-name">{{ post.title }}</span><br />
+			<svg class="icon"><use xlink:href="#icon-repost" /></svg>
+			<a href="{{ reaction }}" class="u-favorite-of" title="Favorite of: {{ reaction }}">{{ reaction }}</a>
+		{% else %}
+			<svg class="icon"><use xlink:href="#icon-repost" /></svg>
+			<span class="p-name">
+				<a href="{{ reaction }}" class="u-favorite-of" title="Favorite of: {{ reaction }}">{{ reaction }}</a>
+			</span>
+		{% endif %}
+	{% endfor %}
+{% endif %}
