@@ -107,66 +107,6 @@ config = configparser.ConfigParser(
 config.read('config.ini')
 config = __expandconfig(config)
 
-
-class TokenDB(object):
-    def __init__(self):
-        self.db = os.path.abspath(os.path.join(
-            config.get('common', 'basedir'),
-            'tokens.json'
-        ))
-        self.tokens = {}
-        self.refresh()
-
-    def refresh(self):
-        if os.path.isfile(self.db):
-            with open(self.db, 'rt') as f:
-                self.tokens = json.loads(f.read())
-
-    def save(self):
-        with open(self.db, 'wt') as f:
-            f.write(
-                json.dumps(
-                    self.tokens, indent=4, sort_keys=True
-                )
-            )
-        self.refresh()
-
-    def get_token(self, token):
-        return self.tokens.get(token, None)
-
-    def get_service(self, service):
-        s = self.tokens.get(service, None)
-        if s:
-            s = self.get_token(s)
-        return s
-
-    def set_service(self, service, token):
-        self.tokens.update({
-            service: token
-        })
-        #self.save()
-
-    def set_token(self, token, secret):
-        self.tokens.update({
-            token: {
-                'oauth_token': token,
-                'oauth_token_secret': secret
-            }
-        })
-        #self.save()
-
-    def set_verifier(self, token, verifier):
-        t = self.tokens.get(token)
-        t.update({
-            'verifier': verifier
-        })
-        self.tokens.update({
-            token: t
-        })
-        #self.save()
-
-tokendb = TokenDB()
-
 class CMDLine(object):
     def __init__(self, executable):
         self.executable = self._which(executable)

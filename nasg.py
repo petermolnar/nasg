@@ -157,6 +157,7 @@ class Indexer(object):
             singular.fname,
             singular.summary,
             singular.content,
+            singular.reactions.values()
         ]
 
         content_remote = []
@@ -164,7 +165,7 @@ class Indexer(object):
             #content_remote.append("%s" % offlinecopy)
 
         weight = 1
-        if singular.isbookmark:
+        if singular.isbookmark or singular.isfav:
             weight = 10
         if singular.ispage:
             weight = 100
@@ -249,6 +250,24 @@ class OfflineArchive(object):
         #self.images = []
 
         self.exists = os.path.isfile(self.target)
+
+    #def read(self):
+        #if not self.exists:
+            #return ''
+
+        #with open(self.target, 'rt') as f:
+            #self.fm = frontmatter.loads(f.read())
+
+        #readable = ''
+        #try:
+            #readable = Document(self.fm.content)
+            #readable = shared.Pandoc(False).convert(readable.summary())
+            #readable = shared.Pandoc().convert(readable)
+        #except Exception as e:
+            #logging.error('Failed to readable %s', self.target)
+
+        #return readable
+
 
     def _getimage(self, src):
         imgname, imgext = os.path.splitext(os.path.basename(src))
@@ -396,11 +415,11 @@ class OfflineArchive(object):
             return None
 
 
-    def read():
-        if os.path.isfile(self.target):
-            with open(self.target) as f:
-                self.fm = frontmatter.loads(f.read())
-                return
+    #def read():
+        #if os.path.isfile(self.target):
+            #with open(self.target) as f:
+                #self.fm = frontmatter.loads(f.read())
+                #return
 
 
     def run(self):
@@ -1394,7 +1413,6 @@ class Singular(BaseRenderable):
                 self.content,
                 self.photo
             )
-        # REMOVE THIS
         trigger = self.offlinecopies
 
 
@@ -1406,18 +1424,27 @@ class Singular(BaseRenderable):
                 )
             )
         )
-        img = self.meta.get('image', False)
-        if not img:
-            return
+
         if not url:
             return
 
-        c = '[![%s](/%s/%s)](%s){.favurl}' % (
-            self.title,
-            shared.config.get('source', 'files'),
-            img,
-            url
-        )
+        img = self.meta.get('image', False)
+        imgs = self.meta.get('images', [])
+        if img:
+            imgs.append(img)
+
+        if not imgs or not len(imgs):
+            return
+
+        c = ''
+        for i in imgs:
+            c = '%s\n[![%s](/%s/%s)](%s){.favurl}' % (
+                c,
+                self.title,
+                shared.config.get('source', 'files'),
+                i,
+                url
+            )
 
         if self.isbookmark:
             c = "%s\n\n%s" % (c, self.content)
@@ -1674,7 +1701,9 @@ class Singular(BaseRenderable):
         for maybe in ['title', 'bookmark-of', 'in-reply-to', 'repost-of']:
             maybe = self.meta.get(maybe, False)
             if maybe:
-                self._title = maybe
+                if isinstance(maybe, list):
+                    maybe = maybe.pop()
+                self._title = maybe.replace('\n', ' ').replace('\r', '')
                 break
         return self._title
 
@@ -1717,18 +1746,19 @@ class Singular(BaseRenderable):
             return self.copies
 
         copies = {}
-        for maybe in ['bookmark-of', 'in-reply-to', 'repost-of']:
+        for maybe in ['bookmark-of', 'in-reply-to', 'repost-of', 'favorite-of']:
             maybe = self.meta.get(maybe, False)
             if not maybe:
                 continue
             if not isinstance(maybe, list):
                 maybe = [maybe]
             for url in maybe:
-                copies[url] = OfflineArchive(url)
-                copies[url].run()
+                arch = OfflineArchive(url)
+                arch.run()
+                #copies[url] = arch.read()
 
-        self.copies = copies
-        return copies
+        #self.copies = copies
+        #return copies
 
 
     @property
@@ -1768,8 +1798,8 @@ class Singular(BaseRenderable):
             'slug': self.fname,
             'shortslug': self.shortslug,
             'rssenclosure': self.rssenclosure,
-            #'copies': self.offlinecopies,
-            'copies': [],
+            #'offlinecopies': self.offlinecopies,
+            #'copies': [],
             'comments': self.comments,
             'replies': self.replies,
             'reacjis': self.reacjis,

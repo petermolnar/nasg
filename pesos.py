@@ -11,24 +11,19 @@ import shutil
 import arrow
 import bs4
 from slugify import slugify
+import oauth
 
 from pprint import pprint
 
 """ TODO
 
-- following from:
-    - tumblr
-    - deviantart
-    - flickr
+- followings?
+
+- favs from:
     - wordpress.com
     - twitter
-    - 500px
-
 
 """
-
-
-
 
 class Bookmark(object):
     def __init__(self, title, url, fname=None):
@@ -122,8 +117,8 @@ class Fav(object):
             self.imgname
         )
 
-    def saveimg(self, url):
-        target = self.imgtarget
+    def saveimg(self, url, target=None):
+        target = target or self.imgtarget
         if os.path.isfile(target):
             logging.error("%s already exists, refusing to overwrite", target)
             return
@@ -259,6 +254,97 @@ class FivehpxFav(Fav):
             content = ''
         self.fm.content = content
 
+
+class TumblrFav(Fav):
+    def __init__(self, like):
+        super(TumblrFav, self).__init__()
+        self.like = like
+        self.blogname = like.get('blog_name')
+        self.postid = like.get('id')
+        self.fname = "tumblr-%s-%s.md" % (self.blogname, self.postid)
+        self.url = like.get('post_url')
+        self.images = []
+
+    def run(self):
+        icntr = 0
+        for p in self.like.get('photos', []):
+            i = p.get('original_size').get('url')
+            logging.debug('parsing image %s', i)
+            n = self.fname.replace('.md', '_%d.jpg' % icntr)
+            self.images.append(n)
+            nt = os.path.join(
+                shared.config.get('source', 'filesdir'),
+                n
+            )
+            self.saveimg(i, nt)
+            icntr = icntr + 1
+
+        self.arrow = arrow.get(
+            self.like.get('liked_timestamp',
+                self.like.get('date',
+                    arrow.utcnow().timestamp
+                )
+            )
+        )
+
+        self.fm.content = self.like.get('caption', '')
+
+        title = self.like.get('summary', '').strip()
+        if not len(title):
+            title = self.like.get('slug', '').strip()
+        if not len(title):
+            title = shared.slugfname(self.like.get('post_url'))
+
+        self.fm.metadata = {
+            'published': self.arrow.format(shared.ARROWISO),
+            'title': title,
+            'favorite-of': self.url,
+            'tumblr_tags': self.like.get('tags'),
+            'author': {
+                'name': self.like.get('blog_name'),
+                'url': 'http://%s.tumblr.com' % self.like.get('blog_name')
+            },
+            'images': self.images
+        }
+
+
+class DAFav(Fav):
+    def __init__(self, fav):
+        super(DAFav, self).__init__()
+        self.fav = fav
+        self.deviationid = fav.get('deviationid')
+        self.url = fav.get('url')
+        self.title = fav.get('title', False) or self.deviationid
+        self.author = self.fav.get('author').get('username')
+        self.fname = "deviantart-%s-by-%s.md" % (
+            slugify(self.title), slugify(self.author)
+        )
+        self.image = fav.get('content', {}).get('src')
+
+    def run(self):
+        self.saveimg(self.image)
+
+        self.arrow = arrow.get(
+            self.fav.get('published_time', arrow.utcnow().timestamp)
+        )
+
+        self.fm.metadata = {
+            'published': self.arrow.format(shared.ARROWISO),
+            'title': '%s' % self.title,
+            'favorite-of': self.url,
+            'da_tags': [t.get('tag_name') for t in self.fav.get('meta', {}).get('tags', [])],
+            'author': {
+                'name': self.author,
+                'url': 'https://%s.deviantart.com' % (self.author),
+            },
+            'image': self.imgname
+        }
+
+        content = self.fav.get('meta', {}).get('description', '')
+        content = shared.Pandoc(False).convert(content)
+        self.fm.content = content
+
+
 class Favs(object):
     def __init__(self, confgroup):
         self.confgroup = confgroup
@@ -327,6 +413,287 @@ class FivehpxFavs(Favs):
                 fav.write()
 
 
+class TumblrFavs(Favs):
+    def __init__(self):
+        super(TumblrFavs, self).__init__('tumblr')
+        self.oauth = oauth.TumblrOauth()
+        self.params = {
+            'after': self.lastpulled
+        }
+        self.likes = []
+
+    def getpaged(self, offset):
+        r = self.oauth.request(
+            self.url,
+            params={'offset': offset}
+        )
+        return json.loads(r.text)
+
+    def run(self):
+        r = self.oauth.request(
+            self.url,
+            params=self.params
+        )
+
+        js = json.loads(r.text)
+        total = int(js.get('response', {}).get('liked_count', 20))
+        print('total: %d' % total)
+        offset = 20
+        cntr = total - offset
+        likes = js.get('response', {}).get('liked_posts', [])
+        while cntr > 0:
+            paged = self.getpaged(offset)
+            likes = likes + paged.get('response', {}).get('liked_posts', [])
+            offset = offset + 20
+            cntr = total - offset
+
+        self.likes = likes
+        for like in self.likes:
+            fav = TumblrFav(like)
+            if not fav.exists:
+                fav.run()
+                fav.write()
+
+
+class DAFavs(Favs):
+    def __init__(self):
+        from pprint import pprint
+        super(DAFavs, self).__init__('deviantart')
+        self.oauth = oauth.DAOauth()
+        self.params = {
+            'limit': 24,
+            'mature_content': 'true',
+            'username': shared.config.get('deviantart', 'username')
+        }
+        self.likes = []
+
+    def getpaged(self, offset):
+        self.params.update({'offset': offset})
+        r = self.oauth.request(
+            self.url,
+            self.params
+        )
+        return json.loads(r.text)
+
+    def getsinglemeta(self, daid):
+        r = self.oauth.request(
+            'https://www.deviantart.com/api/v1/oauth2/deviation/metadata',
+            params={
+                'deviationids[]': daid,
+                'ext_submission': False,
+                'ext_camera': False,
+                'ext_stats': False,
+                'ext_collection': False,
+                'mature_content': True,
+            }
+        )
+        meta = {}
+        try:
+            meta = json.loads(r.text)
+            return meta.get('metadata', []).pop()
+        except:
+            return meta
+
+    def has_more(self, q):
+        if 'True' == q or 'true' == q:
+            return True
+        return False
+
+    def run(self):
+        r = self.oauth.request(
+            self.url,
+            self.params
+        )
+
+        js = json.loads(r.text)
+        has_more = js.get('has_more')
+        offset = js.get('next_offset')
+        favs = js.get('results', [])
+        while True == has_more:
+            logging.debug('iterating over DA results with offset %d', offset)
+            paged = self.getpaged(offset)
+            favs = favs + paged.get('results', [])
+            has_more = paged.get('has_more')
+            n = paged.get('next_offset')
+            if n:
+                offset = offset + n
+
+        self.favs = favs
+        for fav in self.favs:
+            f = DAFav(fav)
+            if f.exists:
+                continue
+
+            f.fav.update({'meta': self.getsinglemeta(fav.get('deviationid'))})
+            f.run()
+            f.write()
+
+
+
+#class WPFavs(Favs):
+    #def __init__(self):
+        #from pprint import pprint
+        #super(DAFavs, self).__init__('wordpress')
+        #self.oauth = oauth.DAOauth()
+        #self.params = {
+            #'limit': 24,
+            #'mature_content': 'true',
+            #'username': shared.config.get('deviantart', 'username')
+        #}
+        #self.likes = []
+
+    #def getpaged(self, offset):
+        #self.params.update({'offset': offset})
+        #r = self.oauth.request(
+            #self.url,
+            #self.params
+        #)
+        #return json.loads(r.text)
+
+    #def getsinglemeta(self, daid):
+        #r = self.oauth.request(
+            #'https://www.deviantart.com/api/v1/oauth2/deviation/metadata',
+            #params={
+                #'deviationids[]': daid,
+                #'ext_submission': False,
+                #'ext_camera': False,
+                #'ext_stats': False,
+                #'ext_collection': False,
+                #'mature_content': True,
+            #}
+        #)
+        #meta = {}
+        #try:
+            #meta = json.loads(r.text)
+            #return meta.get('metadata', []).pop()
+        #except:
+            #return meta
+
+    #def has_more(self, q):
+        #if 'True' == q or 'true' == q:
+            #return True
+        #return False
+
+    #def run(self):
+        #r = self.oauth.request(
+            #self.url,
+            #self.params
+        #)
+
+        #js = json.loads(r.text)
+        #has_more = js.get('has_more')
+        #offset = js.get('next_offset')
+        #favs = js.get('results', [])
+        #while True == has_more:
+            #logging.debug('iterating over DA results with offset %d', offset)
+            #paged = self.getpaged(offset)
+            #favs = favs + paged.get('results', [])
+            #has_more = paged.get('has_more')
+            #n = paged.get('next_offset')
+            #if n:
+                #offset = offset + n
+
+        #self.favs = favs
+        #for fav in self.favs:
+            #f = DAFav(fav)
+            #if f.exists:
+                #continue
+
+            #f.fav.update({'meta': self.getsinglemeta(fav.get('deviationid'))})
+            #f.run()
+            #f.write()
+
+#class Following(object):
+    #def __init__(self, confgroup):
+        #self.confgroup = confgroup
+        #self.url = shared.config.get(confgroup, 'following_api')
+        #self.followings = []
+
+
+#class FlickrFollowing(Following):
+    #def __init__(self):
+        #super(FlickrFollowing, self).__init__('flickr')
+        #self.oauth = oauth.FlickrOauth()
+
+
+    #def run(self):
+        #r = self.oauth.request(self.url, params={
+            #'method': 'flickr.contacts.getList',
+            #'format': 'json',
+            #'nojsoncallback': 1,
+            #'api_key': shared.config.get(self.confgroup, 'api_key')
+        #})
+
+        #try:
+            #contacts = json.loads(r.text)
+            #for c in contacts.get('contacts', {}).get('contact', []):
+                #self.followings.append({
+                    #'url': "https://www.flickr.com/people/%s/" % c.get('nsid'),
+                    #'name': c.get('realname'),
+                    #'username': c.get('username'),
+                    #'userid': c.get('nsid')
+                #})
+
+        #except Exception as e:
+            #logging.error('getting following from flickr failed: %s', e)
+
+
+#class TumblrFollowing(Following):
+    #def __init__(self):
+        #super(TumblrFollowing, self).__init__('tumblr')
+        #self.oauth = oauth.FlickrOauth()
+
+
+    #def run(self):
+        #r = self.oauth.request(self.url, params={
+            #'method': 'flickr.contacts.getList',
+            #'format': 'json',
+            #'nojsoncallback': 1,
+            #'api_key': shared.config.get(self.confgroup, 'api_key')
+        #})
+
+        #try:
+            #contacts = json.loads(r.text)
+            #for c in contacts.get('contacts', {}).get('contact', []):
+                #self.followings.append({
+                    #'url': "https://www.flickr.com/people/%s/" % c.get('nsid'),
+                    #'name': c.get('realname'),
+                    #'username': c.get('username'),
+                    #'userid': c.get('nsid')
+                #})
+
+        #except Exception as e:
+            #logging.error('getting following from flickr failed: %s', e)
+
+
+#class FlickrFollowing(object):
+    #def __init__(self):
+        #super(FlickrFollowing, self).__init__('flickr')
+        #self.params = {
+            #'consumer_key': shared.config.get('500px', 'api_key'),
+            #'rpp': 100,
+            #'image_size': 4,
+            #'include_tags': 1,
+            #'include_geo': 1
+        #}
+
+    #def run(self):
+        #r = requests.get(self.url,params=self.params)
+        #js = json.loads(r.text)
+        #for photo in js.get('photos', []):
+            #fav = FivehpxFav(photo)
+            #if not fav.exists:
+                #fav.run()
+                #fav.write()
+
+
+    #def run(self):
+
+
+
+#https://api.flickr.com/services/rest/?method=flickr.contacts.getList&api_key=27d8a5bf7dabf882ff1c710894041f64&format=json&nojsoncallback=1&auth_token=72157682938907284-9c5f21debeec9833&api_sig=8ac87b900f44debea06a3765ed223680
+
+
 #class Following(object):
     #def __init__(self, confgroup):
         #self.confgroup = confgroup
@@ -357,7 +724,7 @@ if __name__ == '__main__':
         logging.root.removeHandler(logging.root.handlers[-1])
 
     logging.basicConfig(
-        level=20,
+        level=10,
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
 
@@ -369,6 +736,13 @@ if __name__ == '__main__':
 
     fivehpx = FivehpxFavs()
     fivehpx.run()
+
+    tumblr = TumblrFavs()
+    tumblr.run()
+
+    da = DAFavs()
+    da.run()
+
 
     #flickrfollow = FlickrFollowing()
     #flickrfollow.run()
