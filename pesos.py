@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import os
 import hashlib
@@ -12,8 +14,7 @@ import arrow
 import bs4
 from slugify import slugify
 import oauth
-
-from pprint import pprint
+import argparse
 
 """ TODO
 
@@ -720,11 +721,21 @@ class DAFavs(Favs):
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Parameters for NASG')
+    parser.add_argument(
+        '--loglevel',
+        default='error',
+        help='change loglevel'
+    )
+
+    params = vars(parser.parse_args())
+
     while len(logging.root.handlers) > 0:
         logging.root.removeHandler(logging.root.handlers[-1])
 
     logging.basicConfig(
-        level=10,
+        level=shared.LLEVEL[params.get('loglevel')],
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
 
@@ -742,7 +753,3 @@ if __name__ == '__main__':
 
     da = DAFavs()
     da.run()
-
-
-    #flickrfollow = FlickrFollowing()
-    #flickrfollow.run()

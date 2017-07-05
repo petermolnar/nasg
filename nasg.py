@@ -1969,15 +1969,8 @@ class NASG(object):
             logging.root.removeHandler(logging.root.handlers[-1])
 
         # --- set loglevel
-        llevel = {
-            'critical': 50,
-            'error': 40,
-            'warning': 30,
-            'info': 20,
-            'debug': 10
-        }
         logging.basicConfig(
-            level=llevel[shared.config.get('params', 'loglevel')],
+            level=shared.LLEVEL[shared.config.get('params', 'loglevel')],
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
 

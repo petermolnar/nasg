@@ -10,6 +10,15 @@ from whoosh import fields
 from whoosh import analysis
 from slugify import slugify
 
+LLEVEL = {
+    'critical': 50,
+    'error': 40,
+    'warning': 30,
+    'info': 20,
+    'debug': 10
+}
+
+
 def __expandconfig(config):
     """ add the dirs to the config automatically """
     basepath = os.path.expanduser(config.get('common','base'))
