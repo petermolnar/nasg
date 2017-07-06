@@ -225,8 +225,13 @@ class Oauth1Flow(object):
         return client.get(url, params=params)
 
 
+class FivehpxOauth(Oauth1Flow):
+    request_token_url = 'https://api.500px.com/v1/oauth/request_token'
+    access_token_url = 'https://api.500px.com/v1/oauth/access_token'
+    authorize_url = 'https://api.500px.com/v1/oauth/authorize'
 
-
+    def __init__(self):
+        super(FivehpxOauth, self).__init__('500px')
 
 
 class FlickrOauth(Oauth1Flow):
@@ -236,6 +241,7 @@ class FlickrOauth(Oauth1Flow):
 
     def __init__(self):
         super(FlickrOauth, self).__init__('flickr')
+
 
 class TumblrOauth(Oauth1Flow):
     request_token_url = 'https://www.tumblr.com/oauth/request_token'

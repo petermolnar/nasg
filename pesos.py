@@ -363,18 +363,37 @@ class Favs(object):
 
 
 class FlickrFavs(Favs):
+    url = 'https://api.flickr.com/services/rest/'
+
     def __init__(self):
         super(FlickrFavs, self).__init__('flickr')
+        self.get_uid()
         self.params = {
             'method': 'flickr.favorites.getList',
             'api_key': shared.config.get('flickr', 'api_key'),
-            'user_id': shared.config.get('flickr', 'user_id'),
+            'user_id': self.uid,
             'extras': 'description,geo,tags,url_z,url_b,owner_name,date_upload',
             'per_page': 500, # maximim
             'format': 'json',
             'nojsoncallback': '1',
             'min_fave_date': self.lastpulled
         }
+
+    def get_uid(self):
+        params = {
+            'method': 'flickr.people.findByUsername',
+            'api_key': shared.config.get('flickr', 'api_key'),
+            'format': 'json',
+            'nojsoncallback': '1',
+            'username': shared.config.get('flickr', 'username'),
+        }
+        r = requests.get(
+            self.url,
+            params=params
+        )
+        parsed = json.loads(r.text)
+        self.uid = parsed.get('user', {}).get('id')
+
 
     def getpaged(self, offset):
         logging.info('requesting page #%d of paginated results', offset)
@@ -619,7 +638,7 @@ class DAFavs(Favs):
             paged = self.getpaged(offset)
             new = paged.get('results', [])
             if not len(new):
-                logging.error('empty results from deviantART, breaking loop')
+                #logging.error('empty results from deviantART, breaking loop')
                 break
             favs = favs + new
             has_more = self.has_more(paged.get('has_more'))
