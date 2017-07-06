@@ -161,6 +161,8 @@ class PinterestFav(Fav):
 
 
 class FlickrFav(Fav):
+    url = 'https://api.flickr.com/services/rest/'
+
     def __init__(self, photo):
         super(FlickrFav, self).__init__()
         self.photo = photo
@@ -340,7 +342,6 @@ class DAFav(Fav):
 class Favs(object):
     def __init__(self, confgroup):
         self.confgroup = confgroup
-        self.url = shared.config.get(confgroup, 'fav_api')
 
     @property
     def lastpulled(self):
@@ -410,7 +411,6 @@ class FlickrFavs(Favs):
                 fav.run()
                 fav.write()
 
-
 class FivehpxFavs(Favs):
     def __init__(self):
         super(FivehpxFavs, self).__init__('500px')
@@ -423,6 +423,36 @@ class FivehpxFavs(Favs):
             'sort': 'created_at',
             'sort_direction': 'desc'
         }
+        self.oauth = oauth.FivehpxOauth()
+        self.uid = None
+        self.galid = None
+
+    def get_uid(self):
+        r = self.oauth.request(
+            'https://api.500px.com/v1/users',
+            params={}
+        )
+        js = json.loads(r.text)
+        self.uid = js.get('user', {}).get('id')
+
+    def get_favgalid(self):
+        r = self.oauth.request(
+            'https://api.500px.com/v1/users/%s/galleries' % (self.uid),
+            params={
+                'kinds': 5 # see https://github.com/500px/api-documentation/blob/master/basics/formats_and_terms.md#gallery-kinds
+            }
+        )
+        js = json.loads(r.text)
+        g = js.get('galleries', []).pop()
+        self.galid = g.get('id')
+
+
+    @property
+    def url(self):
+        return 'https://api.500px.com/v1/users/%s/galleries/%s/items' % (
+            self.uid,
+            self.galid
+        )
 
     def getpaged(self, offset):
         logging.info('requesting page #%d of paginated results', offset)
@@ -437,6 +467,9 @@ class FivehpxFavs(Favs):
         return parsed.get('photos')
 
     def run(self):
+        self.get_uid()
+        self.get_favgalid()
+
         r = requests.get(self.url,params=self.params)
         js = json.loads(r.text)
         photos = js.get('photos')
@@ -459,6 +492,8 @@ class FivehpxFavs(Favs):
 
 
 class TumblrFavs(Favs):
+    url = 'https://api.tumblr.com/v2/user/likes'
+
     def __init__(self):
         super(TumblrFavs, self).__init__('tumblr')
         self.oauth = oauth.TumblrOauth()
@@ -503,13 +538,36 @@ class DAFavs(Favs):
     def __init__(self):
         from pprint import pprint
         super(DAFavs, self).__init__('deviantart')
+        self.username = shared.config.get(self.confgroup, 'username'),
         self.oauth = oauth.DAOauth()
-        self.params = {
-            'limit': 24,
-            'mature_content': 'true',
-            'username': shared.config.get('deviantart', 'username')
-        }
         self.likes = []
+        self.galid = None
+        self.params = {
+            'limit': 24, # this is the max as far as I can tell
+            'mature_content': 'true',
+            'username': self.username
+        }
+
+    def get_favgalid(self):
+        r = self.oauth.request(
+            'https://www.deviantart.com/api/v1/oauth2/collections/folders',
+            params={
+                'username': self.username,
+                'calculate_size': 'false',
+                'ext_preload': 'false',
+                'mature_content': 'true'
+            }
+        )
+        js = json.loads(r.text)
+        for g in js.get('results', []):
+            if 'Featured' == g.get('name'):
+                self.galid = g.get('folderid')
+                break
+
+    @property
+    def url(self):
+         return 'https://www.deviantart.com/api/v1/oauth2/collections/%s' % (self.galid)
+
 
     def getpaged(self, offset):
         self.params.update({'offset': offset})
@@ -517,7 +575,8 @@ class DAFavs(Favs):
             self.url,
             self.params
         )
-        return json.loads(r.text)
+        js = json.loads(r.text)
+        return js
 
     def getsinglemeta(self, daid):
         r = self.oauth.request(
@@ -539,11 +598,13 @@ class DAFavs(Favs):
             return meta
 
     def has_more(self, q):
-        if 'True' == q or 'true' == q:
+        if True == q or 'True' == q or 'true' == q:
             return True
         return False
 
     def run(self):
+        self.get_favgalid()
+
         r = self.oauth.request(
             self.url,
             self.params
@@ -551,16 +612,23 @@ class DAFavs(Favs):
 
         js = json.loads(r.text)
         favs = js.get('results', [])
-        has_more = js.get('has_more')
+        has_more = self.has_more(js.get('has_more'))
         offset = js.get('next_offset')
         while True == has_more:
-            logging.debug('iterating over DA results with offset %d', offset)
+            logging.info('iterating over DA results with offset %d', offset)
             paged = self.getpaged(offset)
-            favs = favs + paged.get('results', [])
-            has_more = paged.get('has_more')
-            n = paged.get('next_offset')
-            if n:
-                offset = offset + n
+            new = paged.get('results', [])
+            if not len(new):
+                logging.error('empty results from deviantART, breaking loop')
+                break
+            favs = favs + new
+            has_more = self.has_more(paged.get('has_more'))
+            if not has_more:
+                break
+            n = int(paged.get('next_offset'))
+            if not n:
+                break
+            offset = offset + n
 
         self.favs = favs
         for fav in self.favs:
