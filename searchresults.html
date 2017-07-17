@@ -34,21 +34,21 @@
 <section class="content-body">
 	<h1 class="p-name hide">Search results for "{{ term }}"</h1>
 	{% if posts|length %}
-	{% for post in posts %}
+	{% for url, post in posts.items() %}
 		<article class="searchresult">
 			<header>
 				<h2>
-					<a href="{{ post.url }}">
+					<a href="{{ url }}">
 						<span class="p-name">
 							{% if post.title|length %}
 								{{ post.title }}
 							{% else %}
-								{{ post.url }}
+								{{ url }}
 							{% endif %}
 						</span>
 					</a>
 				</h2>
-				<h3>{{ post.url }}</h3>
+				<h3>{{ url }}</h3>
 			</header>
 
 			<div class="highlight">… {{ post.highlight }} …</div>

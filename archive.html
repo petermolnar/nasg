@@ -73,6 +73,8 @@
 			{% set hentry = 'article' %}
 		{% elif ( ( post.category == 'note' ) or ( post.category == 'reply' ) ) %}
 			{% set hentry = 'note' %}
+		{% elif ( post.category == 'favorite' ) %}
+			{% set hentry = 'favorite' %}
 		{% else %}
 			{% set hentry = 'status' %}
 		{% endif %}
@@ -105,11 +107,13 @@
 
 			{% if hentry == "article" %}
 				<div class="e-summary long">
+					<!--
 					{%if post.thumbnail %}
 						<img src="{{ post.thumbnail }}" alt="{{ post.title }}" class="alignleft" />
 					{% else %}
 						<svg class="icon large"><use xlink:href="#icon-{{ post.category }}" /></svg>
-					{% endif %} {{ post.sumhtml }}
+					{% endif %}-->
+					{{ post.sumhtml }}
 					<span class="more">
 						<a href="{{ site.url }}/{{ post.slug }}" title="{{ post.title }}"></a>
 					</span>
@@ -142,10 +146,10 @@
 	{% if taxonomy.paged > 1 %}
 	{% set prev = taxonomy.paged - 1 %}
 			<li>
-				<a href="{{ site.url}}{{ taxonomy.url }}page/{{ prev }}">«</a>
+				<a rel="prev" href="{{ site.url}}{{ taxonomy.url }}page/{{ prev }}">«</a>
 			</li>
 			<li>
-				<a href="{{ site.url}}{{ taxonomy.url }}">1</a>
+				<a rel="prev" href="{{ site.url}}{{ taxonomy.url }}">1</a>
 			</li>
 	{% endif %}
 
@@ -191,7 +195,7 @@
 	{% if taxonomy.paged < taxonomy.total %}
 	{% set next = taxonomy.paged + 1 %}
 			<li>
-				<a href="{{ site.url}}{{ taxonomy.url }}page/{{ next }}">»</a>
+				<a rel="next" href="{{ site.url}}{{ taxonomy.url }}page/{{ next }}">»</a>
 			</li>
 	{% endif %}
 		</ul>

@@ -35,16 +35,14 @@
 					<svg class="icon"><use xlink:href="#icon-rss" /></svg>
 					<a title="RSS feed" href="{{ site.url }}/feed/">RSS</a>
 				</dd>
+				<dt>Donation</dt>
+				<dd>
+					<svg class="icon"><use xlink:href="#icon-creditcard" /></svg>
+					<a title="Like the content? You can thank it with a coffee." href="{{ site.author.donateurl }}">Buy me a coffee!</a>
+				</dd>
 			</dl>
 		</nav>
-		<aside class="footer-notes p-note">
-
-			<p>I'm dreamer, sysadmin, former embedded &amp; web developer. A Hungarian, living in the UK, wishing for United Europe, trying to generate less and less waste and fixing whatever is broken.
-			</p>
-
-			<p>I'm making and hosting my own site. It saw Geocities, and it was around before MySpace or Facebook. If you want your content to last, post it your own site - at least on your own site <em>as well</em>.
-			</p>
-		</aside>
+		<aside class="footer-notes p-note">{{ site.author.note }}</aside>
 		<a href="/notforbot" title="This link is here to identify bad robots. Don't follow it. Don't click on it." rel="nofollow"></a>
 	</div>
 </footer>

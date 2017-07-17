@@ -26,7 +26,6 @@
 					{% if reply.source|length > 0 %}
 					<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
 					{% endif %}
-					<a class="u-in-reply-to" href="{{ post.url }}"></a>
 				</footer
 			</li>
 		{% endfor %}
@@ -55,7 +54,9 @@
 							<span class="p-name fn">{{ reply.author.name }}</span>
 						{% endif %}
 					</span>
-					<a class="u-in-reply-to" href="{{ post.url }}"></a>
+					<a href="{{ reply.source }}" class="u-repost-of" title="{{ reply.source }}">
+						<svg class="icon"><use xlink:href="#icon-link" /></svg>
+					</a>
 				</li>
 			{% endfor %}
 			</ul>

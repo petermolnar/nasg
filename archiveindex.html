@@ -1,0 +1,23 @@
+{% include 'block_header_open.html' %}
+{% include 'block_header_close.html' %}
+
+<section class="content-body">
+{% for tname, posts in taxonomies %}
+	<details>
+	<summary>{{ tname }} [{{ posts|length }}]</summary>
+	<ol>
+	{% for post in posts %}
+		<li>
+			{{ post.title }}
+			<br />
+			<a href="{{ post.url }}" title="{{ post.title }}">
+				{{ post.url }}
+			</a>
+		</li>
+	{% endfor %}
+	</ol>
+	</details>
+{% endfor %}
+</section>
+
+{% include 'block_footer.html' %}

@@ -65,74 +65,62 @@
 
 		</header>
 
-		{% if post.summary %}
+{% if post.summary %}
 		<div class="e-summary">
 			{{ post.sumhtml }}
 			<br class="clear" />
 		</div>
-		{% endif %}
+{% endif %}
 
 		<div class="e-content">
 			<div class="content-inner">
 				{{ post.html }}
 
-				{% if ( post.exif ) %}
+{% if ( post.exif ) %}
 					{% include 'block_exif.html'  %}
-				{% endif %}
+{% endif %}
 
-				{% if ( post.syndicate ) %}
+{% if ( post.syndicate ) %}
 					{% include 'block_syndicate.html'  %}
-				{% endif %}
+{% endif %}
 
 			</div>
 		</div>
 
+
 		<footer>
-			<aside class="pubdate">
-				<h6 class="pubdate-title">Published</h6>
-				<p>
-					<a class="u-url u-uuid" href="{{ site.url}}/{{ post.slug }}/"></a>
-					<a title="{{ post.title }}" href="{{ site.url }}/{{ post.slug }}/">
-						<time class="dt-published"
-							datetime="{{ post.published|date("c") }}">
-							{{ post.published|date("%Y-%m-%d %H:%M") }}
-						</time>
-					</a>
-				</p>
-
-				{% if post.updated %}
-				<h6 class="update-title">Last updated</h6>
-				<p>
-					<time class="dt-updated"
-						datetime="{{ post.updated|date("c") }}">
-						{{ post.updated|date("%Y-%m-%d %H:%M") }}
-					</time>
-				</p>
-				{% endif %}
-			</aside>
-
-			{% if post.tags %}
-				<aside class="tags">
-					<h6 class="tags-title">Tags</h6>
-					<ul>
-						{% for tname in post.tags %}<li>
-							<a href="/tag/{{ tname|slugify }}" class="p-category">{{ tname }}</a>
-						</li>{% endfor %}
-					</ul>
-				</aside>
-			{% endif %}
-
-			<h6 class="shortlink-title">Short URL</h6>
-			<aside class="shortlink">
-				<p>
-					<a href="{{ site.url }}/{{ post.shortslug }}">{{ site.url }}/{{ post.shortslug }}</a>
-				</p>
-			</aside>
+			<a class="u-url u-uuid" href="{{ site.url}}/{{ post.slug }}/"></a>
+			<p class="shorturl">
+				<a href="{{ site.url }}/{{ post.shortslug }}">{{ site.url }}/{{ post.shortslug }}</a>
+			</p>
+			<p class="published">
+				<time class="dt-published"
+					datetime="{{ post.published|date("c") }}">
+					{{ post.published|date("%Y-%m-%d %H:%M") }}
+				</time>
+			</p>
+{% if post.updated and post.updated != post.published %}
+			<p class="updated">
+				<time class="dt-updated"
+					datetime="{{ post.updated|date("c") }}">
+					{{ post.updated|date("%Y-%m-%d %H:%M") }}
+				</time>
+			</p>
+{% endif %}
+{% if post.tags %}
+			<ul class="tags">
+{% for tname in post.tags %}
+				<li>
+					<a href="{{ site.url }}/tag/{{ tname|slugify }}" class="p-category">{{ tname }}</a>
+				</li>
+{% endfor %}
+			</ul>
+{% endif %}
 		</footer>
 
-		{% if ( post.comments ) %}
-			{% include 'block_comments.html'  %}
-		{% endif %}
+{% if ( post.comments ) %}
+{% include 'block_comments.html'  %}
+{% endif %}
 
 	</article>
 
