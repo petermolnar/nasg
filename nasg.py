@@ -33,7 +33,7 @@ from whoosh import qparser
 import jinja2
 import urllib.parse
 from webmentiontools.send import WebmentionSend
-from bleach import clean
+import bleach
 from emoji import UNICODE_EMOJI
 from bs4 import BeautifulSoup
 from readability.readability import Document
@@ -153,16 +153,19 @@ class Indexer(object):
                 logging.info("search index is out of date: %d (indexed) vs %d", ixtime, singular.mtime)
                 exists = True
 
-        content_real = [
-            singular.fname,
-            singular.summary,
-            singular.content,
-            singular.reactions.values()
-        ]
+        reactions = []
+        for t, v in singular.reactions.items():
+            if isinstance(v, list) and len(v):
+                reactions = [*reactions, *v]
 
-        content_remote = []
-        #for url, offlinecopy in singular.offlinecopies.items():
-            #content_remote.append("%s" % offlinecopy)
+        content = "\n\n".join([
+            "\n\n".join([
+                bleach.clean(c, tags=[], strip_comments=True, strip=True)
+                for c in [singular.sumhtml, singular.html]
+            ]),
+            "\n".join(["%s" % c for c in singular.tags]),
+            "\n\n".join(reactions)
+        ])
 
         weight = 1
         if singular.isbookmark or singular.isfav:
@@ -170,33 +173,34 @@ class Indexer(object):
         if singular.ispage:
             weight = 100
 
-        content = " ".join(list(map(str,[*content_real, *content_remote])))
+        if not len(singular.title):
+            title = singular.fname
+        else:
+            title = singular.title
+
+        if singular.photo:
+            img = shared.Pandoc().convert("%s" % singular.photo)
+        else:
+            img = ''
+
+        args = {
+            'url': singular.url,
+            'category': singular.category,
+            'date': singular.published.datetime,
+            'title': title,
+            'weight': weight,
+            'img': img,
+            'content': content,
+            'fuzzy': content,
+            'mtime': singular.mtime
+        }
+
         if exists:
             logging.info("updating search index with %s", singular.fname)
-            self.writer.add_document(
-                title=singular.title,
-                url=singular.url,
-                content=content,
-                fuzzy=content,
-                date=singular.published.datetime,
-                tags=",".join(list(map(str, singular.tags))),
-                weight=weight,
-                img="%s" % singular.photo,
-                mtime=singular.mtime,
-            )
+            self.writer.add_document(**args)
         else:
             logging.info("appending search index with %s", singular.fname)
-            self.writer.update_document(
-                title=singular.title,
-                url=singular.url,
-                content=" ".join(list(map(str,[*content_real, *content_remote]))),
-                fuzzy=content,
-                date=singular.published.datetime,
-                tags=",".join(list(map(str, singular.tags))),
-                weight=weight,
-                img="%s" % singular.photo,
-                mtime=singular.mtime
-            )
+            self.writer.update_document(**args)
 
 
     def finish(self):
@@ -551,21 +555,29 @@ class Comment(BaseRenderable):
         if hasattr(self, '_reacji'):
             return self._reacji
 
-        t = self.meta.get('type', 'webmention')
-        typemap = {
-            'like-of': '👍',
-            'bookmark-of': '🔖',
-            'favorite': '★',
-        }
-
         self._reacji = ''
+        maybe = bleach.clean(
+            self.content,
+            tags=[],
+            strip_comments=True,
+            strip=True,
+        ).strip()
 
-        if t in typemap.keys():
-            self._reacji = typemap[t]
-        else:
-            maybe = clean(self.content).strip()
-            if maybe in UNICODE_EMOJI:
-                self._reacji = maybe
+        if not len(maybe):
+            self._reacji = '★'
+        elif maybe in UNICODE_EMOJI:
+            self._reacji = maybe
+
+        #t = self.meta.get('type', 'webmention')
+        #typemap = {
+            #'like-of': '👍',
+            #'bookmark-of': '🔖',
+            #'favorite': '★',
+        #}
+
+        #if t in typemap.keys():
+            #self._reacji = typemap[t]
+        #else:
 
         return self._reacji
 
@@ -575,7 +587,8 @@ class Comment(BaseRenderable):
         if hasattr(self, '_html'):
             return self._html
 
-        self._html = shared.Pandoc().convert(self.content)
+        tmp = shared.Pandoc().convert(self.content)
+        self._html = bleach.clean(tmp, strip=True)
         return self._html
 
 
@@ -586,7 +599,7 @@ class Comment(BaseRenderable):
 
         self._tmplvars = {
             'published': self.published.datetime,
-            'author': dict(self.meta.get('author', {})),
+            'author': self.meta.get('author', {}),
             'content': self.content,
             'html': self.html,
             'source': self.source,
@@ -686,7 +699,7 @@ class Comments(object):
     def populate(self):
         for fpath in self.files:
             item = Comment(fpath)
-            t = item.target
+            t = item.targeturl
             if not self.bytarget.get(t):
                 self.bytarget[t] = BaseIter()
             self.bytarget[t].append(item.pubtime, item)
@@ -1193,6 +1206,7 @@ class Taxonomy(BaseIter):
             'taxonomy': {
                 'url': self.baseurl,
                 'name': self.name,
+                'slug': self.slug,
                 'taxonomy': self.taxonomy,
                 'paged': page,
                 'total': self.pages,
@@ -1307,20 +1321,18 @@ class Content(BaseIter):
                 if tslug not in self.tags:
                     self.tags[tslug] = Taxonomy(tag, 'tag', tslug)
                 self.tags[tslug].append(item.pubtime, item)
-                self.symlinktag(tslug, item.path)
+                #self.symlinktag(tslug, item.path)
 
-
-    def symlinktag(self, tslug, fpath):
-        fdir, fname = os.path.split(fpath)
-        tagpath = os.path.join(shared.config.get('source', 'tagsdir'), tslug)
-        if not os.path.isdir(tagpath):
-            os.mkdir(tagpath)
-        sympath = os.path.relpath(fdir, tagpath)
-        dst = os.path.join(tagpath, fname)
-        src = os.path.join(sympath, fname)
-        if not os.path.islink(dst):
-            os.symlink(src, dst)
-
+    #def symlinktag(self, tslug, fpath):
+        #fdir, fname = os.path.split(fpath)
+        #tagpath = os.path.join(shared.config.get('source', 'tagsdir'), tslug)
+        #if not os.path.isdir(tagpath):
+            #os.mkdir(tagpath)
+        #sympath = os.path.relpath(fdir, tagpath)
+        #dst = os.path.join(tagpath, fname)
+        #src = os.path.join(sympath, fname)
+        #if not os.path.islink(dst):
+            #os.symlink(src, dst)
 
     def sitemap(self):
         target = os.path.join(
@@ -1406,15 +1418,27 @@ class Singular(BaseRenderable):
     def __parse(self):
         with open(self.path, mode='rt') as f:
             self.meta, self.content = frontmatter.parse(f.read())
+        #self.__filter_syndication()
         self.__filter_favs()
         self.__filter_images()
         if self.isphoto:
-            self.content = "%s\n%s" % (
+            self.content = "%s\n\n%s" % (
+                self.photo,
                 self.content,
-                self.photo
             )
+        if shared.config.getboolean('params', 'nooffline'):
+            return
         trigger = self.offlinecopies
 
+    #def __filter_syndication(self):
+        #syndications = self.meta.get('syndicate', None)
+        #if not syndications:
+            #return
+        #s = "\n\n".join(['<a href="%s" class="u-syndication"></a>' % s for s in syndications])
+        #self.content = "%s\n\n%s" % (
+            #s,
+            #self.content
+        #)
 
     def __filter_favs(self):
         url = self.meta.get('favorite-of',
@@ -1557,25 +1581,34 @@ class Singular(BaseRenderable):
 
 
     @property
+    def syndicate(self):
+        return self.meta.get('syndicate', [])
+
+    @property
     def urls(self):
         if hasattr(self, '_urls'):
             return self._urls
 
-        urls = shared.URLREGEX.findall(self.content)
+        #urls = shared.URLREGEX.findall(self.content)
+        #urls = [*urls, *self.syndicate]
+        urls = list(self.syndicate)
 
         for reactionurls in self.reactions.values():
             urls = [*urls, *reactionurls]
 
-        r = []
-        for link in urls:
-            domain = '{uri.netloc}'.format(uri=urllib.parse.urlparse(link))
-            if domain in shared.config.get('site', 'domains'):
-                continue
-            if link in r:
-                continue
-            r.append(link)
+        #r = []
+        #logging.debug('searching for urls for %s', self.fname)
+        #for link in urls:
+            #purl = urllib.parse.urlparse(link)
+            #if purl.netloc in shared.config.get('site', 'domains'):
+                #logging.debug('excluding url %s - %s matches %s', link, purl.netloc, shared.config.get('site', 'domains'))
+                #continue
+            #if link in r:
+                #continue
+            #r.append(link)
 
-        self._urls = r
+        self._urls = urls
+        logging.debug('urls for %s: %s', self.fname, urls)
         return self._urls
 
 
@@ -1794,12 +1827,10 @@ class Singular(BaseRenderable):
             'sumhtml': self.sumhtml,
             'exif': self.exif,
             'lang': self.lang,
-            'syndicate': '',
+            'syndicate': self.syndicate,
             'slug': self.fname,
             'shortslug': self.shortslug,
             'rssenclosure': self.rssenclosure,
-            #'offlinecopies': self.offlinecopies,
-            #'copies': [],
             'comments': self.comments,
             'replies': self.replies,
             'reacjis': self.reacjis,
@@ -1836,7 +1867,7 @@ class Singular(BaseRenderable):
             #lctime = self.comments[0].mtime
             #if lctime > self.mtime:
                 #self.mtime = lctime
-        await self.rendercomments(renderer)
+        #await self.rendercomments(renderer)
 
         mtime = self.mtime
         if len(self.comments):
@@ -1866,6 +1897,7 @@ class Singular(BaseRenderable):
 
 
     async def ping(self, pinger):
+        logging.debug('urls in %s: %s', self.fname, self.urls)
         for target in self.urls:
             record = {
                 'mtime': self.mtime,
@@ -1940,6 +1972,12 @@ class NASG(object):
             help='change loglevel'
         )
         parser.add_argument(
+            '--nooffline',
+            action='store_true',
+            default=False,
+            help='skip offline copie checks'
+        )
+        parser.add_argument(
             '--nodownsize',
             action='store_true',
             default=False,
@@ -1997,6 +2035,36 @@ class NASG(object):
     async def __aping(self, content, pinger):
         for (pubtime, singular) in content:
             await singular.ping(pinger)
+
+    def __atindexrender(self, content, renderer):
+        m = {
+            'category': content.categories,
+            'tag': content.tags
+        }
+
+        for p, taxonomy in m.items():
+            target = os.path.abspath(os.path.join(
+                shared.config.get('target', 'builddir'),
+                p,
+                'index.html'
+            ))
+
+            tmplvars = {
+                'site': renderer.sitevars,
+                'taxonomy': {},
+                'taxonomies': {}
+            }
+
+            for name, t in taxonomy.items():
+                logging.debug('adding %s to taxonomyindex' % name)
+                tmplvars['taxonomies'][name] = [{'title': t.data[k].title, 'url': t.data[k].url} for k in list(sorted(
+        t.data.keys(), reverse=True))]
+
+            tmplvars['taxonomies'] = sorted(tmplvars['taxonomies'].items())
+            logging.debug('rendering taxonomy index to %s', target)
+            r = renderer.j2.get_template('archiveindex.html').render(tmplvars)
+            with open(target, "wt") as html:
+                html.write(r)
 
 
     def run(self):
@@ -2059,8 +2127,12 @@ class NASG(object):
                 content.front, renderer
             ))
 
+            logging.info("rendering taxonomy indexes")
+            self.__atindexrender(content, renderer)
+
             logging.info("rendering sitemap")
             content.sitemap()
+
 
         logging.info("render magic.php")
         content.magicphp(renderer)

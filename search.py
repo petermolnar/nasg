@@ -30,23 +30,26 @@ def SearchHandler(query, tmpl):
     )))
 
     qp = qparser.MultifieldParser(
-        ["title", "content", "tags"],
+        ["title", "content"],
         schema = shared.schema
     )
 
     q = qp.parse(query)
     r = ix.searcher().search(q, sortedby="weight", limit=100)
     logging.info("results for '%s': %i", query, len(r))
-    results = []
+    results = {}
     for result in r:
+        if result['url'] in results.keys():
+            continue
+
         res = {
             'title': result['title'],
-            'url': result['url'],
+            #'url': result['url'],
             'highlight': result.highlights("content"),
         }
         if 'img' in result:
             res['img'] = result['img']
-        results.append(res)
+        results[result['url']] = res
 
     tvars = {
         'term': query,

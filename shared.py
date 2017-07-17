@@ -76,13 +76,22 @@ schema = fields.Schema(
         stored=True,
         unique=True
     ),
-    title=fields.TEXT(
+    category=fields.TEXT(
         stored=True,
-        analyzer=analysis.FancyAnalyzer()
     ),
     date=fields.DATETIME(
         stored=True,
         sortable=True
+    ),
+    title=fields.TEXT(
+        stored=True,
+        analyzer=analysis.FancyAnalyzer()
+    ),
+    weight=fields.NUMERIC(
+        sortable=True
+    ),
+    img=fields.TEXT(
+        stored=True
     ),
     content=fields.TEXT(
         stored=True,
@@ -91,22 +100,22 @@ schema = fields.Schema(
     fuzzy=fields.NGRAMWORDS(
         tokenizer=analysis.NgramTokenizer(4)
     ),
-    tags=fields.TEXT(
-        stored=True,
-        analyzer=analysis.KeywordAnalyzer(
-            lowercase=True,
-            commas=True
-        ),
-    ),
-    weight=fields.NUMERIC(
-        sortable=True
-    ),
-    img=fields.TEXT(
-        stored=True
-    ),
     mtime=fields.NUMERIC(
         stored=True
     )
+    #slug=fields.NGRAMWORDS(
+        #tokenizer=analysis.NgramTokenizer(4)
+    #),
+    #reactions=fields.NGRAMWORDS(
+        #tokenizer=analysis.NgramTokenizer(4)
+    #),
+    #tags=fields.TEXT(
+        #stored=False,
+        #analyzer=analysis.KeywordAnalyzer(
+            #lowercase=True,
+            #commas=True
+        #),
+    #),
 )
 
 config = configparser.ConfigParser(
@@ -165,7 +174,7 @@ class Pandoc(CMDLine):
 
     def __init__(self, md2html=True):
         super().__init__('pandoc')
-        if md2html:
+        if True == md2html:
             self.i = "markdown+" + "+".join([
                 'backtick_code_blocks',
                 'auto_identifiers',
@@ -185,6 +194,26 @@ class Pandoc(CMDLine):
                 'footnotes',
             ])
             self.o = 'html5'
+        elif 'plain' == md2html:
+            self.i = "markdown+" + "+".join([
+                'backtick_code_blocks',
+                'auto_identifiers',
+                'fenced_code_attributes',
+                'definition_lists',
+                'grid_tables',
+                'pipe_tables',
+                'strikeout',
+                'superscript',
+                'subscript',
+                'markdown_in_html_blocks',
+                'shortcut_reference_links',
+                'autolink_bare_uris',
+                'raw_html',
+                'link_attributes',
+                'header_attributes',
+                'footnotes',
+            ])
+            self.o = "plain"
         else:
             self.o = "markdown-" + "-".join([
                 'raw_html',
