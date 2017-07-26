@@ -50,7 +50,11 @@ def baseN(num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
     )
 
 def slugfname(url):
-    return "%s" % slugify(re.sub(r"^https?://(?:www)?", "", url))[:200]
+    return "%s" % slugify(
+        re.sub(r"^https?://(?:www)?", "", url),
+        only_ascii=True,
+        lower=True
+    )[:200]
 
 ARROWISO = 'YYYY-MM-DDTHH:mm:ssZ'
 STRFISO = '%Y-%m-%dT%H:%M:%S%z'

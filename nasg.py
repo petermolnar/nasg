@@ -460,6 +460,7 @@ class Renderer(object):
         self.sitevars = dict(shared.config.items('site'))
         self.sitevars['author'] = dict(shared.config.items('author'))
         self.sitevars['author']['socials'] = dict(shared.config.items('socials'))
+        self.sitevars['author']['qr'] = dict(shared.config.items('qr'))
 
         self.jinjaldr = jinja2.FileSystemLoader(
             searchpath=shared.config.get('source', 'templatesdir')
@@ -813,13 +814,39 @@ class WebImage(object):
                 "%s%s" % (self.fname, self.ext)
             )
 
-
-    def __str__(self):
+    def _setupvars(self):
         if self.is_downsizeable:
             if self.singleimage and not self.cl:
                 self.cl = '.u-photo'
             elif self.singleimage:
                 self.cl = '.u-photo %s' % self.cl
+        else:
+            if not self.cl:
+                self.cl = '.aligncenter'
+
+    @property
+    def tmplvars(self):
+        self._setupvars()
+        if hasattr(self, '_tmplvars'):
+            return self._tmplvars
+
+        self._tmplvars = {
+            'alttext': self.alttext,
+            'fallback': self.fallback,
+            'title': "%s%s" % (self.fname, self.ext),
+            'target': self.target,
+            'cl': self.cl
+        }
+        return self._tmplvars
+
+    def __str__(self):
+        self._setupvars()
+
+        if self.is_downsizeable:
+            #if self.singleimage and not self.cl:
+                #self.cl = '.u-photo'
+            #elif self.singleimage:
+                #self.cl = '.u-photo %s' % self.cl
 
             return '[![%s](%s "%s%s"){.adaptimg}](%s){.adaptive %s}' % (
                 self.alttext,
@@ -830,8 +857,8 @@ class WebImage(object):
                 self.cl
             )
         else:
-            if not self.cl:
-                self.cl = '.aligncenter'
+            #if not self.cl:
+                #self.cl = '.aligncenter'
             return '![%s](%s "%s%s"){%s}' % (
                 self.alttext,
                 self.fallback,
@@ -1395,11 +1422,11 @@ class Content(BaseIter):
 
 
 class Singular(BaseRenderable):
-    def __init__(self, path, images, comments):
+    def __init__(self, path, images = None, comments = None):
         logging.debug("initiating singular object from %s", path)
         self.path = path
-        self.images = images
-        self.allcomments = comments
+        self.images = images or Images()
+        self.allcomments = comments or Comments()
         self.category = splitpath(path)[-2]
         self.mtime = int(os.path.getmtime(self.path))
         self.fname, self.ext = os.path.splitext(os.path.basename(self.path))
@@ -1421,11 +1448,11 @@ class Singular(BaseRenderable):
         #self.__filter_syndication()
         self.__filter_favs()
         self.__filter_images()
-        if self.isphoto:
-            self.content = "%s\n\n%s" % (
-                self.photo,
-                self.content,
-            )
+        #if self.isphoto:
+            #self.content = "%s\n\n%s" % (
+                #self.photo,
+                #self.content,
+            #)
         if shared.config.getboolean('params', 'nooffline'):
             return
         trigger = self.offlinecopies
@@ -1522,7 +1549,7 @@ class Singular(BaseRenderable):
         for by in [self.fname, self.shortslug]:
             c = {**c, **self.allcomments[by].data}
         #self._comments = [c[k].tmplvars for k in list(sorted(c.keys(), reverse=True))]
-        self._comments = [c[k] for k in list(sorted(c.keys(), reverse=True))]
+        self._comments = [c[k] for k in list(sorted(c.keys(), reverse=False))]
         return self._comments
 
 
@@ -1801,12 +1828,11 @@ class Singular(BaseRenderable):
         return self.photo.exif
 
 
-    @property
-    def rssenclosure(self):
-        if not self.isphoto:
-            return {}
-        return self.photo.rssenclosure
-
+    #@property
+    #def rssenclosure(self):
+        #if not self.isphoto:
+            #return {}
+        #return self.photo.rssenclosure
 
     @property
     def tmplvars(self):
@@ -1830,11 +1856,18 @@ class Singular(BaseRenderable):
             'syndicate': self.syndicate,
             'slug': self.fname,
             'shortslug': self.shortslug,
-            'rssenclosure': self.rssenclosure,
             'comments': self.comments,
             'replies': self.replies,
             'reacjis': self.reacjis,
+            'photo': {},
+            'rssenclosure': {},
         }
+
+        if self.isphoto:
+            self._tmplvars.update({
+                'photo': self.photo.tmplvars,
+                'rssenclosure': self.photo.rssenclosure
+            })
         return self._tmplvars
 
 
@@ -1860,7 +1893,8 @@ class Singular(BaseRenderable):
             await comment.render(renderer)
 
 
-    async def render(self, renderer):
+    async def render(self, renderer = None):
+        renderer = renderer or Renderer()
         # this is only when I want salmentions and I want to include all of the comments as well
         # otherwise it affects both webmentions sending and search indexing
         #if len(self.comments):
@@ -2012,34 +2046,34 @@ class NASG(object):
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
 
-    async def __adownsize(self, images, existing):
-        for fname, img in images:
-            await img.downsize(existing)
+    async def __adownsize(self):
+        for fname, img in self.images:
+            await img.downsize(self.existing)
 
-    async def __acrender(self, content, renderer):
-        for (pubtime, singular) in content:
-            await singular.render(renderer)
+    async def __acrender(self):
+        for (pubtime, singular) in self.content:
+            await singular.render(self.renderer)
 
-    async def __atrender(self, taxonomies, renderer):
-        for e in taxonomies:
+    async def __atrender(self):
+        for e in [self.content.categories, self.content.tags]:
             for name, t in e.items():
-                await t.render(renderer)
+                await t.render(self.renderer)
 
-    async def __afrender(self, front, renderer):
-        await front.render(renderer)
+    async def __afrender(self):
+        await self.content.front.render(self.renderer)
 
-    async def __aindex(self, content, searchdb):
-        for (pubtime, singular) in content:
-            await searchdb.append(singular)
+    async def __aindex(self):
+        for (pubtime, singular) in self.content:
+            await self.searchdb.append(singular)
 
-    async def __aping(self, content, pinger):
-        for (pubtime, singular) in content:
-            await singular.ping(pinger)
+    async def __aping(self):
+        for (pubtime, singular) in self.content:
+            await singular.ping(self.pinger)
 
-    def __atindexrender(self, content, renderer):
+    def __atindexrender(self):
         m = {
-            'category': content.categories,
-            'tag': content.tags
+            'category': self.content.categories,
+            'tag': self.content.tags
         }
 
         for p, taxonomy in m.items():
@@ -2050,7 +2084,7 @@ class NASG(object):
             ))
 
             tmplvars = {
-                'site': renderer.sitevars,
+                'site': self.renderer.sitevars,
                 'taxonomy': {},
                 'taxonomies': {}
             }
@@ -2062,9 +2096,72 @@ class NASG(object):
 
             tmplvars['taxonomies'] = sorted(tmplvars['taxonomies'].items())
             logging.debug('rendering taxonomy index to %s', target)
-            r = renderer.j2.get_template('archiveindex.html').render(tmplvars)
+            r = self.renderer.j2.get_template('archiveindex.html').render(tmplvars)
             with open(target, "wt") as html:
                 html.write(r)
+
+    @property
+    def images(self):
+        if hasattr(self, '_images'):
+            return self._images
+        logging.info("discovering images")
+        images = Images()
+        images.populate()
+        self._images = images
+        return self._images
+
+    @property
+    def content(self):
+        if hasattr(self, '_content'):
+            return self._content
+        logging.info("discovering content")
+        content = Content(self.images, self.comments)
+        content.populate()
+        self._content = content
+        return self._content
+
+    @property
+    def comments(self):
+        if hasattr(self, '_comments'):
+            return self._comments
+        logging.info("discovering comments")
+        comments = Comments()
+        comments.populate()
+        self._comments = comments
+        return self._comments
+
+    @property
+    def existing(self):
+        if hasattr(self, '_existing'):
+            return self._existing
+        existing = glob.glob(os.path.join(
+            shared.config.get('target', 'filesdir'),
+            "*"
+        ))
+        self._existing = existing
+        return self._existing
+
+    @property
+    def renderer(self):
+        if hasattr(self, '_renderer'):
+            return self._renderer
+        self._renderer = Renderer()
+        return self._renderer
+
+    @property
+    def searchdb(self):
+        if hasattr(self, '_searchdb'):
+            return self._searchdb
+        self._searchdb = Indexer()
+        return self._searchdb
+
+
+    @property
+    def pinger(self):
+        if hasattr(self, '_pinger'):
+            return self._pinger
+        self._pinger = Webmentioner()
+        return self._pinger
 
 
     def run(self):
@@ -2091,51 +2188,29 @@ class NASG(object):
             if 'dir' in d and not os.path.isdir(shared.config.get('target', d)):
                 os.mkdir(shared.config.get('target', d))
 
-        logging.info("discovering images")
-        images = Images()
-        images.populate()
-        existing = glob.glob(os.path.join(
-            shared.config.get('target', 'filesdir'),
-            "*"
-        ))
         if not shared.config.getboolean('params', 'nodownsize'):
             logging.info("downsizing images")
-            loop.run_until_complete(self.__adownsize(images, existing))
+            loop.run_until_complete(self.__adownsize())
 
-        logging.info("discovering comments")
-        comments = Comments()
-        comments.populate()
-
-        logging.info("discovering content")
-        content = Content(images, comments)
-        content.populate()
-
-        renderer = Renderer()
         if not shared.config.getboolean('params', 'norender'):
             logging.info("rendering content")
-            loop.run_until_complete(self.__acrender(
-                content, renderer
-            ))
+            loop.run_until_complete(self.__acrender())
 
             logging.info("rendering categories and tags")
-            loop.run_until_complete(self.__atrender(
-                [content.categories, content.tags], renderer
-            ))
+            loop.run_until_complete(self.__atrender())
 
             logging.info("rendering the front page elements")
-            loop.run_until_complete(self.__afrender(
-                content.front, renderer
-            ))
+            loop.run_until_complete(self.__afrender())
 
             logging.info("rendering taxonomy indexes")
-            self.__atindexrender(content, renderer)
+            self.__atindexrender()
 
             logging.info("rendering sitemap")
-            content.sitemap()
+            self.content.sitemap()
 
 
         logging.info("render magic.php")
-        content.magicphp(renderer)
+        self.content.magicphp(self.renderer)
 
         logging.info("copy the static bits")
         src = shared.config.get('source', 'staticdir')
@@ -2146,14 +2221,13 @@ class NASG(object):
             shutil.copy2(s, d)
 
         logging.info("pouplating searchdb")
-        searchdb = Indexer()
-        loop.run_until_complete(self.__aindex(content, searchdb))
-        searchdb.finish()
+
+        loop.run_until_complete(self.__aindex())
+        self.searchdb.finish()
 
         logging.info("webmentioning urls")
-        pinger = Webmentioner()
-        loop.run_until_complete(self.__aping(content, pinger))
-        pinger.finish()
+        loop.run_until_complete(self.__aping())
+        self.pinger.finish()
 
         loop.close()
 

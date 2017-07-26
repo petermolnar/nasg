@@ -15,6 +15,7 @@ import arrow
 from webmentiontools import urlinfo
 import shared
 import envelope
+import bleach
 
 
 class WebmentionHandler(object):
@@ -175,7 +176,7 @@ class WebmentionHandler(object):
             return self._meta
 
         self._meta = {
-            'author': self._source.author,
+            'author': bleach.clean(self._source.author, tags=[], strip_comments=True, strip=True),
             'type': self._source.relationType,
             'target': self.target,
             'source': self.source,
