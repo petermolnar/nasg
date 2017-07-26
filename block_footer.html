@@ -42,7 +42,15 @@
 				</dd>
 			</dl>
 		</nav>
-		<aside class="footer-notes p-note">{{ site.author.note }}</aside>
+		<aside class="footer-notes p-note">
+			{{ site.author.note }}
+{% for title, vcard in site.author.qr.items() %}
+			<figure>
+				<img src="{{ vcard }}" alt="{{ title }}" />
+				<figcaption>{{ title }}</figcaption>
+			</figure>
+{% endfor %}
+		</aside>
 		<a href="/notforbot" title="This link is here to identify bad robots. Don't follow it. Don't click on it." rel="nofollow"></a>
 	</div>
 </footer>

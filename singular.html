@@ -8,7 +8,7 @@
 	{% if post.title %}
 	<title>{{ post.title }} | {{ site.domain }}</title>
 	{% else %}
-	<title>{{ post.name }} | {{ site.domain }}</title>
+	<title>{{ post.slug }} | {{ site.domain }}</title>
 	{% endif %}
 
 	<link rel="canonical" href="{{ site.url }}/{{ post.slug }}/" />
@@ -40,18 +40,18 @@
 {% include 'block_header_close.html' %}
 
 <section class="content-body">
-	<article class="h-entry singular"{% if post and post.lang %} lang="{{ post.lang }}"{% endif %}>
+	<article class="h-entry hentry singular"{% if post and post.lang %} lang="{{ post.lang }}"{% endif %}>
 		<header>
+			<p class="hide"><a class="u-url u-uuid" rel="bookmark" href="{{ site.url}}/{{ post.slug }}/"></a></p>
 		{% if post.reactions %}
 			<h1 class="reaction">{% include 'block_reaction.html' %}</h1>
 		{% elif post.title|length %}
 			<h1>
 				<a href="{{ site.url }}/{{ post.slug }}/" title="{{ post.title }}">
-					<span class="p-name">{{ post.title }}</span>
+					<span class="entry-title p-name">{{ post.title }}</span>
 				</a>
 			</h1>
 		{% endif %}
-
 			{% if 'IT' in post.tags %}
 				{% if post.updated %}
 					{% set py = post.updated|date('%Y')|int %}
@@ -66,19 +66,20 @@
 		</header>
 
 {% if post.summary %}
-		<div class="e-summary">
+		<div class="e-summary entry-summary">
 			{{ post.sumhtml }}
 			<br class="clear" />
 		</div>
 {% endif %}
 
-		<div class="e-content">
+		<div class="e-content entry-content">
 			<div class="content-inner">
-				{{ post.html }}
 
-{% if ( post.exif ) %}
-					{% include 'block_exif.html'  %}
+{% if ( post.photo ) %}
+					{% include 'block_photo.html'  %}
 {% endif %}
+
+				{{ post.html }}
 
 {% if ( post.syndicate ) %}
 					{% include 'block_syndicate.html'  %}
@@ -87,12 +88,11 @@
 			</div>
 		</div>
 
+{% if ( post.comments ) %}
+{% include 'block_comments.html'  %}
+{% endif %}
 
 		<footer>
-			<a class="u-url u-uuid" href="{{ site.url}}/{{ post.slug }}/"></a>
-			<p class="shorturl">
-				<a href="{{ site.url }}/{{ post.shortslug }}">{{ site.url }}/{{ post.shortslug }}</a>
-			</p>
 			<p class="published">
 				<time class="dt-published"
 					datetime="{{ post.published|date("c") }}">
@@ -103,24 +103,22 @@
 			<p class="updated">
 				<time class="dt-updated"
 					datetime="{{ post.updated|date("c") }}">
-					{{ post.updated|date("%Y-%m-%d %H:%M") }}
+					(updated: {{ post.updated|date("%Y-%m-%d %H:%M") }})
 				</time>
 			</p>
 {% endif %}
 {% if post.tags %}
-			<ul class="tags">
+			<p class="tags">
 {% for tname in post.tags %}
-				<li>
-					<a href="{{ site.url }}/tag/{{ tname|slugify }}" class="p-category">{{ tname }}</a>
-				</li>
+				#<a href="{{ site.url }}/tag/{{ tname|slugify }}" rel="tag" class="p-category">{{ tname }}</a>
 {% endfor %}
-			</ul>
+			</p>
 {% endif %}
-		</footer>
+			<p class="shorturl">
+				<a href="{{ site.url }}/{{ post.shortslug }}">{{ site.url }}/{{ post.shortslug }}</a>
+			</p>
 
-{% if ( post.comments ) %}
-{% include 'block_comments.html'  %}
-{% endif %}
+		</footer>
 
 	</article>
 

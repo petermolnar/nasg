@@ -1,4 +1,5 @@
-* {
+
+		* {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
@@ -33,7 +34,7 @@ html, body {
     min-height: 100%;
     font-size:19px;
     line-height: 1.2rem;
-    font-family:"Liberation Sans", "Helvetica Neue", "Roboto", sans-serif;
+    font-family: "Liberation Sans", "Helvetica Neue", "Roboto", "Arial", sans-serif;
     font-weight: normal;
     color: #333336;
     text-shadow: 1px 1px 1px rgba(0,0,0,0.004);
@@ -46,13 +47,11 @@ html {
 
 a {
     color: #333;
-    border-bottom: 1px solid #999;
     text-decoration:none;
 }
 
 a:hover {
     color: #000;
-    border-bottom-color: #000;
 }
 
 b, strong {
@@ -72,7 +71,7 @@ li {
 }
 
 ul li {
-   line-height: 1.6rem;    
+   line-height: 1.6rem;
 }
 
 li p {
@@ -80,11 +79,12 @@ li p {
     padding: 0;
 }
 
-blockquote, q {
+blockquote {
     margin: 0.3rem;
     padding-left: 0.6rem;
     font-style: italic;
     border-left: 2px solid #999;
+    color: #666;
 }
 
 table {
@@ -97,7 +97,7 @@ hr {
     height: 1px;
     border: none;
     border-top: 1px solid #999;
-    margin: 0.3rem 0 1rem 0;
+    margin: 1.3rem 0 1rem 0;
     clear:both;
 }
 
@@ -109,85 +109,96 @@ hr {
 
 .h-entry {
     padding: 0 0.6rem;
-    font-size: 0.9rem;
+    font-size: 0.86rem;
 }
 
-h1, h2, h3, h4, h5, h6,
-dt {
+h1, h2, h3, h4, h5, h6, dt {
     font-weight:bold;
     clear:both;
-    margin: 1rem 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 1.3rem 0 0.3rem 0;
+    padding: 0 0 0.3rem 0;
 }
 
 h1 {
-    font-size: 1.3rem;
-    margin: 0;
-}
-
-h1 a,
-h2 a {
-    border: none;
+    font-size: 1.2rem;
+    margin-top: 0;
 }
 
 h2 {
+    font-size: 1.1rem;
     border-bottom: 2px solid #999;
+}
+
+h3 {
+    font-size: 1rem;
 }
 
 .h-feed .h-entry h2 {
     border: none;
-    margin:0 0 0.3rem 0;
+    font-size: 1rem;
+    margin: 0;
+    padding: 0;
 }
 
 .h-feed .h-entry {
     margin: 2rem 0 0 0;
 }
 
-.h-entry.singular .e-summary {
-    margin-top: 1rem;
+.h-entry footer {
+    opacity: 0.8;
 }
 
-h3 {
-    border-bottom: 1px dotted #999;
+.published, .updated {
+    display: inline;
 }
 
-aside p {
-    padding:0;
+.shorturl,
+.tags {
+    padding: 0.3rem 0;
 }
 
-svg {
-    transform: rotate(0.01deg);
+.e-content a {
+    color:#115394;
+}
+
+.e-content a:hover {
+    color:#004283;
 }
 
 .icon {
+    transform: rotate(0.01deg);
     width: 19px;
     height: 19px;
-    display: inline-block;
+    display: inline;
     fill: currentColor;
     vertical-align:middle;
     overflow: visible;
 }
 
-code.sourceCode span.al { color: white; }
-code.sourceCode span.at { color: white; }
-code.sourceCode span.bn { color: white; }
-code.sourceCode span.bu { color: white; }
-code.sourceCode span.cf { color: white; }
-code.sourceCode span.ch { color: white; }
+code.sourceCode span.al { color: black; }
+code.sourceCode span.at { color: black; }
+code.sourceCode span.bn { color: black; }
+code.sourceCode span.bu { color: black; }
+code.sourceCode span.cf { color: black; }
+code.sourceCode span.ch { color: black; }
 code.sourceCode span.co { color: darkgray; }
-code.sourceCode span.dt { color: white; }
-code.sourceCode span.dv { color: white; }
-code.sourceCode span.er { color: white; }
+code.sourceCode span.dt { color: black; }
+code.sourceCode span.dv { color: black; }
+code.sourceCode span.er { color: black; }
 code.sourceCode span.ex { color: darkorange; }
-code.sourceCode span.fl { color: white; }
+code.sourceCode span.fl { color: black; }
 code.sourceCode span.fu { color: darkorange; }
-code.sourceCode span.im { color: white; }
+code.sourceCode span.im { color: black; }
 code.sourceCode span.kw { color: darkcyan; }
-code.sourceCode span.op { color: white; }
-code.sourceCode span.ot { color: white; }
-code.sourceCode span.pp { color: white; }
-code.sourceCode span.sc { color: white; }
-code.sourceCode span.ss { color: white; }
+code.sourceCode span.op { color: black; }
+code.sourceCode span.ot { color: black; }
+code.sourceCode span.pp { color: black; }
+code.sourceCode span.sc { color: black; }
+code.sourceCode span.ss { color: black; }
 code.sourceCode span.st { color: magenta; }
 code.sourceCode span.va { color: darkturquoise; }
 
@@ -195,8 +206,7 @@ code,
 pre {
     font-family: "Inconsolata", monospace;
     font-size: 0.8rem;
-    background-color: #222;
-    color: lightgreen;
+    color: darkslategrey;
     direction: ltr;
     text-align: left;
     white-space: pre;
@@ -204,6 +214,8 @@ pre {
     word-break: normal;
     tab-size: 2;
     hyphens: none;
+    border: 1px solid #ccc;
+    background-color: whitesmoke;
 }
 
 pre {
@@ -215,7 +227,7 @@ pre {
 code {
     display: inline-block;
     padding: 0 0.3rem;
-    line-height: 1.2rem;
+    line-height: 1.1rem;
 }
 
 pre code {
@@ -228,29 +240,14 @@ pre code {
     margin: 2rem 0;
 }
 
-.tags {
-    list-style-type: none;
-}
-
-.tags,
-.tags li {
-    display: inline-block;
-}
-
-.tags li {
-    margin:0 0.3rem 0 0;
-}
-
-.tags li:before {
-    content: '#';
-    color: #999;
-}
-
-
 .footnoteRef,
 .footnoteRef:hover {
     border: 0;
     white-space: nowrap;
+}
+
+.footnoteRef a {
+    border: none;
 }
 
 .footnoteRef sup {
@@ -258,7 +255,6 @@ pre code {
     position: relative;
     top: -0.3rem;
     font-size: 0.8rem;
-    color: #33c;
     margin-right: 0.1rem;
 }
 
@@ -267,26 +263,8 @@ pre code {
     color: #33c;
 }
 
-.footnoteRef sup:before {
-    content: "[";
-}
-
-.footnoteRef sup:after {
-    content: "]";
-}
-
-.footnoteRef sup:hover,
-.footnoteRef sup:hover:after,
-.footnoteRef sup:hover:before {
-    text-shadow: 1px 0 0 #33c;
-}
-
-.footnotes ol {
-    font-size: 0.8rem;
-}
-
 .footnotes ol li {
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.3rem;
 }
 
 .comments ol .u-repost-of,
@@ -296,13 +274,8 @@ pre code {
     white-space: nowrap;
     text-overflow: ellipsis;
     vertical-align: top;
-    border-bottom: 1px solid #ccc;
-}
-
-.footnotes ol li a {
     max-width: 80%;
 }
-
 
 .footnotes ol li a[href^="#"] {
     margin: 0 0 0 0.6rem;
@@ -384,6 +357,15 @@ pre code {
     border-bottom: none;
 }
 
+.footer-notes figure {
+    display: inline-block;
+    margin-right: 1rem;
+}
+
+.footer-notes figure img {
+    width:7rem;
+}
+
 input {
     vertical-align:middle;
     border: none;
@@ -396,7 +378,7 @@ input {
 }
 
 input[type=submit] {
-    
+
     width: 2.2rem;
     cursor: pointer;
 }
@@ -429,7 +411,7 @@ input[type=submit]:hover {
 
 .content-navigation ul li a {
     display:block;
-    padding:0.2rem;
+    padding:0 0.2rem;
     font-weight: bold;
     border-bottom: 3px solid transparent;
     text-align: center;
@@ -514,7 +496,7 @@ input[type=submit]:hover {
 
 .more {
     display:block;
-    font-weight:bold;    
+    font-weight:bold;
 }
 
 .more a:before {
@@ -537,11 +519,7 @@ input[type=submit]:hover {
 }
 
 time {
-    font-family: "Inconsolata", monospace;
     font-size: 0.8rem;
-}
-.pubdate a {
-    border: none;
 }
 
 .exif {
@@ -574,22 +552,23 @@ time {
     margin-bottom: 1.3rem;
 }
 
-.comments ol .u-repost-of {
-    border: none;
-}
-
-.comments ol .u-repost-of {
-    opacity: 0.7;
-    font-size: 0.7rem;
-    max-width: 99%;
-}
 
 .comments ol .p-name {
     font-weight: bold;
     display: block;
 }
 
-/* reactions */
+.comments ol time,
+.comments ol .u-repost-of {
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+.comments ol .u-repost-of:before {
+    content: '•';
+    margin: 0 0.3rem;
+}
+
 .comments dt,
 .comments dd,
 .comments dl ul,
@@ -604,7 +583,7 @@ time {
 
 .comments dl a.u-repost-of {
     margin-left: 0.3rem;
-    
+
 }
 
 .content-note {
@@ -656,7 +635,7 @@ time {
 }
 
 .u-favorite-of {
-    font-size: 0.9rem; 
+    font-size: 0.9rem;
     font-weight: initial;
 }
 
@@ -690,7 +669,7 @@ time {
 
 @media print {
     * {
-       background-color: #fff;
+       background-color: #fff !important;
     }
 
     html, body {
@@ -745,7 +724,7 @@ time {
         max-height:45vh;
     }
 
-    .content-note, .content-header, .content-footer,  
+    .content-note, .content-header, .content-footer,
     video, audio,
     .footnotes ol li a[href^="#"],
     .footnotes ol li a[href^="#"]:after {
@@ -761,7 +740,7 @@ time {
     }
 
     code.sourceCode span { color: #000; }
-    
+
     pre.sourceCode, code, pre {
        color: #222;
        word-break: break-all;
@@ -770,3 +749,4 @@ time {
         line-height: 1rem;
     }
 }
+	

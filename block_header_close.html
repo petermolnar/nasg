@@ -1,3 +1,6 @@
+	<style media="all">
+		{% include 'style.css' %}
+	</style>
 </head>
 
 <body>
@@ -13,39 +16,39 @@
 				</a>
 			</li>
 			<li>
-				<a title="photos" href="{{ site.url }}/category/photo/" class="{% if (post and post.category ==  'photo' ) or ( taxonomy.name|lower == 'photo' ) %} active{% endif %}">
+				<a title="photos" href="{{ site.url }}/category/photo/" class="{% if (post and post.category ==  'photo' ) or ( taxonomy.slug == 'photo' ) %} active{% endif %}">
 					<svg class="icon"><use xlink:href="#icon-photo" /></svg>
 					photos
 				</a>
 			</li>
 			<li>
-				<a title="journal" href="{{ site.url }}/category/journal/" class="{% if ( post and post.category == 'journal' ) or ( post and 'journal' in post.tags ) or ( taxonomy.name|lower == 'journal' ) %} active{% endif %}">
+				<a title="journal" href="{{ site.url }}/category/journal/" class="{% if ( post and post.category == 'journal' ) or ( post and 'journal' in post.tags ) or ( taxonomy.slug == 'journal' ) %} active{% endif %}">
 					<svg class="icon"><use xlink:href="#icon-journal" /></svg>
 					journal
 				</a>
 			</li>
 			<li>
-				<a title="IT" href="{{ site.url }}/category/article/" class="{% if ( post and post.category == 'article' ) or ( post and 'IT' in post.tags ) or ( ( taxonomy.name|lower == 'article' ) or ( taxonomy.name|lower == 'it' ) ) %} active{% endif %}">
+				<a title="IT" href="{{ site.url }}/category/article/" class="{% if ( post and post.category == 'article' ) or ( post and 'IT' in post.tags ) or ( ( taxonomy.slug == 'article' ) or ( taxonomy.slug == 'it' ) ) %} active{% endif %}">
 					<svg class="icon"><use xlink:href="#icon-article" /></svg>
 					IT
 				</a>
 			</li>
 			<li>
-				<a title="notes" href="{{ site.url }}/category/note/" class="{% if ( post and 'Note' in post.tags ) or ( taxonomy.name|lower == 'note' ) %} active{% endif %}">
+				<a title="notes" href="{{ site.url }}/category/note/" class="{% if ( post and 'Note' in post.tags ) or ( taxonomy.slug == 'note' ) %} active{% endif %}">
 					<svg class="icon"><use xlink:href="#icon-note" /></svg>
 					notes
 				</a>
 			</li>
 			{#
 			<li>
-				<a title="replies" href="{{ site.url }}/category/reply/" class="{% if ( post and 'Reply' in post.tags ) or ( taxonomy.name|lower == 'reply' ) %} active{% endif %}">
+				<a title="replies" href="{{ site.url }}/category/reply/" class="{% if ( post and 'Reply' in post.tags ) or ( taxonomy.slug == 'reply' ) %} active{% endif %}">
 					<svg class="icon"><use xlink:href="#icon-reply" /></svg>
 					re:
 				</a>
 			</li>
 			#}
 			<li>
-				<a title="bookmarks" href="{{ site.url }}/category/bookmark/" class="{% if ( post and post.category == 'bookmark' ) or ( post and 'Bookmark' in post.tags ) or ( taxonomy.name|lower == 'bookmark' ) %} active{% endif %}">
+				<a title="bookmarks" href="{{ site.url }}/category/bookmark/" class="{% if ( post and post.category == 'bookmark' ) or ( post and 'Bookmark' in post.tags ) or ( taxonomy.slug == 'bookmark' ) %} active{% endif %}">
 					<svg class="icon"><use xlink:href="#icon-bookmark" /></svg>
 					bookmarks
 				</a>
@@ -55,8 +58,9 @@
 
 	<form role="search" method="get" class="search-form" action="/search">
 		<label for="search" class="hide">Search</label>
-		<input type="search" class="search-field" placeholder="search..." value="" name="s" id="s" title="Search for:">
-		<input type="submit" class="search-submit" value="Go ➡">
+		<input type="search" class="search-field" placeholder="search..." value="" name="s" id="s" title="Search for:" />
+		<input type="submit" class="search-submit" value="Go ➡" />
+		<input type="hidden" class="hide" value="{{ taxonomy.slug }}" name="c" id="c" />
 	</form>
 
 	<br class="clear" />

@@ -6,7 +6,7 @@
 			<li class="h-entry p-comment">
 				<a class="u-url u-uuid" href="{{ site.url }}/{{ site.commentspath }}/{{ reply.fname }}/" name="{{ reply.fname }}"></a>
 				<header>
-					<div class="p-author h-card">
+					<p class="p-author h-card">
 						{% if reply.author.url %}
 							<a class="url u-url" href="{{ reply.author.url }}">
 								<span class="p-name fn">{{ reply.author.name }}</span>
@@ -14,19 +14,19 @@
 						{% else %}
 							<span class="p-name fn">{{ reply.author.name }}</span>
 						{% endif %}
-					</div>
+					</p>
+					<p>
 					<time class="dt-published" datetime="{{ reply.published|date('c') }}">
 						{{ reply.published|date('%Y-%m-%d %H:%M') }}
 					</time>
+					{% if reply.source|length > 0 %}
+					<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
+					{% endif %}
+					</p>
 				</header>
 				<div class="e-content">
 					{{ reply.html }}
 				</div>
-				<footer>
-					{% if reply.source|length > 0 %}
-					<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
-					{% endif %}
-				</footer
 			</li>
 		{% endfor %}
 		</ol>

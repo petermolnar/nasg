@@ -1,15 +1,17 @@
 {% include 'block_header_open.html' %}
 
 {%- if taxonomy.name -%}
-{%- set title = taxonomy.name ~ ' | ' ~ site.name -%}
+{%- set title = taxonomy.name ~ ' | ' ~ site.domain -%}
 {%- else -%}
-{%- set title = site.name -%}
+{%- set title = site.title -%}
 {%- endif -%}
+
 {%- if ( taxonomy.paged > 1 ) -%}
 {%- set turl = site.url ~ taxonomy.url ~ taxonomy.paged ~ '/'  -%}
 {%- else -%}
 {%- set turl = site.url ~ taxonomy.url  -%}
 {%- endif -%}
+
 	<title>{{ title }}</title>
 	<link rel="alternate" type="application/rss+xml" title="{{ title }} RSS Feed" href="{{ site.url}}{{ taxonomy.url }}feed" />
 
@@ -20,14 +22,14 @@
 	<meta property="og:type" content="website" />
 	<meta name="og:updated_time" content="{{ posts[0].published|date("c") }}" />
 	<meta property="og:url" content="{{ turl }}" />
-	<meta property="og:image" content="{{ site.url }}/theme/favicon.png"/>
+	<meta property="og:image" content="{{ site.url }}/favicon.png"/>
 
 	<meta name="twitter:card" content="summary" />
 	<meta name="twitter:description" content="{{ taxonomy.description|default(title) }}" />
 	{% if site.author.twitter %}<meta name="twitter:site" content="@{{ site.author.twitter }}" />{% endif %}
 	{% if site.author.twitter %}<meta name="twitter:creator" content="@{{ site.author.twitter }}" />{% endif %}
 	<meta name="twitter:title" content="{{ title }}" />
-	<meta name="twitter:image" content="{{ site.url }}/theme/favicon.png">
+	<meta name="twitter:image" content="{{ site.url }}/favicon.png">
 
 	<meta name="DC.Format" content="text/html" />
 	<meta name="DC.Title" content="{{ title }}" />
@@ -79,15 +81,15 @@
 			{% set hentry = 'status' %}
 		{% endif %}
 
-		<article class="h-entry h-{{ hentry }}"{% if post and post.lang %} lang="{{ post.lang }}"{% endif %}>
+		<article class="h-entry hentry h-{{ hentry }}"{% if post and post.lang %} lang="{{ post.lang }}"{% endif %}>
 			<header>
 
 				{% if post.reactions %}
-					<h2 class="reaction">{% include 'block_reaction.html' %}</h2>
+					{% include 'block_reaction.html' %}
 				{% elif post.title|length %}
 				<h2>
 					<a href="{{ site.url }}/{{ post.slug }}" title="{{ post.title }}">
-						<span class="p-name">
+						<span class="p-name entry-title">
 							{{ post.title }}
 						</span>
 					</a>
@@ -106,13 +108,7 @@
 			</header>
 
 			{% if hentry == "article" %}
-				<div class="e-summary long">
-					<!--
-					{%if post.thumbnail %}
-						<img src="{{ post.thumbnail }}" alt="{{ post.title }}" class="alignleft" />
-					{% else %}
-						<svg class="icon large"><use xlink:href="#icon-{{ post.category }}" /></svg>
-					{% endif %}-->
+				<div class="e-summary entry-summary">
 					{{ post.sumhtml }}
 					<span class="more">
 						<a href="{{ site.url }}/{{ post.slug }}" title="{{ post.title }}"></a>
@@ -120,15 +116,13 @@
 					<br class="clear" />
 				</div>
 			{% else %}
-				<div class="e-content">
+				<div class="e-content entry-content">
+					{% if ( post.photo ) %}
+						{% include 'block_photo.html' %}
+					{% endif %}
 
 					{{ post.html }}
 
-					{% if ( post.exif ) %}
-						{% include 'block_exif.html' %}
-					{% endif %}
-
-					<br class="clear" />
 				</div>
 			{% endif %}
 
