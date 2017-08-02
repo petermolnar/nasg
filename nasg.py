@@ -134,6 +134,9 @@ class Indexer(object):
 
 
     async def append(self, singular):
+        if singular.isfuture:
+            return
+
         logging.debug("searching for existing index for %s", singular.fname)
         if self.mtime >= singular.mtime:
             logging.debug("search index is newer than post mtime (%d vs %d), skipping post", self.mtime, singular.mtime)
@@ -806,9 +809,10 @@ class WebImage(object):
         self.target = False
         if self.is_downsizeable:
             self.fallback = [e for e in self.sizes if e[0] == self.fallbacksize][0][1]['url']
+            self.small = [e for e in self.sizes if e[1]['crop'] == False][0][1]['url']
             self.target = self.sizes[-1][1]['url']
         else:
-            self.fallback = "%s/%s/%s" % (
+            self.small = self.fallback = "%s/%s/%s" % (
                 shared.config.get('site', 'url'),
                 shared.config.get('source', 'files'),
                 "%s%s" % (self.fname, self.ext)
@@ -833,9 +837,11 @@ class WebImage(object):
         self._tmplvars = {
             'alttext': self.alttext,
             'fallback': self.fallback,
+            'small': self.small,
             'title': "%s%s" % (self.fname, self.ext),
             'target': self.target,
-            'cl': self.cl
+            'cl': " ".join([s[1:] for s in self.cl.split()]),
+            'orientation': self.orientation
         }
         return self._tmplvars
 
@@ -925,6 +931,14 @@ class WebImage(object):
         self._exif = exif
         return self._exif
 
+    @property
+    def orientation(self):
+        width = int(self.meta.get('ImageWidth', 0))
+        height = int(self.meta.get('ImageHeight', 0))
+
+        if width >= height:
+            return 'horizontal'
+        return 'vertical'
 
     @property
     def rssenclosure(self):
@@ -1193,6 +1207,50 @@ class Taxonomy(BaseIter):
             return "%s/%d/index.html" % (self.pagep, page)
 
 
+    async def grender(self, renderer):
+        #if not self.slug or self.slug is 'None':
+            #return
+
+        self.__mkdirs()
+        target = self.tpath(1)
+        target = target.replace('index', 'gallery')
+
+        if not shared.config.getboolean('params', 'force') and os.path.isfile(target):
+            ttime = int(os.path.getmtime(target))
+            mtime = self.mtime
+            if ttime == mtime:
+                logging.info('taxonomy index for "%s" exists and up-to-date (lastmod: %d)', self.slug, ttime)
+                return
+            else:
+                logging.info('taxonomy update needed: %s timestamp is %d, last post timestamp is %d (%s)',
+                    target,
+                    ttime,
+                    mtime,
+                    self.data[mtime].fname
+                )
+
+        posttmpls = [self.data[k].tmplvars for k in list(sorted(
+            self.data.keys(), reverse=True))]
+
+        logging.info("rendering gallery to %s", target)
+        tmplvars = {
+            'taxonomy': {
+                'url': self.baseurl,
+                'name': self.name,
+                'slug': self.slug,
+                'taxonomy': self.taxonomy,
+                'lastmod': arrow.get(self.mtime).datetime
+            },
+            'site': renderer.sitevars,
+            'posts': posttmpls,
+        }
+
+        r = renderer.j2.get_template('gallery.html').render(tmplvars)
+        with open(target, "wt") as html:
+            html.write(r)
+        os.utime(target, (self.mtime, self.mtime))
+
+
     async def render(self, renderer):
         #if not self.slug or self.slug is 'None':
             #return
@@ -1331,7 +1389,7 @@ class Content(BaseIter):
             self.append(item.pubtime, item)
             #self.shortslugmap[item.shortslug] = item.fname
 
-            if item.pubtime > now:
+            if item.isfuture:
                 logging.warning("skipping future post %s", item.fname)
                 continue
 
@@ -1606,6 +1664,37 @@ class Singular(BaseRenderable):
         self._reactions = reactions
         return self._reactions
 
+    @property
+    def author(self):
+        return dict(shared.config.items('author'))
+
+    @property
+    def license(self):
+        if hasattr(self, '_licence'):
+            return self._licence
+
+
+        if 'article' == self.category:
+            l = {
+                'url': 'https://creativecommons.org/licenses/by/4.0/',
+                'text': 'CC BY 4.0',
+                'description': 'Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, even for commercial use.'
+            }
+        if 'journal' == self.category:
+            l = {
+                'url': 'https://creativecommons.org/licenses/by-nc/4.0/',
+                'text': 'CC BY-NC 4.0',
+                'description': 'Licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, for non commercial use. For commercial use please contact the author.'
+            }
+        else:
+            l = {
+                'url': 'https://creativecommons.org/licenses/by-nc-nd/4.0/',
+                'text': 'CC BY-NC-ND 4.0',
+                'description': 'Licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International</a>. You are free to share if you link back here for non commercial use, but you can\'t publish any altered versions of it. For commercial use please contact the author.'
+            }
+
+        self._licence = l
+        return self._licence
 
     @property
     def syndicate(self):
@@ -1704,6 +1793,12 @@ class Singular(BaseRenderable):
     def isreply(self):
         return self.meta.get('in-reply-to', False)
 
+    @property
+    def isfuture(self):
+        now = arrow.utcnow().timestamp
+        if self.pubtime > now:
+            return True
+        return False
 
     # TODO
     #@property
@@ -1843,7 +1938,7 @@ class Singular(BaseRenderable):
             'title': self.title,
             'published': self.published.datetime,
             'tags': self.tags,
-            'author': dict(shared.config.items('author')),
+            'author': self.author,
             'content': self.content,
             'html': self.html,
             'category': self.category,
@@ -1861,6 +1956,7 @@ class Singular(BaseRenderable):
             'reacjis': self.reacjis,
             'photo': {},
             'rssenclosure': {},
+            'license': self.license,
         }
 
         if self.isphoto:
@@ -1931,6 +2027,9 @@ class Singular(BaseRenderable):
 
 
     async def ping(self, pinger):
+        if self.isfuture:
+            return
+
         logging.debug('urls in %s: %s', self.fname, self.urls)
         for target in self.urls:
             record = {
@@ -2058,6 +2157,10 @@ class NASG(object):
         for e in [self.content.categories, self.content.tags]:
             for name, t in e.items():
                 await t.render(self.renderer)
+                if name == 'photo' and t.taxonomy == 'category':
+                    await t.grender(self.renderer)
+
+
 
     async def __afrender(self):
         await self.content.front.render(self.renderer)
