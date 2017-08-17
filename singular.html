@@ -6,7 +6,7 @@
 {% include 'block_header_open.html' %}
 
 	{% if post.title %}
-	<title>{{ post.title }} | {{ site.domain }}</title>
+	<title>{{ post.title|e }} | {{ site.domain }}</title>
 	{% else %}
 	<title>{{ post.slug }} | {{ site.domain }}</title>
 	{% endif %}
@@ -16,9 +16,9 @@
 
 	<meta name="author" content="{{ post.author.name }}">
 	<meta name="keywords" content="{{ post.tags|join(',') }}">
-	<meta name="description" content="{{ post.excerpt|default(post.title) }}">
+	<meta name="description" content="{{ post.summary|e }}">
 
-	<meta property="og:description" content="{{ post.excerpt|striptags }}" />
+	<meta property="og:description" content="{{ post.summary|e }}" />
 	<meta property="og:locale" content="{{ post.lang|default(site.lang) }}" />
 	<meta property="og:site_name" content="{{ site.name }}" />
 	<meta property="og:title" content="{{ post.title }}" />
@@ -26,28 +26,30 @@
 	{% if post.modified %}<meta name="og:updated_time" content="{{ post.modified|date("c") }}" />{%endif%}
 	<meta property="og:url" content="{{ site.url }}/{{ post.shortslug }}/" />
 
+	<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/" >
 	<meta name="DC.Format" content="text/html" />
-	<meta name="DC.Title" content="{{ post.title }}">
+	<meta name="DC.Title" content="{{ post.title|e }}">
 	<meta name="DC.Creator" content="{{ post.author.name }}">
-	<meta name="DC.Description" content="{{ post.excerpt|default(post.title) }}">
+	<meta name="DC.Description" content="{{ post.summary|e }}">
 	<meta name="DC.Date" content="{{ post.published|date("%Y-%m-%d") }}">
 	<meta name="DC.Type" content="{{ dctype }}">
 	<meta name="DC.Identifier" content="{{ site.url }}/{{ post.slug }}/">
 	<meta name="DC.Source" content="{{ site.url }}/{{ post.slug }}/">
 	<meta name="DC.Language" content="{{ post.lang|default(site.lang) }}">
-	<meta name="DC.Rights" content="Copyright {{ post.published|date("%Y") }}, {{ post.author.name }} <{{ post.author.email }}>. All rights reserved.">
+
+	<link rel="license" href="{{ post.license.url }}" />
+	<meta name="DC.Rights" content="{{ post.license.text }} by {{ post.author.name }}">
 
 {% include 'block_header_close.html' %}
 
 <section class="content-body">
 	<article class="h-entry hentry singular"{% if post and post.lang %} lang="{{ post.lang }}"{% endif %}>
 		<header>
-			<p class="hide"><a class="u-url u-uuid" rel="bookmark" href="{{ site.url}}/{{ post.slug }}/"></a></p>
 		{% if post.reactions %}
 			<h1 class="reaction">{% include 'block_reaction.html' %}</h1>
 		{% elif post.title|length %}
 			<h1>
-				<a href="{{ site.url }}/{{ post.slug }}/" title="{{ post.title }}">
+				<a href="/{{ post.slug }}/" title="{{ post.title }}">
 					<span class="entry-title p-name">{{ post.title }}</span>
 				</a>
 			</h1>
@@ -75,22 +77,26 @@
 		<div class="e-content entry-content">
 			<div class="content-inner">
 
-{% if ( post.photo ) %}
-					{% include 'block_photo.html'  %}
-{% endif %}
+					{% if ( post.photo ) %}
+						{% include 'block_photo.html' %}
+					{% endif %}
+
+					{% if ( post.exif ) %}
+						{% include 'block_exif.html' %}
+					{% endif %}
 
 				{{ post.html }}
 
 {% if ( post.syndicate ) %}
-					{% include 'block_syndicate.html'  %}
+	<aside class="syndicate hide">
+	{% for url in post.syndicate %}
+		<a href="{{ url }}" class="u-syndication"></a>
+	{% endfor %}
+	</aside>
 {% endif %}
 
 			</div>
 		</div>
-
-{% if ( post.comments ) %}
-{% include 'block_comments.html'  %}
-{% endif %}
 
 		<footer>
 			<p class="published">
@@ -110,25 +116,108 @@
 {% if post.tags %}
 			<p class="tags">
 {% for tname in post.tags %}
-				#<a href="{{ site.url }}/tag/{{ tname|slugify }}" rel="tag" class="p-category">{{ tname }}</a>
+				#<a href="/tag/{{ tname|slugify }}" rel="tag" class="p-category">{{ tname }}</a>
 {% endfor %}
 			</p>
 {% endif %}
 			<p class="shorturl">
-				<a href="{{ site.url }}/{{ post.shortslug }}">{{ site.url }}/{{ post.shortslug }}</a>
+				<a href="/{{ post.shortslug }}">{{ site.url }}/{{ post.shortslug }}</a>
 			</p>
 
+{% include 'block_author.html' %}
+			<p class="hide">
+				<a class="u-url u-uuid" rel="bookmark" href="{{ site.url}}/{{ post.slug }}/"></a>
+			</p>
 		</footer>
+
+
+{% if ( post.comments ) %}
+		<section class="comments h-feed">
+			{% if post.replies|length > 0 %}
+			<h6 class="comments-replies"><a name="replies"></a>Replies</h6>
+			<ol>
+				{% for reply in post.replies %}
+					<li class="h-entry p-comment">
+						<a class="u-url u-uuid" href="{{ site.url }}/{{ site.commentspath }}/{{ reply.fname }}/" name="{{ reply.fname }}"></a>
+						<header>
+							<p class="p-author h-card">
+								{% if reply.author.url %}
+									<a class="url u-url" href="{{ reply.author.url }}">
+										<span class="p-name fn">{{ reply.author.name }}</span>
+									</a>
+								{% else %}
+									<span class="p-name fn">{{ reply.author.name }}</span>
+								{% endif %}
+							</p>
+							<p>
+							<time class="dt-published" datetime="{{ reply.published|date('c') }}">
+								{{ reply.published|date('%Y-%m-%d %H:%M') }}
+							</time>
+							{% if reply.source|length > 0 %}
+							<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
+							{% endif %}
+							</p>
+						</header>
+						<div class="e-content">
+							{{ reply.html }}
+						</div>
+					</li>
+				{% endfor %}
+				</ol>
+			{% endif %}
+
+			{% if post.reacjis|length > 0 %}
+			<h6 class="comments-reacji"><a name="reacji"></a>Reactions</h6>
+			<dl>
+			{% for reacji, replies in post.reacjis.items() %}
+				<dt><a name="{{ reacji }}"></a>{{ reacji }}</dt>
+				<dd>
+					<ul>
+					{% for reply in replies %}
+						<li class="p-comment h-entry ">
+							<a class="u-url u-uuid" href="/{{ site.commentspath }}/{{ reply.fname }}/" name="{{ reply.fname }}"></a>
+							<time class="dt-published" datetime="{{ reply.published|date('c') }}">
+								{{ reply.published|date('%Y-%m-%d %H:%M') }}
+							</time>
+							<span class="p-author h-card">
+								{% if reply.author.url %}
+									<a class="url u-url" href="{{ reply.author.url }}">
+										<span class="p-name fn">{{ reply.author.name }}</span>
+									</a>
+								{% else %}
+									<span class="p-name fn">{{ reply.author.name }}</span>
+								{% endif %}
+							</span>
+							<a href="{{ reply.source }}" class="u-repost-of" title="{{ reply.source }}">
+								<svg class="icon"><use xlink:href="#icon-link" /></svg>
+							</a>
+						</li>
+					{% endfor %}
+					</ul>
+				</dd>
+				{% endfor %}
+			</dl>
+			{% endif %}
+		</section>
+
+{% endif %}
+
 
 	</article>
 
 	<aside class="content-note">
 		<hr />
+		<p class="license">
+			<a rel="license" href="{{ post.license.url }}" class="hide u-license">{{ post.license.text }}</a>
+			<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+			{{ post.license.description }}
+		</p>
 		<p>Want to leave a comment or get in touch? Reply with your own blog using
 			<a href="http://indiewebcamp.com/webmention">Webmentions</a> or send an
 			<a href="mailto:{{ post.author.email }}?subject=RE: {{ post.title }}"
 			>email</a>.
 		</p>
+
 	</aside>
 
 </section>

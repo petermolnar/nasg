@@ -20,7 +20,7 @@
 	<meta property="og:site_name" content="{{ site.name }}" />
 	<meta property="og:title" content="{{ title }}" />
 	<meta property="og:type" content="website" />
-	<meta name="og:updated_time" content="{{ posts[0].published|date("c") }}" />
+	<meta name="og:updated_time" content="{{ posts[0].published|date('c') }}" />
 	<meta property="og:url" content="{{ turl }}" />
 	<meta property="og:image" content="{{ site.url }}/favicon.png"/>
 
@@ -88,7 +88,7 @@
 					{% include 'block_reaction.html' %}
 				{% elif post.title|length %}
 				<h2>
-					<a href="{{ site.url }}/{{ post.slug }}" title="{{ post.title }}">
+					<a href="/{{ post.slug }}" title="{{ post.title }}">
 						<span class="p-name entry-title">
 							{{ post.title }}
 						</span>
@@ -98,7 +98,7 @@
 
 				<aside class="pubdate{% if post.bookmark or post.repost %} hide{% endif %}">
 					<a class="u-url u-uuid" href="{{ site.url}}/{{ post.slug }}/"></a>
-					<a title="{{ post.title }}" href="{{ site.url }}/{{ post.slug }}">
+					<a title="{{ post.title }}" href="/{{ post.slug }}">
 						<time class="dt-published" datetime="{{ post.published|date('c') }}">
 							{{ post.published|date('%Y-%m-%d %H:%M') }}
 						</time>
@@ -111,7 +111,7 @@
 				<div class="e-summary entry-summary">
 					{{ post.sumhtml }}
 					<span class="more">
-						<a href="{{ site.url }}/{{ post.slug }}" title="{{ post.title }}"></a>
+						<a href="/{{ post.slug }}" title="{{ post.title }}"></a>
 					</span>
 					<br class="clear" />
 				</div>
@@ -121,11 +121,18 @@
 						{% include 'block_photo.html' %}
 					{% endif %}
 
+					{% if ( post.exif ) %}
+						{% include 'block_exif.html' %}
+					{% endif %}
+
 					{{ post.html }}
 
 				</div>
 			{% endif %}
 
+			<footer class="hide">
+{% include 'block_author.html' %}
+			</footer>
 
 		</article>
 
@@ -140,10 +147,10 @@
 	{% if taxonomy.paged > 1 %}
 	{% set prev = taxonomy.paged - 1 %}
 			<li>
-				<a rel="prev" href="{{ site.url}}{{ taxonomy.url }}page/{{ prev }}">«</a>
+				<a rel="prev" href="{{ taxonomy.url }}page/{{ prev }}">«</a>
 			</li>
 			<li>
-				<a rel="prev" href="{{ site.url}}{{ taxonomy.url }}">1</a>
+				<a rel="prev" href="{{ taxonomy.url }}">1</a>
 			</li>
 	{% endif %}
 
@@ -156,7 +163,7 @@
 
 		{% if ( taxonomy.paged - 1 > 1 ) %}
 			<li>
-				<a href="{{ site.url}}{{ taxonomy.url }}page/{{ taxonomy.paged - 1 }}">{{ taxonomy.paged - 1 }}</a>
+				<a href="{{ taxonomy.url }}page/{{ taxonomy.paged - 1 }}">{{ taxonomy.paged - 1 }}</a>
 			</li>
 		{% endif %}
 
@@ -168,7 +175,7 @@
 
 		{% if ( taxonomy.paged + 1 <= taxonomy.total -1 ) %}
 			<li>
-				<a href="{{ site.url}}{{ taxonomy.url }}page/{{ taxonomy.paged + 1 }}">{{ taxonomy.paged + 1 }}</a>
+				<a href="{{ taxonomy.url }}page/{{ taxonomy.paged + 1 }}">{{ taxonomy.paged + 1 }}</a>
 			</li>
 		{% endif %}
 
@@ -182,14 +189,14 @@
 
 	{% if taxonomy.paged != taxonomy.total %}
 			<li>
-				<a href="{{ site.url}}{{ taxonomy.url }}page/{{ taxonomy.total }}">{{ taxonomy.total }}</a>
+				<a href="{{ taxonomy.url }}page/{{ taxonomy.total }}">{{ taxonomy.total }}</a>
 			</li>
 	{% endif %}
 
 	{% if taxonomy.paged < taxonomy.total %}
 	{% set next = taxonomy.paged + 1 %}
 			<li>
-				<a rel="next" href="{{ site.url}}{{ taxonomy.url }}page/{{ next }}">»</a>
+				<a rel="next" href="{{ taxonomy.url }}page/{{ next }}">»</a>
 			</li>
 	{% endif %}
 		</ul>

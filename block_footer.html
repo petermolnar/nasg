@@ -2,12 +2,12 @@
 <footer class="content-footer" id="main-footer">
 	<div class="limit">
 		<nav class="footer-contact p-author h-card vcard">
-			<img class="photo avatar u-photo u-avatar" src="{{ site.url }}/{{ site.author.avatar }}" alt="Photo of {{ site.author.name }}" />
+			<img class="photo avatar u-photo u-avatar" src="{{ site.author.avatar }}" alt="Photo of {{ site.author.name }}" />
 			<dl>
 
 				<dt>name</dt>
 				<dd>
-					<a class="fn p-name url u-url u-uid" href="{{ site.author.url }}">{{ site.author.name }}</a>
+					<a class="fn p-name url u-url u-uid" href="{{ site.author.url }}/about">{{ site.author.name }}</a>
 				</dd>
 				<dt>email</dt>
 				<dd>
@@ -26,14 +26,15 @@
 					<a rel="me" class="u-{{ silo }} url u-url" href="{{ url }}">{{ silo }}</a>
 				</dd>
 	{% endfor %}
-				<dt>copyright notes</dt>
-					<dd>
-						<a rel="license" href="{{ site.url }}/licence" title="Licence"><span class="icon">©</span> copyright notes</a>
-				</dd>
-				<dt>RSS feed</dt>
+				<dt>Feed</dt>
 				<dd>
 					<svg class="icon"><use xlink:href="#icon-rss" /></svg>
-					<a title="RSS feed" href="{{ site.url }}/feed/">RSS</a>
+					<a title="Feed" href="{{ site.url }}/feed/">Feed</a>
+				</dd>
+				<dt>CV</dt>
+				<dd>
+					<svg class="icon"><use xlink:href="#icon-note" /></svg>
+					<a class="u-url u-resume" href="{{ site.author.url }}/cv">CV</a>
 				</dd>
 				<dt>Donation</dt>
 				<dd>

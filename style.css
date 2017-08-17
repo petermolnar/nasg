@@ -1,5 +1,4 @@
-
-		* {
+* {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
@@ -92,6 +91,15 @@ table {
     border-spacing: 0;
 }
 
+td, th {
+    padding: 0.3rem;
+    border: 1px solid #333;
+}
+
+th {
+    font-weight: bold;
+}
+
 hr {
     display: block;
     height: 1px;
@@ -152,19 +160,25 @@ h3 {
     opacity: 0.8;
 }
 
+.h-entry footer p {
+    padding: 0.3rem 0;
+}
+
+.h-entry footer .vcard img {
+    height: 1rem;
+    vertical-align: text-bottom;
+}
+
 .published, .updated {
     display: inline;
 }
 
-.shorturl,
-.tags {
-    padding: 0.3rem 0;
-}
-
+.content-note a,
 .e-content a {
     color:#115394;
 }
 
+.content-note a:hover,
 .e-content a:hover {
     color:#004283;
 }
@@ -431,7 +445,6 @@ input[type=submit]:hover {
     border-bottom: 3px solid #fefefe;
 }
 
-/* above is mobile first; this is the desktop */
 @media all and (min-width: 50rem) {
 
     .content-navigation ul li a {
@@ -565,7 +578,7 @@ time {
 }
 
 .comments ol .u-repost-of:before {
-    content: '•';
+    content: '\2022';
     margin: 0 0.3rem;
 }
 
@@ -666,7 +679,6 @@ time {
     font-size: 0.9rem;
 }
 
-
 @media print {
     * {
        background-color: #fff !important;
@@ -718,6 +730,7 @@ time {
         page-break-inside: avoid !important;
     }
 
+
     .e-content .adaptive img {
         page-break-inside: avoid !important;
         max-width: 100%;
@@ -749,4 +762,3 @@ time {
         line-height: 1rem;
     }
 }
-	
