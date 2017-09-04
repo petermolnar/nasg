@@ -210,254 +210,6 @@ class Indexer(object):
         self.writer.commit()
 
 
-class OfflineArchive(object):
-    # keep in mind that these are frontmattered HTML files with full HTML and embedded images
-    # they can get VERY large
-    def __init__(self, url, content=None, decode_email=False):
-        self.url = url
-        self.parsed = urllib.parse.urlparse(url)
-        self.fbase = shared.slugfname(url)
-        self.fname = "%s.md" % self.fbase
-        self.target = os.path.join(
-            shared.config.get('source', 'offlinecopiesdir'),
-            self.fname
-        )
-        self.targetd = os.path.join(
-            shared.config.get('source', 'offlinecopiesdir'),
-            self.fbase
-        )
-        if not os.path.isdir(self.targetd):
-            os.mkdir(self.targetd)
-
-        self.fm = frontmatter.loads('')
-        self.fm.metadata = {
-            'url': self.url,
-            'date': arrow.utcnow().format("YYYY-MM-DDTHH:mm:ssZ"),
-        }
-        self.headers = requests.utils.default_headers()
-        self.headers.update({
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0',
-        })
-
-        self.skip_fetch = False
-        if content:
-            self.skip_fetch = True
-            if decode_email:
-                content = quopri.decodestring(content)
-                content = str(content, 'utf-8', errors='replace')
-            self.fm.content = content
-        #self.tmp = tempfile.mkdtemp(
-            #'offlinearchive_',
-            #dir=tempfile.gettempdir()
-        #)
-        #atexit.register(
-            #shutil.rmtree,
-            #os.path.abspath(self.tmp)
-        #)
-        #self.images = []
-
-        self.exists = os.path.isfile(self.target)
-
-    #def read(self):
-        #if not self.exists:
-            #return ''
-
-        #with open(self.target, 'rt') as f:
-            #self.fm = frontmatter.loads(f.read())
-
-        #readable = ''
-        #try:
-            #readable = Document(self.fm.content)
-            #readable = shared.Pandoc(False).convert(readable.summary())
-            #readable = shared.Pandoc().convert(readable)
-        #except Exception as e:
-            #logging.error('Failed to readable %s', self.target)
-
-        #return readable
-
-
-    def _getimage(self, src):
-        imgname, imgext = os.path.splitext(os.path.basename(src))
-        imgtarget = os.path.join(
-            self.targetd,
-            "%s%s" % (slugify(imgname, only_ascii=True, lower=True), imgext)
-        )
-        try:
-            logging.debug('donwloading image %s', src)
-            r = requests.get(
-                src,
-                allow_redirects=True,
-                timeout=60,
-                stream=True
-            )
-            with open(imgtarget, 'wb') as f:
-                for chunk in r.iter_content():
-                    if chunk:
-                        f.write(chunk)
-
-            self.fm.content = self.fm.content.replace(
-                src,
-                '%s/%s' % (self.fbase, imgname)
-            )
-        except Exception as e:
-            logging.error('pulling image %s failed: %s', src, e)
-            return
-
-    def _get_images(self):
-        logging.debug("trying to save images")
-        soup = BeautifulSoup(self.fm.content, 'lxml')
-
-        embedded = re.compile(r'^data:.*')
-        for img in soup.find_all('img'):
-            src = img.get('src')
-            if not src:
-                continue
-            if embedded.match(src):
-                continue
-
-            im = urllib.parse.urlparse(src)
-            if not im.scheme:
-                im = im._replace(scheme=self.parsed.scheme)
-            if not im.netloc:
-                im = im._replace(netloc=self.parsed.netloc)
-
-            self._getimage(im.geturl())
-
-
-    #def _getimage(self, src):
-        #tmp = os.path.join(self.tmp, "%s" % slugify(os.path.basename(src))[:200])
-        #try:
-            #r = requests.get(
-                #src,
-                #allow_redirects=True,
-                #timeout=60,
-                #stream=True
-            #)
-            #with open(tmp, 'wb') as f:
-                #for chunk in r.iter_content():
-                    #if chunk:
-                        #f.write(chunk)
-
-            #logging.debug('trying to embed %s', src)
-            #with open(tmp, 'rb') as imgdata:
-                #data = str(base64.b64encode(imgdata.read()), 'ascii')
-                #mimetype, encoding = mimetypes.guess_type(tmp)
-                #self.fm.content = self.fm.content.replace(
-                    #src,
-                    #"data:%s;base64,%s" % (mimetype, data)
-                #)
-        #except Exception as e:
-            #logging.error('pulling image %s failed: %s', src, e)
-            #return
-
-    #def _embed_images(self):
-        #logging.debug("trying to embed images")
-        #soup = BeautifulSoup(self.fm.content, 'lxml')
-
-        #embedded = re.compile(r'^data:.*')
-        #for img in soup.find_all('img'):
-            #src = img.get('src')
-            #if not src:
-                #continue
-            #if embedded.match(src):
-                #continue
-
-            #im = urllib.parse.urlparse(src)
-            #if not im.scheme:
-                #im = im._replace(scheme=self.parsed.scheme)
-            #if not im.netloc:
-                #im = im._replace(netloc=self.parsed.netloc)
-
-            #self._getimage(im.geturl())
-
-
-    def save(self):
-        logging.info(
-            "savig offline copy of\n\t%s to:\n\t%s",
-            self.url,
-            self.target
-        )
-
-        with open(self.target, 'wt') as f:
-            f.write(frontmatter.dumps(self.fm))
-
-    @property
-    def archiveorgurl(self):
-        logging.debug("trying archive.org for %s", self.url)
-        a = self.fetch(
-            "http://archive.org/wayback/available?url=%s" % self.url,
-        )
-        if not a:
-            logging.debug("no entry for %s on archive.org", self.url)
-            return None
-
-        try:
-            a = json.loads(a.text)
-            aurl = a.get(
-                'archived_snapshots', {}
-            ).get(
-                'closest', {}
-            ).get(
-                'url', None
-            )
-            logging.debug("found %s in archive.org for %s", aurl, self.url)
-            self.updateurl(aurl)
-            return self.fetch(aurl)
-        except Exception as e:
-            logging.error("archive.org parsing failed: %s", e)
-            return None
-
-
-    def fetch(self, url):
-        try:
-            r = requests.get(
-                self.url,
-                allow_redirects=True,
-                timeout=60,
-                headers=self.headers
-            )
-            if r.status_code == requests.codes.ok:
-                return r
-        except Exception as e:
-            return None
-
-
-    #def read():
-        #if os.path.isfile(self.target):
-            #with open(self.target) as f:
-                #self.fm = frontmatter.loads(f.read())
-                #return
-
-
-    def run(self):
-        if self.exists:
-            logging.info("offline archive for %s already exists", self.url)
-            return
-
-        logging.info("prepairing offline copy of %s", self.url)
-
-        if not self.skip_fetch:
-            r = self.fetch(self.url)
-
-            # in case it's not, try to look for an archive.org url:
-            if not r:
-                logging.warning("couldn't get live version of %s, trying archive.org", self.url)
-                r = self.fetch(self.archiveorgurl)
-
-            # no live and no archive.org entry :((
-            # howver, by miracle, I may already have a copy, so skip if it's there already
-            if not r:
-                logging.error("no live or archive version of %s found :((", self.url)
-                if not self.exists:
-                    self.save()
-                return
-
-            self.fm.content = r.text
-
-        self._get_images()
-        self.save()
-
-
 class Renderer(object):
     def __init__(self):
         self.sitevars = dict(shared.config.items('site'))
@@ -604,8 +356,8 @@ class Comment(BaseRenderable):
         self._tmplvars = {
             'published': self.published.datetime,
             'author': self.meta.get('author', {}),
-            'content': self.content,
-            'html': self.html,
+            #'content': self.content,
+            #'html': self.html,
             'source': self.source,
             'target': self.targeturl,
             'type': self.meta.get('type', 'webmention'),
@@ -795,8 +547,9 @@ class WebImage(object):
                         shared.config.get('target', 'filesdir'),
                         fname
                     ),
-                    'url': "%s/%s/%s" % (
-                        shared.config.get('site', 'url'),
+                    'url': "/%s/%s" % (
+                    #'url': "%s/%s/%s" % (
+                        #shared.config.get('site', 'url'),
                         shared.config.get('source', 'files'),
                         fname
                     ),
@@ -812,8 +565,9 @@ class WebImage(object):
             self.small = [e for e in self.sizes if e[1]['crop'] == False][0][1]['url']
             self.target = self.sizes[-1][1]['url']
         else:
-            self.small = self.fallback = "%s/%s/%s" % (
-                shared.config.get('site', 'url'),
+            self.small = self.fallback = "/%s/%s" % (
+            #self.small = self.fallback = "%s/%s/%s" % (
+                #shared.config.get('site', 'url'),
                 shared.config.get('source', 'files'),
                 "%s%s" % (self.fname, self.ext)
             )
@@ -1129,12 +883,12 @@ class Taxonomy(BaseIter):
         self.taxonomy = taxonomy
 
 
-    @property
-    def pages(self):
-        if hasattr(self, '_pages'):
-            return self._pages
-        self._pages = math.ceil(len(self.data) / shared.config.getint('common', 'pagination'))
-        return self._pages
+    #@property
+    #def pages(self):
+        #if hasattr(self, '_pages'):
+            #return self._pages
+        #self._pages = math.ceil(len(self.data) / shared.config.getint('common', 'pagination'))
+        #return self._pages
 
     def __repr__(self):
         return "taxonomy %s with %d items" % (self.taxonomy, len(self.data))
@@ -1184,71 +938,48 @@ class Taxonomy(BaseIter):
 
     def __mkdirs(self):
         check = [self.basep, self.myp, self.feedp]
-
-        if self.pages > 1:
-            check.append(self.pagep)
-            for i in range(2, self.pages+1):
-                subpagep = os.path.abspath(os.path.join(
-                    self.pagep,
-                    '%d' % i
-                ))
-                check.append(subpagep)
-
         for p in check:
             if not os.path.isdir(p):
                 logging.debug("creating dir %s", p)
                 os.mkdir(p)
 
-
     def tpath(self, page):
         if page == 1:
-            return "%s/index.html" % (self.myp)
+            p = "%s" % (self.myp)
         else:
-            return "%s/%d/index.html" % (self.pagep, page)
+            p = os.path.join(self.pagep, "%d" % page)
 
+        if not os.path.isdir(p):
+            logging.debug("creating dir %s", p)
+            os.mkdir(p)
 
-    async def grender(self, renderer):
-        #if not self.slug or self.slug is 'None':
-            #return
+        return os.path.join(p, "index.html")
 
-        self.__mkdirs()
-        target = self.tpath(1)
-        target = target.replace('index', 'gallery')
+    @property
+    def is_singlepage(self):
+        spcats = shared.config.get('common', 'onepagecategories').split(',')
+        if self.name in spcats and 'category' == self.taxonomy:
+            return True
+        return False
 
-        if not shared.config.getboolean('params', 'force') and os.path.isfile(target):
-            ttime = int(os.path.getmtime(target))
-            mtime = self.mtime
-            if ttime == mtime:
-                logging.info('taxonomy index for "%s" exists and up-to-date (lastmod: %d)', self.slug, ttime)
-                return
-            else:
-                logging.info('taxonomy update needed: %s timestamp is %d, last post timestamp is %d (%s)',
-                    target,
-                    ttime,
-                    mtime,
-                    self.data[mtime].fname
-                )
+    def posttmpls(self, order='time', start=0, end=None):
+        end = end or len(self.data)
+        if 'all' == order:
+            return [
+                i.tmplvars
+                for k, i in list(sorted(
+                    self.data.items(),
+                    key=lambda value: value[1].title.lower()
+                ))
+            ]
 
-        posttmpls = [self.data[k].tmplvars for k in list(sorted(
-            self.data.keys(), reverse=True))]
-
-        logging.info("rendering gallery to %s", target)
-        tmplvars = {
-            'taxonomy': {
-                'url': self.baseurl,
-                'name': self.name,
-                'slug': self.slug,
-                'taxonomy': self.taxonomy,
-                'lastmod': arrow.get(self.mtime).datetime
-            },
-            'site': renderer.sitevars,
-            'posts': posttmpls,
-        }
-
-        r = renderer.j2.get_template('gallery.html').render(tmplvars)
-        with open(target, "wt") as html:
-            html.write(r)
-        os.utime(target, (self.mtime, self.mtime))
+        return [
+            self.data[k].tmplvars
+            for k in list(sorted(
+                self.data.keys(),
+                reverse=True
+            ))[start:end]
+        ]
 
 
     async def render(self, renderer):
@@ -1272,20 +1003,59 @@ class Taxonomy(BaseIter):
                     self.data[mtime].fname
                 )
 
-        while page <= self.pages:
-            self.renderpage(renderer, page)
+        if self.is_singlepage:
+            pagination = len(self.data)
+        else:
+            pagination = shared.config.getint('common', 'pagination')
+        pages = math.ceil(len(self.data) / pagination)
+
+        while page <= pages:
+            self.render_page(renderer, page, pagination, pages)
             page = page+1
 
+        self.render_feeds(renderer)
+        self.ping_websub
 
-    def renderpage(self, renderer, page):
-        pagination = int(shared.config.get('common', 'pagination'))
-        start = int((page-1) * pagination)
+
+    def render_feeds(self, renderer):
+        pagination = shared.config.getint('common', 'pagination')
+        start = 0
         end = int(start + pagination)
+        posttmpls = self.posttmpls('time', start, end)
+        tmplvars = {
+            'taxonomy': {
+                'url': self.baseurl,
+                'name': self.name,
+                'slug': self.slug,
+                'taxonomy': self.taxonomy,
+                'lastmod': arrow.get(self.mtime).datetime
+            },
+            'site': renderer.sitevars,
+            'posts': posttmpls,
+        }
 
-        posttmpls = [self.data[k].tmplvars for k in list(sorted(
-            self.data.keys(), reverse=True))[start:end]]
+        target = os.path.join(self.feedp, 'index.atom')
+        logging.info("rendering Atom feed to %s", target)
+        r = renderer.j2.get_template('atom.html').render(tmplvars)
+        with open(target, "wt") as html:
+            html.write(r)
+        os.utime(target, (self.mtime, self.mtime))
+
+
+    def render_page(self, renderer, page, pagination, pages):
+        if self.is_singlepage:
+            posttmpls = self.posttmpls('all')
+        else:
+            start = int((page-1) * pagination)
+            end = int(start + pagination)
+            posttmpls = self.posttmpls('time', start, end)
 
         target = self.tpath(page)
+        tdir = os.path.dirname(target)
+        if not os.path.isdir(tdir):
+            logging.debug("creating dir %s", tdir)
+            os.mkdir(tdir)
+
         logging.info("rendering taxonomy page %d to %s", page, target)
         tmplvars = {
             'taxonomy': {
@@ -1294,7 +1064,7 @@ class Taxonomy(BaseIter):
                 'slug': self.slug,
                 'taxonomy': self.taxonomy,
                 'paged': page,
-                'total': self.pages,
+                'total': pages,
                 'perpage': pagination,
                 'lastmod': arrow.get(self.mtime).datetime
             },
@@ -1307,64 +1077,108 @@ class Taxonomy(BaseIter):
             html.write(r)
         os.utime(target, (self.mtime, self.mtime))
 
-        if 1 == page:
-            #target = os.path.join(self.feedp, 'index.rss')
-            #logging.info("rendering RSS feed to %s", target)
-            #r = renderer.j2.get_template('rss.html').render(tmplvars)
+
+    def ping_websub(self):
+        if not self.taxonomy or self.taxonomy == 'category':
+            t = shared.config.get('site', 'websuburl')
+            data = {
+                'hub.mode': 'publish',
+                'hub.url': "%s%s" % (
+                    shared.config.get('site', 'url'), self.baseurl
+                )
+            }
+            logging.info("pinging %s with data %s", t, data)
+            requests.post(t, data=data)
+
+
+    #def renderpage(self, renderer, page):
+        #pagination = int(shared.config.get('common', 'pagination'))
+        #start = int((page-1) * pagination)
+        #end = int(start + pagination)
+
+        #posttmpls = [self.data[k].tmplvars for k in list(sorted(
+            #self.data.keys(), reverse=True))[start:end]]
+
+        #target = self.tpath(page)
+        #logging.info("rendering taxonomy page %d to %s", page, target)
+        #tmplvars = {
+            #'taxonomy': {
+                #'url': self.baseurl,
+                #'name': self.name,
+                #'slug': self.slug,
+                #'taxonomy': self.taxonomy,
+                #'paged': page,
+                #'total': self.pages,
+                #'perpage': pagination,
+                #'lastmod': arrow.get(self.mtime).datetime
+            #},
+            #'site': renderer.sitevars,
+            #'posts': posttmpls,
+        #}
+
+        #r = renderer.j2.get_template('archive.html').render(tmplvars)
+        #with open(target, "wt") as html:
+            #html.write(r)
+        #os.utime(target, (self.mtime, self.mtime))
+
+        #if 1 == page:
+            ##target = os.path.join(self.feedp, 'index.rss')
+            ##logging.info("rendering RSS feed to %s", target)
+            ##r = renderer.j2.get_template('rss.html').render(tmplvars)
+            ##with open(target, "wt") as html:
+                ##html.write(r)
+            ##os.utime(target, (self.mtime, self.mtime))
+
+            #target = os.path.join(self.feedp, 'index.atom')
+            #logging.info("rendering Atom feed to %s", target)
+            #r = renderer.j2.get_template('atom.html').render(tmplvars)
             #with open(target, "wt") as html:
                 #html.write(r)
             #os.utime(target, (self.mtime, self.mtime))
 
-            target = os.path.join(self.feedp, 'index.atom')
-            logging.info("rendering Atom feed to %s", target)
-            r = renderer.j2.get_template('atom.html').render(tmplvars)
-            with open(target, "wt") as html:
-                html.write(r)
-            os.utime(target, (self.mtime, self.mtime))
+        ## ---
+        ## this is a joke
+        ## see http://indieweb.org/YAMLFeed
+        ## don't do YAMLFeeds.
+        #if 1 == page:
+            #fm = frontmatter.loads('')
+            #fm.metadata = {
+                #'site': {
+                    #'author': renderer.sitevars['author'],
+                    #'url': renderer.sitevars['url'],
+                    #'title': renderer.sitevars['title'],
+                #},
+                #'items': [],
+            #}
 
-        # ---
-        # this is a joke
-        # see http://indieweb.org/YAMLFeed
-        # don't do YAMLFeeds.
-        if 1 == page:
-            fm = frontmatter.loads('')
-            fm.metadata = {
-                'site': {
-                    'author': renderer.sitevars['author'],
-                    'url': renderer.sitevars['url'],
-                    'title': renderer.sitevars['title'],
-                },
-                'items': [],
-            }
+            #for p in posttmpls:
+                #fm.metadata['items'].append({
+                    #'title': p['title'],
+                    #'url': "%s/%s/" % ( renderer.sitevars['url'], p['slug']),
+                    #'content': p['content'],
+                    #'summary': p['summary'],
+                    #'published': p['published'],
+                    #'updated': p['updated'],
+                #})
 
-            for p in posttmpls:
-                fm.metadata['items'].append({
-                    'title': p['title'],
-                    'url': "%s/%s/" % ( renderer.sitevars['url'], p['slug']),
-                    'content': p['content'],
-                    'summary': p['summary'],
-                    'published': p['published'],
-                    'updated': p['updated'],
-                })
+            #target = os.path.join(self.feedp, 'index.yml')
+            #logging.info("rendering YAML feed to %s", target)
+            #with open(target, "wt") as html:
+                #html.write(frontmatter.dumps(fm))
+            #os.utime(target, (self.mtime, self.mtime))
+        ## ---
 
-            target = os.path.join(self.feedp, 'index.yml')
-            logging.info("rendering YAML feed to %s", target)
-            with open(target, "wt") as html:
-                html.write(frontmatter.dumps(fm))
-            os.utime(target, (self.mtime, self.mtime))
-        # ---
-
-        if 1 == page:
-            if not self.taxonomy or self.taxonomy == 'category':
-                t = shared.config.get('site', 'websuburl')
-                data = {
-                    'hub.mode': 'publish',
-                    'hub.url': "%s%s" % (
-                        shared.config.get('site', 'url'), self.baseurl
-                    )
-                }
-                logging.info("pinging %s with data %s", t, data)
-                requests.post(t, data=data)
+        #if 1 == page:
+            #if not self.taxonomy or self.taxonomy == 'category':
+                #t = shared.config.get('site', 'websuburl')
+                #data = {
+                    #'hub.mode': 'publish',
+                    #'hub.url': "%s%s" % (
+                        #shared.config.get('site', 'url'), self.baseurl
+                    #)
+                #}
+                #logging.info("pinging %s with data %s", t, data)
+                #requests.post(t, data=data)
 
 
 class Content(BaseIter):
@@ -1511,9 +1325,9 @@ class Singular(BaseRenderable):
                 #self.photo,
                 #self.content,
             #)
-        if shared.config.getboolean('params', 'nooffline'):
-            return
-        trigger = self.offlinecopies
+        #if shared.config.getboolean('params', 'nooffline'):
+            #return
+        #trigger = self.offlinecopies
 
     #def __filter_syndication(self):
         #syndications = self.meta.get('syndicate', None)
@@ -1680,7 +1494,7 @@ class Singular(BaseRenderable):
                 'text': 'CC BY 4.0',
                 'description': 'Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, even for commercial use.'
             }
-        if 'journal' == self.category:
+        elif 'journal' == self.category:
             l = {
                 'url': 'https://creativecommons.org/licenses/by-nc/4.0/',
                 'text': 'CC BY-NC 4.0',
@@ -1894,26 +1708,26 @@ class Singular(BaseRenderable):
         return self._sumhtml
 
 
-    @property
-    def offlinecopies(self):
-        # stupidly simple property caching
-        if hasattr(self, 'copies'):
-            return self.copies
+    #@property
+    #def offlinecopies(self):
+        ## stupidly simple property caching
+        #if hasattr(self, 'copies'):
+            #return self.copies
 
-        copies = {}
-        for maybe in ['bookmark-of', 'in-reply-to', 'repost-of', 'favorite-of']:
-            maybe = self.meta.get(maybe, False)
-            if not maybe:
-                continue
-            if not isinstance(maybe, list):
-                maybe = [maybe]
-            for url in maybe:
-                arch = OfflineArchive(url)
-                arch.run()
-                #copies[url] = arch.read()
+        #copies = {}
+        #for maybe in ['bookmark-of', 'in-reply-to', 'repost-of', 'favorite-of']:
+            #maybe = self.meta.get(maybe, False)
+            #if not maybe:
+                #continue
+            #if not isinstance(maybe, list):
+                #maybe = [maybe]
+            #for url in maybe:
+                #arch = OfflineArchive(url)
+                #arch.run()
+                ##copies[url] = arch.read()
 
-        #self.copies = copies
-        #return copies
+        ##self.copies = copies
+        ##return copies
 
 
     @property
@@ -2157,10 +1971,6 @@ class NASG(object):
         for e in [self.content.categories, self.content.tags]:
             for name, t in e.items():
                 await t.render(self.renderer)
-                if name == 'photo' and t.taxonomy == 'category':
-                    await t.grender(self.renderer)
-
-
 
     async def __afrender(self):
         await self.content.front.render(self.renderer)
