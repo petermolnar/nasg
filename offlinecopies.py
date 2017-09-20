@@ -37,3 +37,7 @@ for fname, fm in bm.items():
     trueurl = shared.find_archiveorgurl(url)
     w = shared.wget(trueurl, dirname=f)
     w.archive()
+
+    # this is to skip the failed ones next time
+    if not os.path.isdir(p):
+        os.mkdir(p)

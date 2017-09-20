@@ -681,8 +681,8 @@ if __name__ == '__main__':
     flickr = FlickrFavs()
     flickr.run()
 
-    hn = HNBookmarks()
-    hn.run()
+    #hn = HNBookmarks()
+    #hn.run()
 
     fivehpx = FivehpxFavs()
     fivehpx.run()

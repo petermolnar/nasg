@@ -16,14 +16,15 @@ import math
 import asyncio
 import csv
 import getpass
-import quopri
-import base64
-import mimetypes
+#import quopri
+#import base64
+#import mimetypes
+import copy
 
 import magic
 import arrow
 import wand.image
-import similar_text
+#import similar_text
 import frontmatter
 from slugify import slugify
 import langdetect
@@ -35,9 +36,10 @@ import urllib.parse
 from webmentiontools.send import WebmentionSend
 import bleach
 from emoji import UNICODE_EMOJI
-from bs4 import BeautifulSoup
-from readability.readability import Document
+#from bs4 import BeautifulSoup
+#from readability.readability import Document
 import shared
+#import oauth
 
 def splitpath(path):
     parts = []
@@ -899,6 +901,8 @@ class Taxonomy(BaseIter):
         p = shared.config.get('target', 'builddir')
         if self.taxonomy:
             p = os.path.join(p, self.taxonomy)
+        if not os.path.isdir(p):
+            os.mkdir(p)
         return p
 
 
@@ -906,18 +910,25 @@ class Taxonomy(BaseIter):
     def myp(self):
         p = self.basep
         if self.slug:
-            return os.path.join(p,self.slug)
+            p = os.path.join(p,self.slug)
+        if not os.path.isdir(p):
+            os.mkdir(p)
         return p
 
 
     @property
     def feedp(self):
-        return os.path.join(self.myp, 'feed')
-
+        p = os.path.join(self.myp, 'feed')
+        if not os.path.isdir(p):
+            os.mkdir(p)
+        return p
 
     @property
     def pagep(self):
-        return os.path.join(self.myp, 'page')
+        p = os.path.join(self.myp, 'page')
+        if not os.path.isdir(p):
+            os.mkdir(p)
+        return p
 
 
     @property
@@ -1492,19 +1503,16 @@ class Singular(BaseRenderable):
             l = {
                 'url': 'https://creativecommons.org/licenses/by/4.0/',
                 'text': 'CC BY 4.0',
-                'description': 'Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, even for commercial use.'
             }
         elif 'journal' == self.category:
             l = {
                 'url': 'https://creativecommons.org/licenses/by-nc/4.0/',
                 'text': 'CC BY-NC 4.0',
-                'description': 'Licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, for non commercial use. For commercial use please contact the author.'
             }
         else:
             l = {
                 'url': 'https://creativecommons.org/licenses/by-nc-nd/4.0/',
                 'text': 'CC BY-NC-ND 4.0',
-                'description': 'Licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International</a>. You are free to share if you link back here for non commercial use, but you can\'t publish any altered versions of it. For commercial use please contact the author.'
             }
 
         self._licence = l
