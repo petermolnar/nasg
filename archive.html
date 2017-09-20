@@ -1,45 +1,7 @@
 {% include 'block_header_open.html' %}
 
-{%- if taxonomy.name -%}
-{%- set title = taxonomy.name ~ ' | ' ~ site.domain -%}
-{%- else -%}
-{%- set title = site.title -%}
-{%- endif -%}
-
-{%- if ( taxonomy.paged > 1 ) -%}
-{%- set turl = site.url ~ taxonomy.url ~ taxonomy.paged ~ '/'  -%}
-{%- else -%}
-{%- set turl = site.url ~ taxonomy.url  -%}
-{%- endif -%}
-
-	<title>{{ title }}</title>
+	<title>{%- if taxonomy.name -%}{{ taxonomy.name ~ ' | ' ~ site.domain }}{%- else -%}{{ site.title }}{%- endif -%}</title>
 	<link rel="alternate" type="application/rss+xml" title="{{ title }} RSS Feed" href="{{ site.url}}{{ taxonomy.url }}feed" />
-
-	<meta property="og:description" content="{{ taxonomy.description|default(title) }}" />
-	<meta property="og:locale" content="{{ site.lang }}" />
-	<meta property="og:site_name" content="{{ site.name }}" />
-	<meta property="og:title" content="{{ title }}" />
-	<meta property="og:type" content="website" />
-	<meta name="og:updated_time" content="{{ posts[0].published|date('c') }}" />
-	<meta property="og:url" content="{{ turl }}" />
-	<meta property="og:image" content="{{ site.url }}/favicon.png"/>
-
-	<meta name="twitter:card" content="summary" />
-	<meta name="twitter:description" content="{{ taxonomy.description|default(title) }}" />
-	{% if site.author.twitter %}<meta name="twitter:site" content="@{{ site.author.twitter }}" />{% endif %}
-	{% if site.author.twitter %}<meta name="twitter:creator" content="@{{ site.author.twitter }}" />{% endif %}
-	<meta name="twitter:title" content="{{ title }}" />
-	<meta name="twitter:image" content="{{ site.url }}/favicon.png">
-
-	<meta name="DC.Format" content="text/html" />
-	<meta name="DC.Title" content="{{ title }}" />
-	<meta name="DC.Creator" content="{{ site.author.name }}" />
-	<meta name="DC.Description" content="{{ taxonomy.description|default(title) }}" />
-	<meta name="DC.Date" content="{{ posts[0].published|date('%Y-%m-%d') }}" />
-	<meta name="DC.Type" content="collection" />
-	<meta name="DC.Language" content="{{ site.lang }}" />
-	<meta name="DC.Source" content="{{ turl }}" />
-	<meta name="DC.Rights" content="Copyright {{ posts[0].published|date('%Y') }}, {{ site.author.name }} <{{ site.author.email }}>. All rights reserved.">
 
 {% include 'block_header_close.html' %}
 

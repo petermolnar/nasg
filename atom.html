@@ -1,11 +1,6 @@
-{%- if taxonomy.name -%}
-{%- set title = taxonomy.name ~ ' | ' ~ site.title -%}
-{%- else -%}
-{%- set title = site.title -%}
-{%- endif -%}
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-	<title>{{ title }}</title>
+	<title>{%- if taxonomy.name -%}{{ taxonomy.name ~ ' | ' ~ site.title }}{%- else -%}{{ site.title }}{%- endif -%}</title>
 	<link href="{{ site.url }}{{ taxonomy.url }}feed/" rel="self" />
 	<link href="{{ site.url }}{{ taxonomy.url }}" />
 	<id>{{ site.url }}{{ taxonomy.url }}</id>

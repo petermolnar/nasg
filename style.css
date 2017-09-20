@@ -51,6 +51,7 @@ a {
 
 a:hover {
     color: #000;
+    text-decoration: underline;
 }
 
 b, strong {
@@ -173,15 +174,77 @@ h3 {
     display: inline;
 }
 
+.content-info {
+    border: 2px dotted #777;
+    padding: 1rem;
+    font-variant: small-caps;
+    text-align: center;
+}
+
+.content-info form {
+    margin-top: 1rem;
+}
+
+.content-info label,
+.content-info input,
+.content-info textarea {
+    display: inline-block;
+    margin: 0 0 1rem 0;
+    vertical-align:bottom;
+    text-align: left;
+}
+
+.content-info label {
+    width: 30%;
+    border-bottom: 2px dotted #777;
+    font-size: 0.9rem;
+}
+
+.content-info textarea {
+    border: 2px dotted #777;
+    padding: 0.3rem;
+    min-height: 4rem;
+}
+
+.content-info input,
+.content-info textarea {
+    width: 60%;
+    border-bottom: 2px dotted #777;
+    color: #333;
+    font-size: 0.8rem;
+}
+
+
+.content-info input:active,
+.content-info input:focus,
+.content-info textarea:active,
+.content-info textarea:focus {
+    color: #111;
+    border-bottom: 2px solid #111;
+}
+
+.content-info textarea:active,
+.content-info textarea:focus {
+    border: 2px solid #111;
+
+}
+
+
+.content-info a,
 .content-note a,
 .e-content a {
     color:#115394;
 }
 
+
+.content-info a:hover,
 .content-note a:hover,
 .e-content a:hover {
     color:#004283;
+    text-decoration: underline;
 }
+
+
 
 .icon {
     transform: rotate(0.01deg);
@@ -323,6 +386,7 @@ pre code {
 .content-footer a:hover {
     color: #fefefe;
     border: none;
+    text-decoration: none;
 }
 
 .content-footer {
@@ -505,6 +569,7 @@ input[type=submit]:hover {
 .more a:hover,
 .pagination a:hover {
     border-bottom-color: #000;
+    text-decoration:none;
 }
 
 .more {
@@ -571,15 +636,14 @@ time {
     display: block;
 }
 
-.comments ol time,
-.comments ol .u-repost-of {
+.comments ol time {
     font-size: 0.8rem;
     margin: 0;
 }
 
-.comments ol .u-repost-of:before {
-    content: '\2022';
-    margin: 0 0.3rem;
+.comments ol .response_link {
+    font-size: 0.9rem;
+    margin: 0;
 }
 
 .comments dt,

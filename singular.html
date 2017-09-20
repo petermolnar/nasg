@@ -11,34 +11,13 @@
 	<title>{{ post.slug }} | {{ site.domain }}</title>
 	{% endif %}
 
-	<link rel="canonical" href="{{ site.url }}/{{ post.slug }}/" />
-	<link rel="shortlink" href="{{ site.url }}/{{ post.shortslug }}" />
-
 	<meta name="author" content="{{ post.author.name }}">
 	<meta name="keywords" content="{{ post.tags|join(',') }}">
 	<meta name="description" content="{{ post.summary|e }}">
 
-	<meta property="og:description" content="{{ post.summary|e }}" />
-	<meta property="og:locale" content="{{ post.lang|default(site.lang) }}" />
-	<meta property="og:site_name" content="{{ site.name }}" />
-	<meta property="og:title" content="{{ post.title }}" />
-	<meta property="og:type" content="blog" />
-	{% if post.modified %}<meta name="og:updated_time" content="{{ post.modified|date("c") }}" />{%endif%}
-	<meta property="og:url" content="{{ site.url }}/{{ post.shortslug }}/" />
-
-	<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/" >
-	<meta name="DC.Format" content="text/html" />
-	<meta name="DC.Title" content="{{ post.title|e }}">
-	<meta name="DC.Creator" content="{{ post.author.name }}">
-	<meta name="DC.Description" content="{{ post.summary|e }}">
-	<meta name="DC.Date" content="{{ post.published|date("%Y-%m-%d") }}">
-	<meta name="DC.Type" content="{{ dctype }}">
-	<meta name="DC.Identifier" content="{{ site.url }}/{{ post.slug }}/">
-	<meta name="DC.Source" content="{{ site.url }}/{{ post.slug }}/">
-	<meta name="DC.Language" content="{{ post.lang|default(site.lang) }}">
-
+	<link rel="canonical" href="{{ site.url }}/{{ post.slug }}/" />
+	<link rel="shortlink" href="{{ site.url }}/{{ post.shortslug }}" />
 	<link rel="license" href="{{ post.license.url }}" />
-	<meta name="DC.Rights" content="{{ post.license.text }} by {{ post.author.name }}">
 
 {% include 'block_header_close.html' %}
 
@@ -153,14 +132,16 @@
 							<time class="dt-published" datetime="{{ reply.published|date('c') }}">
 								{{ reply.published|date('%Y-%m-%d %H:%M') }}
 							</time>
+							</p>
 							{% if reply.source|length > 0 %}
-							<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
+							<p class="reponse_link">
+								Read response at:<br />
+								<svg class="icon"><use xlink:href="#icon-link"></use></svg>
+								<a href="{{ reply.source }}" class="u-repost-of">{{ reply.source }}</a>
+							</p>
 							{% endif %}
 							</p>
 						</header>
-						<div class="e-content">
-							{{ reply.html }}
-						</div>
 					</li>
 				{% endfor %}
 				</ol>
@@ -205,13 +186,44 @@
 
 	</article>
 
+
+	<aside class="content-info">
+		<p>
+{% if post.category == 'photo' %}
+			Did you like this photo?<br />
+			<a href="{{ post.author.donateurl }}">Thank it with a small donation.</a>
+{% elif post.category == 'article' %}
+			Did you find this article useful?<br />
+			<a href="{{ post.author.donateurl }}">Buy me a coffee, so I can write more like this</a>, or <a href="mailto:{{ post.author.email }}">get in touch</a> if you want my help with something similar.
+{% elif post.category == 'journal' %}
+			Did you like this entry?<br />
+			<a href="{{ post.author.donateurl }}">Encourage me to write more of them.</a>
+{% else %}
+			Did you like what you read?<br />
+			<a href="{{ post.author.donateurl }}">Thank it with a small donation.</a>
+{% endif %}
+		</p>
+	</aside>
+
 	<aside class="content-note">
 		<hr />
 		<p class="license">
-			<a rel="license" href="{{ post.license.url }}" class="hide u-license">{{ post.license.text }}</a>
+{% if post.category == 'article' %}
+			<a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="hide u-license">CC BY 4.0</a>
 			<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
-			{{ post.license.description }}
+			Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, even for commercial use.
+{% elif post.category == 'journal' %}
+			<a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="hide u-license">CC BY-NC 4.0</a>
+			<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+			Licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, for non commercial use. For commercial use please contact the author.
+{% else %}
+			<a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="hide u-license">CC BY-NC-ND 4.0</a>
+			<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+			Licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International</a>. You are free to share if you link back here for non commercial use, but you can\'t publish any altered versions of it. For commercial use please contact the author.
+{% endif %}
 		</p>
+
+
 		<p>Want to leave a comment or get in touch? Reply with your own blog using
 			<a href="http://indiewebcamp.com/webmention">Webmentions</a> or send an
 			<a href="mailto:{{ post.author.email }}?subject=RE: {{ post.title }}"
