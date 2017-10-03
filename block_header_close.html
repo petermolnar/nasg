@@ -1,8 +1,7 @@
 	<style media="all">
-{% include 'style.css' %}
+{% include 'style-dark.css' %}
 	</style>
 </head>
-
 <body>
 {% include 'symbols.svg' %}
 
@@ -10,45 +9,61 @@
 	<nav class="content-navigation">
 		<ul>
 			<li>
-				<a title="home" href="/" class="{% if ( not post or post.url == '' ) and ( taxonomy.name == '' ) %} active{% endif %}">
+{% set cssclass = '' %}
+{% if taxonomy is defined and taxonomy.name == '' %}
+	{% set cssclass = 'active' %}
+{% endif %}
+				<a title="home" href="/" class="{{ cssclass }}">
 					<svg class="icon"><use xlink:href="#icon-home" /></svg>
 					home
 				</a>
 			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'photo' ) or ( taxonomy is defined and taxonomy.slug == 'photo' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
 			<li>
-				<a title="photos" href="/category/photo/" class="{% if (post and post.category ==  'photo' ) or ( taxonomy.slug == 'photo' ) %} active{% endif %}">
+				<a title="photos" href="/category/photo/" class="{{ cssclass }}">
 					<svg class="icon"><use xlink:href="#icon-photo" /></svg>
 					photos
 				</a>
 			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'journal' ) or ( taxonomy is defined and taxonomy.slug == 'journal' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
 			<li>
-				<a title="journal" href="/category/journal/" class="{% if ( post and post.category == 'journal' ) or ( post and 'journal' in post.tags ) or ( taxonomy.slug == 'journal' ) %} active{% endif %}">
+				<a title="journal" href="/category/journal/" class="{{ cssclass }}">
 					<svg class="icon"><use xlink:href="#icon-journal" /></svg>
 					journal
 				</a>
 			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'article' ) or ( taxonomy is defined and taxonomy.slug == 'article' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
 			<li>
-				<a title="IT" href="/category/article/" class="{% if ( post and post.category == 'article' ) or ( post and 'IT' in post.tags ) or ( ( taxonomy.slug == 'article' ) or ( taxonomy.slug == 'it' ) ) %} active{% endif %}">
+				<a title="IT" href="/category/article/" class="{{ cssclass }}">
 					<svg class="icon"><use xlink:href="#icon-article" /></svg>
 					IT
 				</a>
 			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'note' ) or ( taxonomy is defined and taxonomy.slug == 'note' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
 			<li>
-				<a title="notes" href="/category/note/" class="{% if ( post and 'Note' in post.tags ) or ( taxonomy.slug == 'note' ) %} active{% endif %}">
+				<a title="notes" href="/category/note/" class="{{ cssclass }}">
 					<svg class="icon"><use xlink:href="#icon-note" /></svg>
 					notes
 				</a>
 			</li>
-			{#
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'bookmark' ) or ( taxonomy is defined and taxonomy.slug == 'bookmark' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
 			<li>
-				<a title="replies" href="/category/reply/" class="{% if ( post and 'Reply' in post.tags ) or ( taxonomy.slug == 'reply' ) %} active{% endif %}">
-					<svg class="icon"><use xlink:href="#icon-reply" /></svg>
-					re:
-				</a>
-			</li>
-			#}
-			<li>
-				<a title="bookmarks" href="/category/bookmark/" class="{% if ( post and post.category == 'bookmark' ) or ( post and 'Bookmark' in post.tags ) or ( taxonomy.slug == 'bookmark' ) %} active{% endif %}">
+				<a title="bookmarks" href="/category/bookmark/" class="{{ cssclass }}">
 					<svg class="icon"><use xlink:href="#icon-bookmark" /></svg>
 					bookmarks
 				</a>
@@ -60,7 +75,6 @@
 		<label for="search" class="hide">Search</label>
 		<input type="search" class="search-field" placeholder="search..." value="" name="s" id="s" title="Search for:" />
 		<input type="submit" class="search-submit" value="Go ➡" />
-		<input type="hidden" class="hide" value="{{ taxonomy.slug }}" name="c" id="c" />
 	</form>
 
 	<br class="clear" />
