@@ -4,7 +4,7 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
 	<style media="all">
-		{% include 'style.css' %}
+		{% include 'style-dark.css' %}
 	</style>
 	<title>Search results for "{{ term }}"</title>
 </head>
@@ -33,33 +33,20 @@
 
 <section class="content-body">
 	<h1 class="p-name hide">Search results for "{{ term }}"</h1>
-	{% if posts|length %}
-	{% for url, post in posts.items() %}
-		<article class="searchresult">
-			<header>
-				<h2>
-					<a href="{{ url }}">
-						<span class="p-name">
-							{% if post.title|length %}
-								{{ post.title }}
-							{% else %}
-								{{ url }}
-							{% endif %}
-						</span>
-					</a>
-				</h2>
-				<h3>{{ url }}</h3>
-			</header>
 
-			<div class="highlight">… {{ post.highlight }} …</div>
-			{% if post.img and 'None' != post.img %}
-				<p>{{ post.img }}</p>
-			{% endif %}
-		</article>
+{% for category, posts in results.items() %}
+	<details open="open" class="search-section">
+	<summary>{{ category }} [{{ posts|length }}]</summary>
+	<ol>
+	{% for fname, post in posts.items() %}
+		<li>
+			<p><a href="{{ post.url }}">{{ post.url }}</a></p>
+			<p>{% if post.title|e %}{{ post.txt }}{% else %}{{ post.title }}{% endif %}</p>
+		</li>
 	{% endfor %}
-	{% else %}
-	<h2>No results for search term "{{ term }}"</h2>
-	{% endif %}
+	</ol>
+	</details>
+{% endfor %}
 </section>
 
 </body>

@@ -677,26 +677,19 @@ time {
     font-weight: bold;
 }
 
-.searchresult {
-    margin-bottom: 3rem;
+.search-section {
+    margin-bottom: 1rem;
 }
 
-.searchresult h3 {
-    font-weight: normal;
-    font-family: mono, monospace;
-    font-size: 0.9rem;
-    margin: 0 0 1rem 0;
-    border: none;
+.search-section summary {
+    border-bottom: 2px solid #999;
+    padding: 0.3rem 0;
+    font-weight: bold;
 }
 
-.searchresult h3:before {
-    content: "\2937";
+.search-section li {
+    margin: 1rem 0.6rem;
 }
-
-.searchresult .highlight {
-    font-size: 0.9rem;
-}
-
 
 @media print {
     * {
