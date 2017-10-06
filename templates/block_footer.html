@@ -1,0 +1,48 @@
+
+		<footer class="content-footer" id="main-footer">
+			<div class="limit">
+				<nav class="footer-contact p-author h-card vcard">
+					<img class="photo avatar u-photo u-avatar" src="{{ site.author.avatar }}" alt="Photo of {{ site.author.name }}" />
+					<dl>
+
+						<dt>name</dt>
+						<dd>
+							<a class="fn p-name url u-url u-uid" href="{{ site.author.url }}/about">{{ site.author.name }}</a>
+						</dd>
+						<dt>email</dt>
+						<dd>
+							<svg class="icon"><use xlink:href="#icon-email" /></svg>
+							<a rel="me" class="u-email email" href="mailto:{{ site.author.email }}">{{ site.author.email }}</a>
+						</dd>
+						<dt>GPG/PGP public key</dt>
+						<dd>
+							<svg class="icon"><use xlink:href="#icon-key" /></svg>
+							<a rel="me" class="u-gpg gpg" href="{{ site.url }}/pgp.asc"> {{ site.author.gpg }}</a>
+						</dd>
+			{% for silo, url in site.author.socials.items() %}
+						<dt>{{ silo }}</dt>
+						<dd>
+							<svg class="icon"><use xlink:href="#icon-{{ silo }}" /></svg>
+							<a rel="me" class="u-{{ silo }} url u-url" href="{{ url }}">{{ silo }}</a>
+						</dd>
+			{% endfor %}
+						<dt>Feed</dt>
+						<dd>
+							<svg class="icon"><use xlink:href="#icon-rss" /></svg>
+							<a title="Feed" href="{{ site.url }}/feed/">Feed</a>
+						</dd>
+						<dt>CV</dt>
+						<dd>
+							<svg class="icon"><use xlink:href="#icon-note" /></svg>
+							<a class="u-url u-resume" href="{{ site.author.url }}/cv">CV</a>
+						</dd>
+					</dl>
+				</nav>
+				<aside class="footer-notes p-note">
+					{{ site.author.note }}
+				</aside>
+			</div>
+		</footer>
+
+	</body>
+</html>

@@ -1,0 +1,81 @@
+	<style media="all">
+{% include 'style-dark.css' %}
+	</style>
+</head>
+<body>
+{% include 'symbols.svg' %}
+
+<header class="content-header" id="main-header">
+	<nav class="content-navigation">
+		<ul>
+			<li>
+{% set cssclass = '' %}
+{% if taxonomy is defined and taxonomy.name == '' %}
+	{% set cssclass = 'active' %}
+{% endif %}
+				<a title="home" href="/" class="{{ cssclass }}">
+					<svg class="icon"><use xlink:href="#icon-home" /></svg>
+					home
+				</a>
+			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'photo' ) or ( taxonomy is defined and taxonomy.slug == 'photo' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
+			<li>
+				<a title="photos" href="/category/photo/" class="{{ cssclass }}">
+					<svg class="icon"><use xlink:href="#icon-photo" /></svg>
+					photos
+				</a>
+			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'journal' ) or ( taxonomy is defined and taxonomy.slug == 'journal' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
+			<li>
+				<a title="journal" href="/category/journal/" class="{{ cssclass }}">
+					<svg class="icon"><use xlink:href="#icon-journal" /></svg>
+					journal
+				</a>
+			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'article' ) or ( taxonomy is defined and taxonomy.slug == 'article' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
+			<li>
+				<a title="IT" href="/category/article/" class="{{ cssclass }}">
+					<svg class="icon"><use xlink:href="#icon-article" /></svg>
+					IT
+				</a>
+			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'note' ) or ( taxonomy is defined and taxonomy.slug == 'note' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
+			<li>
+				<a title="notes" href="/category/note/" class="{{ cssclass }}">
+					<svg class="icon"><use xlink:href="#icon-note" /></svg>
+					notes
+				</a>
+			</li>
+{% set cssclass = '' %}
+{% if (post is defined and post.category ==  'bookmark' ) or ( taxonomy is defined and taxonomy.slug == 'bookmark' ) %}
+	{% set cssclass = 'active' %}
+{% endif %}
+			<li>
+				<a title="bookmarks" href="/category/bookmark/" class="{{ cssclass }}">
+					<svg class="icon"><use xlink:href="#icon-bookmark" /></svg>
+					bookmarks
+				</a>
+			</li>
+		</ul>
+	</nav>
+
+	<form role="search" method="get" class="search-form" action="/search">
+		<label for="search" class="hide">Search</label>
+		<input type="search" class="search-field" placeholder="search..." value="" name="s" id="s" title="Search for:" />
+		<input type="submit" class="search-submit" value="Go ➡" />
+	</form>
+
+	<br class="clear" />
+</header>

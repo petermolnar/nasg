@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+	<title>{{ taxonomy.title }}</title>
+	<link href="{{ taxonomy.feed }}" rel="self" />
+	<id>{{ taxonomy.feed }}</id>
+	<updated>{{ taxonomy.lastmod }}</updated>
+
+{% for post in posts %}
+	<entry>
+		<title>{{ post.title }}</title>
+		<link href="{{ site.url }}/{{ post.slug }}/" />
+		<id>{{ site.url }}/{{ post.slug }}</id>
+		<updated>{{ post.pubtime }}</updated>
+		{% if post.summary|length > 0 %}
+		<summary type="xhtml">
+			<div xmlns="http://www.w3.org/1999/xhtml">
+				{{ post.summary }}>
+			</div>
+		</summary>
+		{% endif %}
+		<content type="xhtml">
+			<div xmlns="http://www.w3.org/1999/xhtml">
+				{{ post.html }}
+			</div>
+		</content>
+		<author>
+			<name>{{ site.author.name }}</name>
+			<email>{{ site.author.email }}</email>
+		</author>
+	<!-- TODO: add enclosure ! -->
+	</entry>
+{% endfor %}
+</feed>

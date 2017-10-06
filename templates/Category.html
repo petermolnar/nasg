@@ -1,0 +1,106 @@
+{% include 'block_header_open.html' %}
+	<title>{{ taxonomy.title }}</title>
+	<link rel="alternate" type="application/rss+xml" title="{{ taxonomy.title }} feed" href="{{ taxonomy.feed }}" />
+
+{% include 'block_header_close.html' %}
+
+<section class="content-body h-feed">
+	<aside class="follow">
+		<p>
+			<svg class="icon"><use xlink:href="#icon-rss" /></svg>
+			<a title="follow {{ taxonomy.title }}" href="{{ taxonomy.feed }}">RSS/Atom feed</a>
+		</p>
+	</aside>
+
+	<h1 class="p-name hide">{{ taxonomy.name }}</h1>
+	{% for post in posts %}
+		<article class="h-entry hentry">
+			<header>
+				<h2>{% include 'Singular_title.html' %}</h2>
+			</header>
+
+
+			{% if post.summary %}
+			<div class="e-summary entry-summary">
+				{{ post.summary }}
+				<span class="more">
+					<a href="/{{ post.slug }}" title="{{ post.title }}"></a>
+				</span>
+				<br class="clear" />
+			</div>
+			{% else %}
+			<div class="e-content entry-content">
+				{{ post.html }}
+			</div>
+			{% endif %}
+		</article>
+
+	{% endfor %}
+</section>
+
+{% if taxonomy.total > 1 %}
+
+	{# based on: http://dev.dbl-a.com/symfony-2-0/symfony2-and-twig-pagination/ #}
+	<nav class="pagination">
+		<ul>
+	{% if taxonomy.page > 1 %}
+	{% set prev = taxonomy.page - 1 %}
+			<li>
+				<a rel="prev" href="{{ taxonomy.url }}page/{{ prev }}">«</a>
+			</li>
+			<li>
+				<a rel="prev" href="{{ taxonomy.url }}">1</a>
+			</li>
+	{% endif %}
+
+	{% if taxonomy.page - 4 > 0 %}
+			<li>
+				<span class="page-numbers dots">…</span>
+			</li>
+	{% endif %}
+
+
+		{% if ( taxonomy.page - 1 > 1 ) %}
+			<li>
+				<a href="{{ taxonomy.url }}page/{{ taxonomy.page - 1 }}">{{ taxonomy.page - 1 }}</a>
+			</li>
+		{% endif %}
+
+
+			<li>
+				<span class="page-numbers taxonomy.page">{{ taxonomy.page }}</span>
+			</li>
+
+
+		{% if ( taxonomy.page + 1 <= taxonomy.total -1 ) %}
+			<li>
+				<a href="{{ taxonomy.url }}page/{{ taxonomy.page + 1 }}">{{ taxonomy.page + 1 }}</a>
+			</li>
+		{% endif %}
+
+
+	{% if taxonomy.page  + 3 < taxonomy.total %}
+			<li>
+				<span class="page-numbers dots">…</span>
+			</li>
+	{% endif %}
+
+
+	{% if taxonomy.page != taxonomy.total %}
+			<li>
+				<a href="{{ taxonomy.url }}page/{{ taxonomy.total }}">{{ taxonomy.total }}</a>
+			</li>
+	{% endif %}
+
+	{% if taxonomy.page < taxonomy.total %}
+	{% set next = taxonomy.page + 1 %}
+			<li>
+				<a rel="next" href="{{ taxonomy.url }}page/{{ next }}">»</a>
+			</li>
+	{% endif %}
+		</ul>
+	</nav>
+
+{% endif %}
+
+{% include 'block_footer.html' %}

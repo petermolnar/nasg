@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
+	<style media="all">
+		{% include 'style-dark.css' %}
+	</style>
+	<title>Search results for "{{ term }}"</title>
+</head>
+
+<body>
+
+<header class="content-header" id="main-header">
+	<nav class="content-navigation">
+		<ul>
+			<li>
+				<a title="back to site" href="/">
+					« back to the site
+				</a>
+			</li>
+		</ul>
+	</nav>
+
+	<form role="search" method="get" class="search-form" action="/search">
+		<label for="search" class="hide">Search</label>
+		<input type="search" class="search-field" placeholder="search..." value="{{ term }}" name="s" id="s" title="Search for:">
+		<input type="submit" class="search-submit" value="Go ➡">
+	</form>
+
+	<br class="clear" />
+</header>
+
+<section class="content-body">
+	<h1 class="p-name hide">Search results for "{{ term }}"</h1>
+
+{% for category, posts in results.items() %}
+	<details open="open" class="search-section">
+	<summary>{{ category }} [{{ posts|length }}]</summary>
+	<ol>
+	{% for fname, post in posts.items() %}
+		<li>
+			<p><a href="{{ post.url }}">{{ post.url }}</a></p>
+			<p>{% if post.title|e %}{{ post.txt }}{% else %}{{ post.title }}{% endif %}</p>
+		</li>
+	{% endfor %}
+	</ol>
+	</details>
+{% endfor %}
+</section>
+
+</body>
+</html>
