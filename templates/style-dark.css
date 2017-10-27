@@ -535,6 +535,42 @@ figcaption {
     margin: 1rem 0.6rem;
 }
 
+.replies ol {
+    margin: 0 0 0 1rem;
+}
+
+.replies li {
+    margin: 0 0 1rem 0;
+}
+
+.replies li .p-author:before {
+    content: '\00B7';
+    margin: 0 0.3rem;
+}
+
+.replies li time {
+    font-size: 0.8rem;
+}
+
+.replies li .source {
+    display: block;
+}
+
+.reactions dl dt,
+.reactions dl ul time {
+    display:none;
+    visibility: hidden;
+}
+
+.reactions dl ul,
+.reactions dl ul li {
+    list-style-type: none;
+    display: inline-block;
+    padding: 0;
+    margin: 0 1rem 0 0;
+}
+
+
 
 /* above is mobile first; this is the desktop */
 @media all and (min-width: 50rem) {

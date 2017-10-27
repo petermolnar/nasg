@@ -59,6 +59,32 @@
 				{% endif %}
 			</p>
 		</footer>
+
+		<section class="replies">
+			<h6><a name="replies"></a>Replies</h6>
+			<ol>
+				{% for mtime, comment in post.replies %}
+					{% include 'Comment.html' %}
+				{% endfor %}
+			</ol>
+		</section>
+
+		<section class="reactions">
+			<h6><a name="reactions"></a>Reactions</h6>
+			<dl>
+				{% for character, comments in post.reactions.items() %}
+				<dt>{{ character }}</dt>
+				<dd>
+					<ul>
+						{% for mtime, comment in comments %}
+							{% include 'Comment.html' %}
+						{% endfor %}
+					</ul>
+				</dd>
+				{% endfor %}
+			</dl>
+		</section>
+
 	</article>
 
 </section>

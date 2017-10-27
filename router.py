@@ -9,6 +9,7 @@ import db
 import shared
 import validators
 import urllib.parse
+import requests
 
 if __name__ == '__main__':
     logging_format = "[%(asctime)s] %(process)d-%(levelname)s "
@@ -79,6 +80,24 @@ if __name__ == '__main__':
         # the actual parsing will be done at site generation time
         wdb = db.WebmentionQueue()
         wdb.queue(source,target)
+
+        # telegram notification, if set
+        if shared.config.has_section('api_telegram'):
+            url = "https://api.telegram.org/bot%s/sendMessage" % (
+                shared.config.get('api_telegram', 'api_token')
+            )
+            data = {
+                'chat_id': shared.config.get('api_telegram', 'chat_id'),
+                'text': 'incoming webmention from %s to %s' % (
+                    source,
+                    target
+                )
+            }
+            # fire and forget
+            try:
+                requests.post(url, data=data)
+            except:
+                pass
         response = sanic.response.text("Accepted", status=202)
         return response
 

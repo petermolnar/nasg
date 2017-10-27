@@ -195,13 +195,13 @@ def __expandconfig():
         allow_no_value=True
     )
     c.read('config.ini')
-
     for s in c.sections():
         for o in c.options(s):
             curr = c.get(s, o)
             if 'photo' == s and 'regex' == o:
                 REGEX.update({'photo': re.compile(curr)})
             c.set(s, o, os.path.expanduser(curr))
+    return c
 
 def baseN(num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
     """ Used to create short, lowercase slug for a number (an epoch) passed """

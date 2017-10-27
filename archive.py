@@ -8,10 +8,12 @@ import subprocess
 import imghdr
 import arrow
 
-from pprint import pprint
-
-from requests_oauthlib import OAuth1Session, oauth1_session, OAuth2Session, oauth2_session
+from requests_oauthlib import OAuth1Session
+from requests_oauthlib import oauth1_session
+from requests_oauthlib import OAuth2Session
+from requests_oauthlib import oauth2_session
 from oauthlib.oauth2 import BackendApplicationClient
+
 import db
 import shared
 
@@ -47,7 +49,19 @@ class FlickrFavs(Favs):
             'method': 'flickr.favorites.getList',
             'api_key': shared.config.get('api_flickr', 'api_key'),
             'user_id': self.uid,
-            'extras': 'description,geo,tags,owner_name,date_upload,url_o,url_k,url_h,url_b,url_c,url_z',
+            'extras':  ','.join([
+                'description',
+                'geo',
+                'tags',
+                'owner_name',
+                'date_upload',
+                'url_o',
+                'url_k',
+                'url_h',
+                'url_b',
+                'url_c',
+                'url_z',
+            ]),
             'per_page': 500, # maximim
             'format': 'json',
             'nojsoncallback': '1',
@@ -837,14 +851,18 @@ class TumblrOauth(Oauth1Flow):
 if __name__ == '__main__':
     logging.basicConfig(level=20)
 
-    flickr = FlickrFavs()
-    flickr.run()
+    if shared.config.has_section('api_flickr'):
+        flickr = FlickrFavs()
+        flickr.run()
 
-    fivehpx = FivehpxFavs()
-    fivehpx.run()
+    if shared.config.has_section('api_500px'):
+        fivehpx = FivehpxFavs()
+        fivehpx.run()
 
-    tumblr = TumblrFavs()
-    tumblr.run()
+    if shared.config.has_section('api_tumblr'):
+        tumblr = TumblrFavs()
+        tumblr.run()
 
-    da = DAFavs()
-    da.run()
+    if shared.config.has_section('api_deviantart'):
+        da = DAFavs()
+        da.run()

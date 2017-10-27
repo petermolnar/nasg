@@ -9,6 +9,7 @@ import glob
 import argparse
 import shutil
 from urllib.parse import urlparse
+#from urllib.parse import urljoin
 import asyncio
 from math import ceil
 import csv
@@ -18,6 +19,10 @@ import frontmatter
 import arrow
 import langdetect
 import wand.image
+
+#import requests
+#from bs4 import BeautifulSoup
+from emoji import UNICODE_EMOJI
 
 import shared
 import db
@@ -348,6 +353,47 @@ class Singular(object):
         return self._images
 
     @property
+    def comments(self):
+        comments = NoDupeContainer()
+        cfiles = []
+        lookin = [*self.redirects, self.fname]
+        for d in lookin:
+            maybe = glob.glob(
+                os.path.join(
+                    shared.config.get('dirs', 'comment'),
+                    d,
+                    '*.md'
+                )
+            )
+            cfiles = [*cfiles, *maybe]
+        for cpath in cfiles:
+            c = Comment(cpath)
+            comments.append(c.mtime, c)
+        return comments
+
+    @property
+    def replies(self):
+        r = {}
+        for mtime, c in self.comments:
+            if 'webmention' == c.type:
+                r.update({mtime:c.tmplvars})
+        return sorted(r.items())
+
+    @property
+    def reactions(self):
+        r = {}
+        for mtime, c in self.comments:
+            if 'webmention' == c.type:
+                continue
+            if c.type not in r:
+                r[c.type] = {}
+            r[c.type].update({mtime:c.tmplvars})
+
+        for icon, comments in r.items():
+            r[icon] = sorted(comments.items())
+        return r
+
+    @property
     def exif(self):
         if not self.photo:
             return {}
@@ -509,7 +555,9 @@ class Singular(object):
                 #'sourceurl': self.sourceurl,
                 'is_reply': self.is_reply,
                 'age': int(self.published.format('YYYY')) - int(arrow.utcnow().format('YYYY')),
-                'summary': self.summary
+                'summary': self.summary,
+                'replies': self.replies,
+                'reactions': self.reactions,
             }
         return self._tmplvars
 
@@ -894,6 +942,116 @@ class WebImage(object):
         tmplfile = "%s.html" % (__class__.__name__)
         return shared.j2.get_template(tmplfile).render({'photo': self.tmplvars})
 
+
+class Comment(object):
+    def __init__(self, fpath):
+        logging.debug("initiating comment object from %s", fpath)
+        self.fpath = fpath
+        self.mtime = os.path.getmtime(self.fpath)
+        with open(self.fpath, mode='rt') as f:
+            self.fm = frontmatter.parse(f.read())
+            self.meta, self.content = self.fm
+
+    @property
+    def dt(self):
+        return arrow.get(self.meta.get('date'))
+
+    @property
+    def html(self):
+        html = "%s" % (self.content)
+        return shared.Pandoc().convert(html)
+
+    @property
+    def target(self):
+        t = urlparse(self.meta.get('target'))
+        return t.path.rstrip('/').strip('/').split('/')[-1]
+
+    @property
+    def source(self):
+        return self.meta.get('source')
+
+    @property
+    def author(self):
+        url = self.meta.get('author').get('url', self.source)
+        name = self.meta.get('author').get('name', urlparse(url).hostname)
+
+        return {
+            'name': name,
+            'url': url
+        }
+
+    @property
+    def type(self):
+        # caching, because calling Pandoc is expensive
+        if not hasattr(self, '_type'):
+            self._type = 'webmention'
+            t = self.meta.get('type', 'webmention')
+            if 'webmention' != t:
+                self._type = '★'
+
+            if len(self.content):
+                maybe = shared.Pandoc('plain').convert(self.content)
+                if maybe in UNICODE_EMOJI:
+                    self._type = maybe
+        return self._type
+
+    @property
+    def tmplvars(self):
+        if not hasattr(self, '_tmplvars'):
+            self._tmplvars = {
+                'author': self.author,
+                'source': self.source,
+                'pubtime': self.dt.format(shared.ARROWFORMAT['iso']),
+                'pubdate': self.dt.format(shared.ARROWFORMAT['display']),
+                'html': self.html,
+                'type': self.type
+            }
+        return self._tmplvars
+
+    def __repr__(self):
+        return "Comment from %s for %s" % (
+            self.source, self.target
+        )
+
+    def __str__(self):
+        tmplfile = "%s.html" % (__class__.__name__)
+        return shared.j2.get_template(tmplfile).render({'comment': self.tmplvars})
+
+
+#class SendWebmention(object):
+    ## TODO def __init__(self, source, target):
+    ## check in gone.tsv?
+    ## discover endpoint
+    ## send webmention
+    ## add to DB on return
+
+    #def run(self):
+        #return
+
+
+#class ReceiveWebmention(object):
+    ## TODO def __init__(self, source, target):
+        ## pull remote
+        ## validate if page links to X anywhere
+        ## find h-entry or use root as SOURCE
+        ## find author in SOURCE
+        ## find content in SOURCE
+        ## save under comments/[target slug]/mtime-[from-slufigied-url].md
+        ##
+
+        ## add to DB on return
+    #def run(self):
+        #return
+
+#def parse_received_queue():
+    # iterate over DB received
+
+#def parse_send_queue():
+    # iterate over DB needs sending
+
+#def webmentions(target_slug):
+    # find all webmentions in the relevant directory
+    # return mtime => Webmention hash
 
 def setup():
     """ parse input parameters and add them as params section to config """
