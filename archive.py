@@ -5,13 +5,15 @@ import glob
 import logging
 import shutil
 import subprocess
+import imghdr
 import arrow
+
+from pprint import pprint
 
 from requests_oauthlib import OAuth1Session, oauth1_session, OAuth2Session, oauth2_session
 from oauthlib.oauth2 import BackendApplicationClient
-
+import db
 import shared
-
 
 class Favs(object):
     def __init__(self, confgroup):
@@ -101,6 +103,7 @@ class FlickrFavs(Favs):
             fav = FlickrFav(photo)
             if not fav.exists:
                 fav.run()
+            #fav.fix_extension()
 
 class FivehpxFavs(Favs):
     def __init__(self):
@@ -179,6 +182,7 @@ class FivehpxFavs(Favs):
             fav = FivehpxFav(photo)
             if not fav.exists:
                 fav.run()
+            #fav.fix_extension()
 
 
 class TumblrFavs(Favs):
@@ -242,7 +246,7 @@ class DAFavs(Favs):
             'https://www.deviantart.com/api/v1/oauth2/collections/folders',
             params={
                 'username': self.username,
-                'calculate_size': 'false',
+                'calculate_size': 'true',
                 'ext_preload': 'false',
                 'mature_content': 'true'
             }
@@ -304,29 +308,29 @@ class DAFavs(Favs):
         has_more = self.has_more(js.get('has_more'))
         offset = js.get('next_offset')
         while True == has_more:
-            logging.info('iterating over DA results with offset %d', offset)
+            #logging.info('iterating over DA results with offset %d', offset)
             paged = self.getpaged(offset)
             new = paged.get('results', [])
             if not len(new):
                 #logging.error('empty results from deviantART, breaking loop')
                 break
-            favs = favs + new
+            favs = [*favs, *new]
             has_more = self.has_more(paged.get('has_more'))
             if not has_more:
                 break
             n = int(paged.get('next_offset'))
             if not n:
                 break
-            offset = offset + n
+            offset = n
 
         self.favs = favs
         for fav in self.favs:
             f = DAFav(fav)
-            if f.exists:
-                continue
+            if not f.exists:
+                f.fav.update({'meta': self.getsinglemeta(fav.get('deviationid'))})
+                f.run()
+            #f.fix_extension()
 
-            f.fav.update({'meta': self.getsinglemeta(fav.get('deviationid'))})
-            f.run()
 
 class ImgFav(object):
     def __init__(self):
@@ -349,7 +353,19 @@ class ImgFav(object):
 
     @property
     def exists(self):
-        return os.path.exists(self.target)
+        maybe = glob.glob(self.target.replace('.jpg', '.*'))
+        if len(maybe):
+            return True
+        return False
+
+    def fix_extension(self):
+        # identify file format
+        what = imghdr.what(self.target)
+        # rename file
+        new = self.target.replace('.jpg', '.%s' % what)
+        if new != self.target:
+            shutil.move(self.target, new)
+            self.target = new
 
     def pull_image(self):
         logging.info("pulling image %s to %s", self.imgurl, self.target)
@@ -359,8 +375,11 @@ class ImgFav(object):
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw, f)
 
-
     def write_exif(self):
+        what = imghdr.what(self.target)
+        if 'jpg' != what or 'png' != what:
+            return
+
         logging.info('populating EXIF data of %s' % self.target)
         tags = list(set(self.meta.get('tags',[])))
         dt = self.meta.get('dt').to('utc')
@@ -387,7 +406,7 @@ class ImgFav(object):
         params = [
             'exiftool',
             '-overwrite_original',
-            '-EXIF:Artist=%s' % author_name[:64],
+            #'-EXIF:Artist=%s' % author_name[:64],
             '-XMP:Copyright=Copyright %s %s (%s)' % (
                 dt.format('YYYY'),
                 author_name,
@@ -501,6 +520,7 @@ class FlickrFav(ImgFav):
             self.photo.get('description', {}).get('_content', '')
         )
 
+        self.fix_extension()
         self.write_exif()
 
 class FivehpxFav(ImgFav):
@@ -546,12 +566,14 @@ class FivehpxFav(ImgFav):
         }
         c = "%s" % self.photo.get('description', '')
         self.content = shared.Pandoc('plain').convert(c)
+        self.fix_extension()
         self.write_exif()
 
 class DAFav(ImgFav):
     def __init__(self, fav):
         self.fav = fav
         self.deviationid = fav.get('deviationid')
+        #logging.info('working on %s', self.deviationid)
         self.url = fav.get('url')
         self.title = fav.get('title', False) or self.deviationid
         self.author = self.fav.get('author').get('username')
@@ -562,9 +584,21 @@ class DAFav(ImgFav):
                 shared.slugfname(self.author)
             )
         )
+
+        self.imgurl = None
+        if 'content' in fav:
+            if 'src' in fav['content']:
+                self.imgurl = fav.get('content').get('src')
+        elif 'preview' in fav:
+            if 'src' in fav['preview']:
+                self.imgurl = fav.get('preview').get('src')
         self.imgurl = fav.get('content', {}).get('src')
 
     def run(self):
+        if not self.imgurl:
+            logging.error('imgurl is empty for deviantart %s', self.deviationid)
+            return
+
         self.pull_image()
 
         self.meta = {
@@ -583,6 +617,7 @@ class DAFav(ImgFav):
         }
         c = "%s" % self.fav.get('meta', {}).get('description', '')
         self.content = shared.Pandoc('plain').convert(c)
+        self.fix_extension()
         self.write_exif()
 
 
@@ -600,7 +635,10 @@ class TumblrFav(object):
 
     @property
     def exists(self):
-        return os.path.exists(self.target.replace('.jpg', '_0.jpg'))
+        maybe = glob.glob(self.target.replace('.jpg', '_0.*'))
+        if len(maybe):
+            return True
+        return False
 
     def run(self):
         content = "%s" % self.like.get('caption', '')
@@ -635,6 +673,7 @@ class TumblrFav(object):
             img.content = content
             img.meta = meta
             img.pull_image()
+            img.fix_extension()
             img.write_exif()
             icntr = icntr + 1
 
@@ -681,7 +720,7 @@ class Oauth1Flow(object):
         self.service = service
         self.key = shared.config.get("api_%s" % service, 'api_key')
         self.secret = shared.config.get("api_%s" % service, 'api_secret')
-        self.tokendb = shared.TokenDB()
+        self.tokendb = db.TokenDB()
         self.t = self.tokendb.get_service(self.service)
         self.oauth_init()
 
@@ -796,7 +835,7 @@ class TumblrOauth(Oauth1Flow):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=10)
+    logging.basicConfig(level=20)
 
     flickr = FlickrFavs()
     flickr.run()
