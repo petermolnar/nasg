@@ -1,4 +1,4 @@
-# NASG (Not Another Statig Generator)
+# NASG (Not Another Static Generator)
 
 This is a tiny static site generator, written in Python, to scratch my own itches.
 It is most probably not suitable for anyone else.
