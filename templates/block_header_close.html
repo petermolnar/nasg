@@ -58,16 +58,6 @@
 					notes
 				</a>
 			</li>
-{% set cssclass = '' %}
-{% if (post is defined and post.category ==  'bookmark' ) or ( taxonomy is defined and taxonomy.slug == 'bookmark' ) %}
-	{% set cssclass = 'active' %}
-{% endif %}
-			<li>
-				<a title="bookmarks" href="/category/bookmark/" class="{{ cssclass }}">
-					<svg class="icon"><use xlink:href="#icon-bookmark" /></svg>
-					bookmarks
-				</a>
-			</li>
 		</ul>
 	</nav>
 

@@ -17,9 +17,9 @@
 <dt>Shutter speed</dt>
 <dd><svg class="icon"><use xlink:href="#icon-clock" /></svg>{{ photo.exif.shutter_speed }} sec</dd>
 {% endif %}
-{% if photo.exif.focal_length %}
+{% if photo.exif.focallength %}
 <dt>Focal length (as set)</dt>
-<dd><svg class="icon"><use xlink:href="#icon-focallength" /></svg>{{ photo.exif.focal_length }} mm</dd>
+<dd><svg class="icon"><use xlink:href="#icon-focallength" /></svg>{{ photo.exif.focallength }}</dd>
 {% endif %}
 {% if photo.exif.iso %}
 <dt>Sensitivity</dt>

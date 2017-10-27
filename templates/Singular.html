@@ -37,35 +37,29 @@
 			<p class="published">
 				<time class="dt-published" datetime="{{ post.pubtime }}">{{ post.pubdate }}</time>
 			</p>
-			<p class="shorturl">
-				<a href="/{{ post.shortslug }}">{{ site.url }}/{{ post.shortslug }}</a>
-			</p>
+			<div class="hide">
 			{% include 'block_author.html' %}
+			</div>
 			<p class="hide">
 				<a class="u-url u-uuid" rel="bookmark" href="{{ site.url}}/{{ post.slug }}/"></a>
 			</p>
+			<p class="license">
+				{% if post.licence.text == 'CC BY 4.0' %}
+					<a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="hide u-license">CC BY 4.0</a>
+					<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+					Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, even for commercial use.
+				{% elif post.licence.text == 'CC BY-NC 4.0' %}
+					<a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="hide u-license">CC BY-NC 4.0</a>
+					<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+					Licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, for non commercial use. For commercial use please contact the author.
+				{% else %}
+					<a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="hide u-license">CC BY-NC-ND 4.0</a>
+					<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+					Licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International</a>. You are free to share if you link back here for non commercial use, but you can't publish any altered versions of it. For commercial use please contact the author.
+				{% endif %}
+			</p>
 		</footer>
 	</article>
-
-	<aside class="content-note">
-		<hr />
-		<p class="license">
-			{% if post.licence.text == 'CC BY 4.0' %}
-				<a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="hide u-license">CC BY 4.0</a>
-				<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
-				Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, even for commercial use.
-			{% elif post.licence.text == 'CC BY-NC 4.0' %}
-				<a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="hide u-license">CC BY-NC 4.0</a>
-				<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
-				Licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, for non commercial use. For commercial use please contact the author.
-			{% else %}
-				<a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="hide u-license">CC BY-NC-ND 4.0</a>
-				<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
-				Licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International</a>. You are free to share if you link back here for non commercial use, but you can\'t publish any altered versions of it. For commercial use please contact the author.
-			{% endif %}
-		</p>
-
-	</aside>
 
 </section>
 

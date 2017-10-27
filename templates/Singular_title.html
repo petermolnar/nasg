@@ -1,20 +1,4 @@
-{% if post.is_bookmark %}
-	<p class="p-name">{{ post.title }}</p>
-	<p>
-		<svg class="icon"><use xlink:href="#icon-bookmark" /></svg>
-		<a href="{{ post.is_bookmark }}" class="u-bookmark-of" title="Bookmarked URL: {{ post.is_bookmark }}">
-			{{ post.is_bookmarkl }}
-		</a>
-	</p>
-{% elif post.is_fav %}
-	<p class="p-name">{{ post.title }}</p>
-	<p>
-		<svg class="icon"><use xlink:href="#icon-repost" /></svg>
-		<a href="{{ post.is_fav }}" class="u-favorite-of" title="Favorite of: {{ post.is_fav }}">
-			{{ post.is_fav }}
-		</a>
-	</p>
-{% elif post.is_reply %}
+{% if post.is_reply %}
 	<p class="p-name">
 		<svg class="icon"><use xlink:href="#icon-reply" /></svg>
 		<a href="{{ post.is_reply }}" class="u-in-reply-to" title="Reply to: {{ post.is_reply }}">
