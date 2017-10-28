@@ -14,6 +14,7 @@ import asyncio
 from math import ceil
 import csv
 import sqlite3
+import magic
 
 import frontmatter
 import arrow
@@ -167,7 +168,7 @@ class Content(FContainer):
 class Category(NoDupeContainer):
     """ A Category which holds pubtime (int) => Singular data """
     indexfile = 'index.html'
-    feedfile = 'index.atom'
+    feedfile = 'index.xml'
     feeddir = 'feed'
     pagedir = 'page'
     taxonomy = 'category'
@@ -198,20 +199,32 @@ class Category(NoDupeContainer):
         # TODO proper title
         return self.name
 
-    def url_paged(self, page=1, feed=False):
-        x = '/'
+    @property
+    def url(self):
         if self.name:
-            x = "%s%s/%s" % (
-                x,
+            url = "/%s/%s/" % (
                 self.taxonomy,
                 self.name,
             )
-
-        if page == 1 and feed:
-            x = "%s/%s/" % (x, self.feeddir)
         else:
-            x = "%s/%s/%s/" % (x, self.pagedir, "%s" % page)
-        return x
+            url = '/'
+        return url
+
+
+    #def url_paged(self, page=1, feed=False):
+        #x = '/'
+        #if self.name:
+            #x = "%s%s/%s" % (
+                #x,
+                #self.taxonomy,
+                #self.name,
+            #)
+
+        #if page == 1 and feed:
+            #x = "%s/%s/" % (x, self.feeddir)
+        #else:
+            #x = "%s/%s/%s/" % (x, self.pagedir, "%s" % page)
+        #return x
 
     def path_paged(self, page=1, feed=False):
         x = shared.config.get('common', 'build')
@@ -242,9 +255,6 @@ class Category(NoDupeContainer):
 
 
     async def render(self):
-        if self.is_uptodate:
-            return
-
         pagination = shared.config.getint('display', 'pagination')
         pages = ceil(len(self.data) / pagination)
         page = 1
@@ -267,9 +277,12 @@ class Category(NoDupeContainer):
                     'page': page,
                     'total': pages,
                     'perpage': pagination,
-                    'lastmod': arrow.get(self.mtime).format(shared.ARROWFORMAT['iso']),
-                    'feed': self.url_paged(page=1, feed=True),
-                    'url': self.url_paged(page),
+                    'lastmod': arrow.get(self.mtime).format(shared.ARROWFORMAT['rcf']),
+                    'url': self.url,
+                    'feed': "%s/%s/" % (
+                        self.url,
+                        shared.config.get('site', 'feed')
+                    ),
                 },
                 'site': shared.site,
                 'posts': posttmpls,
@@ -464,19 +477,23 @@ class Singular(object):
         return lang
 
     def _find_image(self, fname):
+        fname = os.path.basename(fname)
         pattern = os.path.join(
             shared.config.get('dirs', 'files'),
-            '*',
+            '**',
             fname
         )
         logging.debug('trying to locate image %s in %s', fname, pattern)
         maybe = glob.glob(pattern)
 
         if not maybe:
+            logging.error('image not found: %s', fname)
             return None
 
+        maybe = maybe.pop()
+        logging.debug('image found: %s', maybe)
         if fname not in self._images:
-            im = WebImage(maybe.pop())
+            im = WebImage(maybe)
             self._images.append(fname,im)
         return self._images[fname]
 
@@ -493,7 +510,7 @@ class Singular(object):
         body = "%s" % (self.content)
         # get inline images, downsize them and convert them to figures
         for shortcode, alt, fname, title, css in self.inline_images:
-            fname = os.path.basename(fname)
+            #fname = os.path.basename(fname)
             im = self._find_image(fname)
             if not im:
                 continue
@@ -538,6 +555,16 @@ class Singular(object):
         return shared.baseN(self.pubtime)
 
     @property
+    def enclosure(self):
+        if not self.photo:
+            return {}
+        return {
+            'length': os.path.getsize(self.photo.fpath),
+            'url': self.photo.href,
+            'mime': magic.Magic(mime=True).from_file(self.photo.fpath),
+        }
+
+    @property
     def tmplvars(self):
         # very simple caching because we might use this 4 times:
         # post HTML, category, front posts and atom feed
@@ -546,6 +573,7 @@ class Singular(object):
                 'title': self.title,
                 'pubtime': self.published.format(shared.ARROWFORMAT['iso']),
                 'pubdate': self.published.format(shared.ARROWFORMAT['display']),
+                'pubrfc': self.published.format(shared.ARROWFORMAT['rcf']),
                 'category': self.category,
                 'html': self.html,
                 'lang': self.lang,
@@ -558,15 +586,13 @@ class Singular(object):
                 'summary': self.summary,
                 'replies': self.replies,
                 'reactions': self.reactions,
+                'enclosure': self.enclosure,
             }
         return self._tmplvars
 
     async def render(self):
         logging.info('rendering %s' % (self.fname))
         o = self.htmlfile
-        if self.is_uptodate:
-            logging.debug('%s is up to date' % (o))
-            return
 
         tmplfile = "%s.html" % (__class__.__name__)
         r = shared.j2.get_template(tmplfile).render({
@@ -1092,8 +1118,38 @@ def setup():
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
 
+def youngest_mtime(root):
+    youngest = 0
+    files = glob.glob(os.path.join(root, '**'), recursive=True)
+    for f in files:
+        mtime = os.path.getmtime(f)
+        if mtime > youngest:
+            youngest = mtime
+    return youngest
+
 def build():
     setup()
+
+    #if not shared.config.getboolean('params', 'force'):
+        #last_run = youngest_mtime(shared.config.get('common', 'build'))
+        #lookin = [
+            #shared.config.get('dirs', 'content'),
+            #shared.config.get('dirs', 'comment'),
+        #]
+        #youngest = 0
+        #for root in lookin:
+            #maybe = youngest_mtime(root)
+            #if maybe > youngest:
+                #youngest = maybe
+
+        #if last_run > youngest:
+            #logging.info("last build happened at %s which is later than the last modification at %s; exiting silently",
+                #arrow.get(last_run),
+                #arrow.get(youngest)
+            #)
+            #return
+
+
     loop = asyncio.get_event_loop()
     tasks = []
     content = Content()
@@ -1122,7 +1178,7 @@ def build():
             )
 
         # add render task, if needed
-        if not post.is_uptodate or shared.config.get('params', 'force'):
+        if not post.is_uptodate or shared.config.getboolean('params', 'force'):
             task = loop.create_task(post.render())
             tasks.append(task)
 
@@ -1130,6 +1186,10 @@ def build():
         for fname, im in post.images:
             task = loop.create_task(im.downsize())
             tasks.append(task)
+
+        # skip adding future posts to any category
+        if post.is_future:
+            continue
 
         # skip categories starting with _
         if post.category.startswith('_'):
@@ -1152,13 +1212,15 @@ def build():
     sdb.finish()
 
     # render front
-    task = loop.create_task(collector_front.render())
-    tasks.append(task)
+    if not collector_front.is_uptodate or shared.config.getboolean('params', 'force'):
+        task = loop.create_task(collector_front.render())
+        tasks.append(task)
 
     # render categories
     for name, c in collector_categories:
-        task = loop.create_task(c.render())
-        tasks.append(task)
+        if not c.is_uptodate or shared.config.getboolean('params', 'force'):
+            task = loop.create_task(c.render())
+            tasks.append(task)
 
     # add magic.php rendering
     task = loop.create_task(magic.render())

@@ -3,8 +3,7 @@ import json
 import sqlite3
 import glob
 import shared
-
-# TODO sqlite3 cache instead of filesystem ?
+import logging
 
 class TokenDB(object):
     def __init__(self, uuid='tokens'):
@@ -105,15 +104,9 @@ class SearchDB(object):
 
     def append(self, id, corpus, mtime, url, category, title):
         mtime = int(mtime)
+        logging.debug("adding %s to searchdb", id)
         cursor = self.db.cursor()
-        cursor.execute('''UPDATE data SET corpus=?, mtime=?, url=?, category=?, title=? WHERE id=?;''', (
-            corpus,
-            mtime,
-            url,
-            category,
-            title,
-            id
-        ))
+        cursor.execute('''DELETE FROM data WHERE id=?''', (id,))
         cursor.execute('''INSERT OR IGNORE INTO data (id, corpus, mtime, url, category, title) VALUES (?,?,?,?,?,?);''', (
             id,
             corpus,
@@ -125,6 +118,7 @@ class SearchDB(object):
         self.db.commit()
 
     def is_uptodate(self, fname, mtime):
+        mtime = int(mtime)
         ret = {}
         cursor = self.db.cursor()
         cursor.execute('''SELECT mtime
@@ -133,8 +127,12 @@ class SearchDB(object):
             (fname,mtime)
         )
         rows = cursor.fetchall()
+
         if len(rows):
+            logging.debug("%s is up to date in searchdb", fname)
             return True
+
+        logging.debug("%s is out of  date in searchdb", fname)
         return False
 
     def search_by_query(self, query):

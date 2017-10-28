@@ -60,6 +60,7 @@
 			</p>
 		</footer>
 
+{% if post.replies|length %}
 		<section class="replies">
 			<h6><a name="replies"></a>Replies</h6>
 			<ol>
@@ -68,7 +69,8 @@
 				{% endfor %}
 			</ol>
 		</section>
-
+{% endif %}
+{% if post.reactions|length %}
 		<section class="reactions">
 			<h6><a name="reactions"></a>Reactions</h6>
 			<dl>
@@ -84,9 +86,8 @@
 				{% endfor %}
 			</dl>
 		</section>
-
+{% endif %}
 	</article>
-
 </section>
 
 

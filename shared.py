@@ -246,7 +246,8 @@ def __setup_sitevars():
 
 ARROWFORMAT = {
     'iso': 'YYYY-MM-DDTHH:mm:ssZ',
-    'display': 'YYYY-MM-DD HH:mm'
+    'display': 'YYYY-MM-DD HH:mm',
+    'rcf': 'ddd, DD MMM YYYY HH:mm:ss Z'
 }
 
 LLEVEL = {

@@ -1,33 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
+<?xml version="1.0" encoding="UTF-8"?>
+	<rss version="2.0"
+		xmlns:content="http://purl.org/rss/1.0/modules/content/"
+		xmlns:dc="http://purl.org/dc/elements/1.1/"
+	>
+<channel>
 	<title>{{ taxonomy.title }}</title>
-	<link href="{{ taxonomy.feed }}" rel="self" />
-	<id>{{ taxonomy.feed }}</id>
-	<updated>{{ taxonomy.lastmod }}</updated>
-
+	<link>{{ site.url }}{{ taxonomy.feed }}</link>
+	<lastBuildDate>{{ taxonomy.lastmod }}</lastBuildDate>
+	<description>{{ site.title }}: {{ taxonomy.name }}</description>
 {% for post in posts %}
-	<entry>
+	<item>
 		<title>{{ post.title }}</title>
-		<link href="{{ site.url }}/{{ post.slug }}/" />
-		<id>{{ site.url }}/{{ post.slug }}</id>
-		<updated>{{ post.pubtime }}</updated>
-		{% if post.summary|length > 0 %}
-		<summary type="xhtml">
-			<div xmlns="http://www.w3.org/1999/xhtml">
-				{{ post.summary }}>
-			</div>
-		</summary>
-		{% endif %}
-		<content type="xhtml">
-			<div xmlns="http://www.w3.org/1999/xhtml">
-				{{ post.html }}
-			</div>
-		</content>
-		<author>
-			<name>{{ site.author.name }}</name>
-			<email>{{ site.author.email }}</email>
-		</author>
-	<!-- TODO: add enclosure ! -->
-	</entry>
+		<link>{{ site.url }}/{{ post.slug }}/</link>
+		<content:encoded><![CDATA[{{ post.html }}]]></content:encoded>
+		<pubDate>{{ post.pubrfc }}</pubDate>
+		<guid>{{ site.url }}/{{ post.slug }}</guid>
+		<dc:language>{{ post.lang }}</dc:language>
+{%- if post.tags %}{% for tname in post.tags %}
+			<category>{{ tname }}></category>
+{% endfor %}{% endif -%}
+{%- if post.rssenclosure %}
+		<enclosure
+			url="{{ post.enclosure.url }}"
+			type="{{ post.enclosure.mime }}"
+			length="{{ post.enclosure.size }}"
+		/>
+{% endif -%}
+	</item>
 {% endfor %}
-</feed>
+</channel>
+</rss>

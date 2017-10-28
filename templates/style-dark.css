@@ -145,7 +145,7 @@ h3 {
 code,
 pre {
     font-family: "Inconsolata", "Courier New", monospace;
-    font-size: 0.7rem;
+    font-size: 0.9rem;
     color: limegreen;
     direction: ltr;
     text-align: left;
@@ -154,7 +154,7 @@ pre {
     word-break: normal;
     tab-size: 2;
     hyphens: none;
-    border: 1px solid #666;
+    outline: 1px solid #666;
     background-color: #222;
 }
 
@@ -166,7 +166,7 @@ pre {
 
 code {
     display: inline-block;
-    padding: 0 0.3rem;
+    padding: 0 0.3rem 0.1rem 0.3rem;
     line-height: 0.9rem;
 }
 
