@@ -9,7 +9,6 @@ import glob
 import argparse
 import shutil
 from urllib.parse import urlparse
-#from urllib.parse import urljoin
 import asyncio
 from math import ceil
 import csv
@@ -20,9 +19,6 @@ import frontmatter
 import arrow
 import langdetect
 import wand.image
-
-#import requests
-#from bs4 import BeautifulSoup
 from emoji import UNICODE_EMOJI
 
 import shared
@@ -31,7 +27,7 @@ import db
 from pprint import pprint
 
 class MagicPHP(object):
-    name = 'magic.php'
+    name = 'index.php'
 
     def __init__(self):
         # init 'gone 410' array
@@ -330,6 +326,26 @@ class Singular(object):
             self.photo.cssclass = 'u-photo'
 
 
+    def init_extras(self):
+        self.process_webmentions()
+        c = self.comments
+
+
+    # TODO this should be async
+    def process_webmentions(self):
+        wdb = db.WebmentionQueue()
+        queued = wdb.get_queued(self.url)
+        for incoming in queued:
+            wm = Webmention(
+                incoming.get('id'),
+                incoming.get('source'),
+                incoming.get('target'),
+                incoming.get('dt')
+            )
+            wm.run()
+
+            wdb.entry_done(incoming.get('id'))
+        wdb.finish()
 
     @property
     def redirects(self):
@@ -380,6 +396,10 @@ class Singular(object):
             )
             cfiles = [*cfiles, *maybe]
         for cpath in cfiles:
+            cmtime = os.path.getmtime(cpath)
+            if cmtime > self.mtime:
+                self.mtime = cmtime
+
             c = Comment(cpath)
             comments.append(c.mtime, c)
         return comments
@@ -853,7 +873,6 @@ class WebImage(object):
 
     def _copy(self):
         fname = "%s%s" % (self.fname, self.fext)
-        logging.info("copying %s to build dir", fname)
         fpath = os.path.join(
             shared.config.get('common', 'build'),
             shared.config.get('common', 'files'),
@@ -863,6 +882,7 @@ class WebImage(object):
             mtime = os.path.getmtime(fpath)
             if self.mtime <= mtime:
                 return
+        logging.info("copying %s to build dir", fname)
         shutil.copy(self.fpath, fpath)
 
     def _intermediate_dimension(self, size, width, height, crop=False):
@@ -878,7 +898,7 @@ class WebImage(object):
         return (w, h)
 
     def _intermediate(self, img, size, target, crop=False):
-        if img.width <= size and img.height <= size:
+        if img.width < size and img.height < size:
             return False
 
         with img.clone() as thumb:
@@ -1044,40 +1064,81 @@ class Comment(object):
         return shared.j2.get_template(tmplfile).render({'comment': self.tmplvars})
 
 
-#class SendWebmention(object):
-    ## TODO def __init__(self, source, target):
-    ## check in gone.tsv?
-    ## discover endpoint
-    ## send webmention
-    ## add to DB on return
+class Webmention(object):
+    def __init__ (self, id, source, target, dt):
+        self.source = source
+        self.target = target
+        self.id = id
+        self.dt = arrow.get(dt).to('utc')
+        logging.info(
+            "processing webmention %s => %s",
+            self.source,
+            self.target
+        )
 
-    #def run(self):
-        #return
+    def _fetch(self):
+        self._source = shared.XRay(self.source).parse()
 
+    def _save(self):
+        fm = frontmatter.loads('')
+        fm.content = self.content
+        fm.metadata = self.meta
+        with open(self.fpath, 'wt') as f:
+            f.write(frontmatter.dumps(fm))
+        return
 
-#class ReceiveWebmention(object):
-    ## TODO def __init__(self, source, target):
-        ## pull remote
-        ## validate if page links to X anywhere
-        ## find h-entry or use root as SOURCE
-        ## find author in SOURCE
-        ## find content in SOURCE
-        ## save under comments/[target slug]/mtime-[from-slufigied-url].md
-        ##
+    def run(self):
+        self._fetch()
+        self._save()
 
-        ## add to DB on return
-    #def run(self):
-        #return
+    @property
+    def relation(self):
+        r = 'webmention'
+        k = self._source.get('data').keys()
+        for maybe in ['in-reply-to', 'repost-of', 'bookmark-of', 'like-of']:
+            if maybe in k:
+                r = maybe
+                break
+        return r
 
-#def parse_received_queue():
-    # iterate over DB received
+    @property
+    def meta(self):
+        if not hasattr(self, '_meta'):
+            self._meta = {
+                'author': self._source.get('data').get('author'),
+                'type': self.relation,
+                'target': self.target,
+                'source': self.source,
+                'date': self._source.get('data').get('published'),
+            }
+        return self._meta
 
-#def parse_send_queue():
-    # iterate over DB needs sending
+    @property
+    def content(self):
+        return  shared.Pandoc('html').convert(
+            self._source.get('data').get('content').get('html')
+        )
 
-#def webmentions(target_slug):
-    # find all webmentions in the relevant directory
-    # return mtime => Webmention hash
+    @property
+    def fname(self):
+        return "%d-%s.md" % (
+            self.dt.timestamp,
+            shared.slugfname(self.source)
+        )
+
+    @property
+    def fpath(self):
+        tdir = os.path.join(
+            shared.config.get('dirs', 'comment'),
+            self.target.rstrip('/').strip('/').split('/')[-1]
+        )
+        if not os.path.isdir(tdir):
+            os.makedirs(tdir)
+        return os.path.join(
+            tdir,
+            self.fname
+        )
+
 
 def setup():
     """ parse input parameters and add them as params section to config """
@@ -1161,6 +1222,7 @@ def build():
 
     for f, post in content:
         logging.info("PARSING %s", f)
+        post.init_extras()
 
         # extend redirects
         for r in post.redirects:

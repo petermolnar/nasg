@@ -82,22 +82,12 @@ if __name__ == '__main__':
         wdb.queue(source,target)
 
         # telegram notification, if set
-        if shared.config.has_section('api_telegram'):
-            url = "https://api.telegram.org/bot%s/sendMessage" % (
-                shared.config.get('api_telegram', 'api_token')
+        shared.notify(
+            'incoming webmention from %s to %s' % (
+                source,
+                target
             )
-            data = {
-                'chat_id': shared.config.get('api_telegram', 'chat_id'),
-                'text': 'incoming webmention from %s to %s' % (
-                    source,
-                    target
-                )
-            }
-            # fire and forget
-            try:
-                requests.post(url, data=data)
-            except:
-                pass
+        )
         response = sanic.response.text("Accepted", status=202)
         return response
 

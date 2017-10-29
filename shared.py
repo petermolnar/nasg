@@ -6,6 +6,7 @@ import logging
 import subprocess
 import json
 import sqlite3
+import requests
 
 from slugify import slugify
 import jinja2
@@ -24,6 +25,34 @@ class CMDLine(object):
             if which:
                 return which.pop()
         return None
+
+
+class XRay(CMDLine):
+    xraypath = '/usr/local/lib/php/xray'
+
+    def __init__(self, url):
+        super().__init__('php')
+        self.url = url
+
+    def parse(self):
+        cmd = (
+            self.executable,
+            '-r',
+            '''chdir("%s"); include("vendor/autoload.php"); $xray = new p3k\XRay(); echo(json_encode($xray->parse("%s")));''' % (self.xraypath, self.url)
+        )
+        logging.debug('pulling %s with XRay', self.url)
+        p = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        stdout, stderr = p.communicate()
+        if stderr:
+            logging.error("Error with XRay: %s", stderr)
+
+        return json.loads(stdout.decode('utf-8').strip())
 
 
 class Pandoc(CMDLine):
@@ -242,6 +271,25 @@ def __setup_sitevars():
 
     # push the whole thing into cache
     return SiteVars
+
+
+def notify(msg):
+    # telegram notification, if set
+    if not shared.config.has_section('api_telegram'):
+        return
+
+    url = "https://api.telegram.org/bot%s/sendMessage" % (
+        shared.config.get('api_telegram', 'api_token')
+    )
+    data = {
+        'chat_id': shared.config.get('api_telegram', 'chat_id'),
+        'text': msg
+    }
+    # fire and forget
+    try:
+        requests.post(url, data=data)
+    except:
+        pass
 
 
 ARROWFORMAT = {

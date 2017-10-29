@@ -199,20 +199,16 @@ class WebmentionQueue(object):
         )
 
         cursor = self.db.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS `archive` (
-            `id` INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-            `received` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            `processed` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            `source` TEXT NOT NULL,
-            `target` TEXT NOT NULL
-        );''');
-
-        cursor.execute('''CREATE TABLE IF NOT EXISTS `queue` (
-            `id` INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-            `timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            `source` TEXT NOT NULL,
-            `target` TEXT NOT NULL
-        );''');
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS  `queue` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+                `timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `source` TEXT NOT NULL,
+                `target` TEXT NOT NULL,
+                `status` INTEGER NOT NULL DEFAULT 0,
+                `mtime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
         self.db.commit()
 
     def __exit__(self):
@@ -229,4 +225,25 @@ class WebmentionQueue(object):
                 target
             )
         )
+        self.db.commit()
+
+    def get_queued(self, fname=None):
+        logging.debug('getting queued webmentions for %s', fname)
+        ret = []
+        cursor = self.db.cursor()
+        cursor.execute('''SELECT * FROM queue WHERE target LIKE ? AND status = 0''', ('%'+fname+'%',))
+        rows = cursor.fetchall()
+        for r in rows:
+            ret.append({
+                'id': r[0],
+                'dt': r[1],
+                'source': r[2],
+                'target': r[3],
+            })
+        return ret
+
+    def entry_done(self, id):
+        logging.debug('setting %s webmention to done', id)
+        cursor = self.db.cursor()
+        cursor.execute("UPDATE queue SET status = 1 where ID=?", (id,))
         self.db.commit()
