@@ -1,16 +1,35 @@
-# NASG (Not Another Static Generator)
+# NASG (Not Another Static Generator...)
 
 This is a tiny static site generator, written in Python, to scratch my own itches.
-It is most probably not suitable for anyone else.
+It is most probably not suitable for anyone else, but feel free to use it for ideas. Keep in mind that the project is licenced under GPL.
 
 ## Why not [insert static generator here]?
 
-- DRY -Don't Repeat Yourself - is good, so instead of sidefiles for images, I'm using XMP metadata, which most of the ones availabe don't handle well;
-- writing a proper plugin to existing generators - Pelican, Nicola, etc - might have taken longer and I wanted to extend my Python knowledge
+- DRY - Don't Repeat Yourself - is good, so instead of sidefiles for images, I'm using XMP metadata, which most of the ones availabe don't handle well;
+- writing plugins to existing generators - Pelican, Nicola, etc - might have taken longer and I wanted to extend my Python knowledge
 - I wanted to use the best available utilities for some tasks, like `Pandoc` and  `exiftool` instead of Python libraries trying to achive the same
 - I needed to handle webmentions and comments
 
 Don't expect anything fancy: my Python Fu has much to learn.
+
+## Install
+
+### External dependencies
+
+PHP is in order to use [XRay](https://github.com/aaronpk/XRay/)
+
+```
+apt-get install pandoc exiftool php7.0-bcmath php7.0-bz2 php7.0-cli php7.0-common php7.0-curl php7.0-gd php7.0-imap php7.0-intl php7.0-json php7.0-mbstring php7.0-mcrypt php7.0-mysql php7.0-odbc php7.0-opcache php7.0-readline php7.0-sqlite3 php7.0-xml php7.0-zip python3 python3-pip python3-dev
+```
+
+Get XRay:
+```
+mkdir /usr/local/lib/php
+cd /usr/local/lib/php
+wget https://github.com/aaronpk/XRay/releases/download/v1.3.1/xray-app.zip
+unzip xray-app.zip
+rm xray-app.zip
+```
 
 ## How content is organized
 

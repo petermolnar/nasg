@@ -13,7 +13,6 @@ import asyncio
 from math import ceil
 import csv
 import sqlite3
-import magic
 
 import frontmatter
 import arrow
@@ -191,7 +190,6 @@ class Category(NoDupeContainer):
 
     @property
     def title(self):
-        # TODO proper title
         return self.name
 
     @property
@@ -311,24 +309,35 @@ class Singular(object):
 
 
     def init_extras(self):
-        self.process_webmentions()
+        self.receive_webmentions()
         c = self.comments
 
-
-    # TODO this should be async
-    def process_webmentions(self):
+    # note: due to SQLite locking, this will not be async for now
+    def receive_webmentions(self):
         wdb = shared.WebmentionQueue()
         queued = wdb.get_queued(self.url)
         for incoming in queued:
             wm = Webmention(
-                incoming.get('id'),
                 incoming.get('source'),
                 incoming.get('target'),
                 incoming.get('dt')
             )
-            wm.run()
-
+            wm.receive()
             wdb.entry_done(incoming.get('id'))
+        wdb.finish()
+
+    # note: due to SQLite locking, this will not be async for now
+    def send_webmentions(self):
+        if not self.is_reply:
+            return
+        wdb = shared.WebmentionQueue()
+        id = wdb.queue(self.url, self.is_reply)
+        wm = Webmention(
+            self.url,
+            self.is_reply
+        )
+        wm.send()
+        wdb.entry_done(id)
         wdb.finish()
 
     @property
@@ -523,9 +532,6 @@ class Singular(object):
             im.title = title
             im.cssclass = css
             body = body.replace(shortcode, str(im))
-
-        # TODO if multiple meta images, inline all except the first
-        # which will be added at the HTML stage or as enclosure to the feed
         return body
 
     @property
@@ -559,16 +565,6 @@ class Singular(object):
         return shared.baseN(self.pubtime)
 
     @property
-    def enclosure(self):
-        if not self.photo:
-            return {}
-        return {
-            'length': os.path.getsize(self.photo.fpath),
-            'url': self.photo.href,
-            'mime': magic.Magic(mime=True).from_file(self.photo.fpath),
-        }
-
-    @property
     def tmplvars(self):
         # very simple caching because we might use this 4 times:
         # post HTML, category, front posts and atom feed
@@ -584,13 +580,11 @@ class Singular(object):
                 'slug': self.fname,
                 'shortslug': self.shortslug,
                 'licence': self.licence,
-                #'sourceurl': self.sourceurl,
                 'is_reply': self.is_reply,
                 'age': int(self.published.format('YYYY')) - int(arrow.utcnow().format('YYYY')),
                 'summary': self.summary,
                 'replies': self.replies,
                 'reactions': self.reactions,
-                'enclosure': self.enclosure,
             }
         return self._tmplvars
 
@@ -1049,10 +1043,9 @@ class Comment(object):
 
 
 class Webmention(object):
-    def __init__ (self, id, source, target, dt):
+    def __init__ (self, source, target, dt=arrow.utcnow().timestamp):
         self.source = source
         self.target = target
-        self.id = id
         self.dt = arrow.get(dt).to('utc')
         logging.info(
             "processing webmention %s => %s",
@@ -1071,7 +1064,26 @@ class Webmention(object):
             f.write(frontmatter.dumps(fm))
         return
 
-    def run(self):
+    def send(self):
+        rels = shared.XRay(self.source).set_discover().parse()
+        endpoint = False
+        if 'rels' not in rels:
+            return
+        for k in rels.get('rels').keys():
+            if 'webmention' in k:
+                endpoint = rels.get('rels').get(k)
+                break
+        if not endpoint:
+            return
+        requests.post(
+            self.target,
+            data = {
+                'source': self.source,
+                'target': self.target
+            }
+        )
+
+    def receive(self):
         self._fetch()
         if 'data' not in self._source:
             return
@@ -1130,7 +1142,6 @@ class Webmention(object):
             tdir,
             self.fname
         )
-
 
 def setup():
     """ parse input parameters and add them as params section to config """
@@ -1281,8 +1292,6 @@ def build():
     tasks.append(task)
 
     # TODO: send webmentions to any url
-    # TODO: comments
-    # TODO: ping websub?
 
     # do all the things!
     w = asyncio.wait(tasks)

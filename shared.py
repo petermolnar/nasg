@@ -7,7 +7,6 @@ import subprocess
 import json
 import sqlite3
 import requests
-
 from slugify import slugify
 import jinja2
 
@@ -28,21 +27,48 @@ class CMDLine(object):
 
 
 class XRay(CMDLine):
-    xraypath = '/usr/local/lib/php/xray'
+    cmd_prefix = 'chdir("/usr/local/lib/php/xray"); include("vendor/autoload.php"); $xray = new p3k\XRay();'
 
     def __init__(self, url):
         super().__init__('php')
         self.url = url
-
-    def parse(self):
-        cmd = (
+        self.target = ''
+        self.cmd = (
             self.executable,
             '-r',
-            '''chdir("%s"); include("vendor/autoload.php"); $xray = new p3k\XRay(); echo(json_encode($xray->parse("%s")));''' % (self.xraypath, self.url)
+            '%s; echo(json_encode($xray->parse("%s")));' % (
+                self.cmd_prefix,
+                self.url
+            )
         )
+
+    def set_receive(self, target):
+        self.cmd = (
+            self.executable,
+            '-r',
+            '%s; echo(json_encode($xray->parse("%s")));' % (
+                self.cmd_prefix,
+                self.url,
+                target
+            )
+        )
+        return self
+
+    def set_discover(self):
+        self.cmd = (
+            self.executable,
+            '-r',
+            '%s; echo(json_encode($xray->rels("%s")));' % (
+                self.cmd_prefix,
+                self.url,
+            )
+        )
+        return self
+
+    def parse(self):
         logging.debug('pulling %s with XRay', self.url)
         p = subprocess.Popen(
-            cmd,
+            self.cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -53,7 +79,6 @@ class XRay(CMDLine):
             logging.error("Error with XRay: %s", stderr)
 
         return json.loads(stdout.decode('utf-8').strip())
-
 
 class Pandoc(CMDLine):
     """ Pandoc command line call with piped in- and output """
@@ -439,7 +464,9 @@ class WebmentionQueue(object):
                 target
             )
         )
+        r = cursor.lastrowid
         self.db.commit()
+        return r
 
     def get_queued(self, fname=None):
         logging.debug('getting queued webmentions for %s', fname)

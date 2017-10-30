@@ -1,16 +1,25 @@
 from setuptools import setup, find_packages
-from . import __version__
 
 setup(
-    version=__version__,
+    version='2.0.0',
     name="nasg",
     author="Peter Molnar",
     author_email="hello@petermolnar.eu",
     description="Not Another Static Generator - a static generator",
     long_description=open('README.md').read(),
     packages=['nasg'],
-    install_requires=['arrow', 'Jinja2', 'langdetect', 'requests', 'requests-oauthlib', 'sanic', 'unicode-slugify', 'Wand', 'emoji', 'html5lib', 'BeautifulSoup'],
+    install_requires=[
+        'arrow',
+        'Jinja2',
+        'langdetect',
+        'requests',
+        'requests-oauthlib',
+        'sanic',
+        'unicode-slugify',
+        'Wand',
+        'emoji',
+    ],
     url='https://github.com/petermolnar/nasg',
-    license=open('LICENCE').read(),
+    license=open('./LICENSE').read(),
     include_package_data=True,
 )

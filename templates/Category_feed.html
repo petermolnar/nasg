@@ -19,13 +19,6 @@
 {%- if post.tags %}{% for tname in post.tags %}
 			<category>{{ tname }}></category>
 {% endfor %}{% endif -%}
-{%- if post.rssenclosure %}
-		<enclosure
-			url="{{ post.enclosure.url }}"
-			type="{{ post.enclosure.mime }}"
-			length="{{ post.enclosure.size }}"
-		/>
-{% endif -%}
 	</item>
 {% endfor %}
 </channel>
