@@ -19,7 +19,7 @@
 				</a>
 			</li>
 {% set cssclass = '' %}
-{% if (post is defined and post.category ==  'photo' ) or ( taxonomy is defined and taxonomy.slug == 'photo' ) %}
+{% if (post is defined and post.category ==  'photo' ) or ( taxonomy is defined and taxonomy.name == 'photo' ) %}
 	{% set cssclass = 'active' %}
 {% endif %}
 			<li>
@@ -29,7 +29,7 @@
 				</a>
 			</li>
 {% set cssclass = '' %}
-{% if (post is defined and post.category ==  'journal' ) or ( taxonomy is defined and taxonomy.slug == 'journal' ) %}
+{% if (post is defined and post.category ==  'journal' ) or ( taxonomy is defined and taxonomy.name == 'journal' ) %}
 	{% set cssclass = 'active' %}
 {% endif %}
 			<li>
@@ -39,7 +39,7 @@
 				</a>
 			</li>
 {% set cssclass = '' %}
-{% if (post is defined and post.category ==  'article' ) or ( taxonomy is defined and taxonomy.slug == 'article' ) %}
+{% if (post is defined and post.category ==  'article' ) or ( taxonomy is defined and taxonomy.name == 'article' ) %}
 	{% set cssclass = 'active' %}
 {% endif %}
 			<li>
@@ -49,7 +49,7 @@
 				</a>
 			</li>
 {% set cssclass = '' %}
-{% if (post is defined and post.category ==  'note' ) or ( taxonomy is defined and taxonomy.slug == 'note' ) %}
+{% if (post is defined and post.category ==  'note' ) or ( taxonomy is defined and taxonomy.name == 'note' ) %}
 	{% set cssclass = 'active' %}
 {% endif %}
 			<li>

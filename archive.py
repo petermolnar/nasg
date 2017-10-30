@@ -14,7 +14,6 @@ from requests_oauthlib import OAuth2Session
 from requests_oauthlib import oauth2_session
 from oauthlib.oauth2 import BackendApplicationClient
 
-import db
 import shared
 
 class Favs(object):
@@ -734,7 +733,7 @@ class Oauth1Flow(object):
         self.service = service
         self.key = shared.config.get("api_%s" % service, 'api_key')
         self.secret = shared.config.get("api_%s" % service, 'api_secret')
-        self.tokendb = db.TokenDB()
+        self.tokendb = shared.TokenDB()
         self.t = self.tokendb.get_service(self.service)
         self.oauth_init()
 

@@ -5,11 +5,9 @@
 from sanic import Sanic
 import sanic.response
 import logging
-import db
-import shared
 import validators
 import urllib.parse
-import requests
+import shared
 
 if __name__ == '__main__':
     logging_format = "[%(asctime)s] %(process)d-%(levelname)s "
@@ -26,7 +24,7 @@ if __name__ == '__main__':
     # since I'm running this from systemctl it already goes into syslog
     app = Sanic('router', log_config=None)
     # this is ok to be read-only
-    sdb = db.SearchDB()
+    sdb = shared.SearchDB()
 
 
     @app.route("/oauth1", methods=["GET"])
@@ -78,7 +76,7 @@ if __name__ == '__main__':
         # it is unfortunate that I need to init this every time, but
         # otherwise it'll become read-only for reasons I'm yet to grasp
         # the actual parsing will be done at site generation time
-        wdb = db.WebmentionQueue()
+        wdb = shared.WebmentionQueue()
         wdb.queue(source,target)
 
         # telegram notification, if set

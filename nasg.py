@@ -22,7 +22,6 @@ import wand.image
 from emoji import UNICODE_EMOJI
 
 import shared
-import db
 
 from pprint import pprint
 
@@ -206,22 +205,6 @@ class Category(NoDupeContainer):
             url = '/'
         return url
 
-
-    #def url_paged(self, page=1, feed=False):
-        #x = '/'
-        #if self.name:
-            #x = "%s%s/%s" % (
-                #x,
-                #self.taxonomy,
-                #self.name,
-            #)
-
-        #if page == 1 and feed:
-            #x = "%s/%s/" % (x, self.feeddir)
-        #else:
-            #x = "%s/%s/%s/" % (x, self.pagedir, "%s" % page)
-        #return x
-
     def path_paged(self, page=1, feed=False):
         x = shared.config.get('common', 'build')
 
@@ -309,6 +292,7 @@ class Singular(object):
         logging.debug("initiating singular object from %s", fpath)
         self.fpath = fpath
         self.mtime = os.path.getmtime(self.fpath)
+        self.stime = self.mtime
         self.fname, self.fext = os.path.splitext(os.path.basename(self.fpath))
         self.category = os.path.basename(os.path.dirname(self.fpath))
         self._images = NoDupeContainer()
@@ -333,7 +317,7 @@ class Singular(object):
 
     # TODO this should be async
     def process_webmentions(self):
-        wdb = db.WebmentionQueue()
+        wdb = shared.WebmentionQueue()
         queued = wdb.get_queued(self.url)
         for incoming in queued:
             wm = Webmention(
@@ -358,7 +342,7 @@ class Singular(object):
         if not os.path.isfile(self.htmlfile):
             return False
         mtime = os.path.getmtime(self.htmlfile)
-        if mtime == self.mtime:
+        if mtime >= self.stime:
             return True
         return False
 
@@ -397,8 +381,8 @@ class Singular(object):
             cfiles = [*cfiles, *maybe]
         for cpath in cfiles:
             cmtime = os.path.getmtime(cpath)
-            if cmtime > self.mtime:
-                self.mtime = cmtime
+            if cmtime > self.stime:
+                self.stime = cmtime
 
             c = Comment(cpath)
             comments.append(c.mtime, c)
@@ -1089,6 +1073,8 @@ class Webmention(object):
 
     def run(self):
         self._fetch()
+        if 'data' not in self._source:
+            return
         self._save()
 
     @property
@@ -1115,9 +1101,15 @@ class Webmention(object):
 
     @property
     def content(self):
-        return  shared.Pandoc('html').convert(
-            self._source.get('data').get('content').get('html')
-        )
+        if 'content' not in self._source.get('data'):
+            return ''
+        elif 'html' in self._source.get('data').get('content'):
+            what = self._source.get('data').get('content').get('html')
+        elif 'text' in self._source.get('data').get('content'):
+            what = self._source.get('data').get('content').get('text')
+        else:
+            return ''
+        return  shared.Pandoc('html').convert(what)
 
     @property
     def fname(self):
@@ -1214,7 +1206,7 @@ def build():
     loop = asyncio.get_event_loop()
     tasks = []
     content = Content()
-    sdb = db.SearchDB()
+    sdb = shared.SearchDB()
     magic = MagicPHP()
 
     collector_front = Category()
