@@ -145,35 +145,26 @@ h3 {
 code,
 pre {
     font-family: "Inconsolata", "Courier New", monospace;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: limegreen;
+    background-color: #222;
+    border: 1px solid #666;
     direction: ltr;
     text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
     tab-size: 2;
-    hyphens: none;
-    outline: 1px solid #666;
-    background-color: #222;
 }
 
-pre {
-    padding: 0.3rem;
-    margin: 0.6rem 0;
+pre {   
     overflow: auto;
+    padding: 0.3rem;
 }
 
 code {
-    display: inline-block;
-    padding: 0 0.3rem 0.1rem 0.3rem;
-    line-height: 0.9rem;
+    padding: 0.1rem;
 }
 
 pre code {
-    background-color: transparent;
     border: none;
-    padding: 0;
 }
 
 code.sourceCode span.al { color: limegreen; }
@@ -198,6 +189,7 @@ code.sourceCode span.sc { color: limegreen; }
 code.sourceCode span.ss { color: limegreen; }
 code.sourceCode span.st { color: magenta; }
 code.sourceCode span.va { color: turquoise; }
+
 
 .limit,
 .content-body {
@@ -318,11 +310,16 @@ code.sourceCode span.va { color: turquoise; }
     margin-top: 2rem;
     padding: 0.3rem 0;
     opacity: 0.8;
+    text-align: center;
+}
+
+.content-footer * {
+    display: inline-block;
+    vertical-align: top;
 }
 
 .content-footer img {
-    width: 1.1rem;
-    float: left;
+    width: 1rem;
     margin: 0 0.3rem 0rem 0;
 }
 
@@ -570,7 +567,35 @@ figcaption {
     margin: 0 1rem 0 0;
 }
 
+.donation {
+    text-align: center;
+}
 
+.donation p {
+    color: #ccc;
+}
+
+.donation ul {
+    list-style-type: none;
+    padding: 0 0 1rem 0;
+}
+
+.donation li {
+    display: inline;
+}
+
+.donation li a {
+    display: inline-block;
+    border: 1px dashed #933;
+    padding: 0.6rem;
+    background-color: #111;
+    width: 5rem;
+}
+
+.donation li a:hover {
+    border: 1px solid #933;
+    color: #fff;
+}
 
 /* above is mobile first; this is the desktop */
 @media all and (min-width: 50rem) {
@@ -683,6 +708,7 @@ figcaption {
     code.sourceCode span.st { color: magenta; }
     code.sourceCode span.va { color: darkturquoise; }
 }
+	
 	
 	
 	

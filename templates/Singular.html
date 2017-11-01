@@ -60,6 +60,26 @@
 			</p>
 		</footer>
 
+		<aside class="donation">
+			<p>
+			{% if post.category == 'photo' %}
+				Did you like this photo?<br />Thank it with a small donation.
+			{% elif post.category == 'article' %}
+				Did you find this article useful?<br />Buy me a coffee, so I can write more like this.<br />If you want my help with something similar, get in touch.
+			{% elif post.category == 'journal' %}
+				Did you like this entry?<br />Encourage me to write more of them.
+			{% else %}
+				Did you like what you read?<br />Thank it with a small donation.</a>
+			{% endif %}
+			</p>
+			<ul>
+				{% for value in [3,5,10,42] %}
+					<li><a href="{{ site.author.donateurl }}{{value}}GBP">£{{value}}</a></li>
+				{% endfor %}
+			</ul>
+		</aside>
+
+
 {% if post.replies|length %}
 		<section class="replies">
 			<h6><a name="replies"></a>Replies</h6>

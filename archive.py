@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import imghdr
 import arrow
+import csv
 
 from requests_oauthlib import OAuth1Session
 from requests_oauthlib import oauth1_session
@@ -15,6 +16,86 @@ from requests_oauthlib import oauth2_session
 from oauthlib.oauth2 import BackendApplicationClient
 
 import shared
+
+class LastFM(object):
+    url = 'http://ws.audioscrobbler.com/2.0/'
+    def __init__(self):
+        self.service = 'lastfm'
+        self.target = shared.config.get("api_%s" % self.service, 'logfile')
+        self.params = {
+            'method': 'user.getrecenttracks',
+            'user': shared.config.get("api_%s" % self.service, 'username'),
+            'api_key': shared.config.get("api_%s" % self.service, 'api_key'),
+            'format': 'json',
+            'limit': '200'
+        }
+        if os.path.isfile(self.target):
+            mtime = os.path.getmtime(self.target)
+            self.params.update({'from': mtime})
+
+    def hash2flat(self, data):
+        time = int(data.get('date').get('uts'))
+        r = {
+            'date': arrow.get(time).format(shared.ARROWFORMAT['iso']),
+            'title': data.get('name'),
+            'title_mbid': data.get('mbid'),
+            'artist': data.get('artist').get('#text'),
+            'artist_mbid': data.get('artist').get('mbid'),
+            'album': data.get('album').get('#text'),
+            'album_mbid': data.get('album').get('mbid'),
+        }
+        return (time, r)
+
+    def getpaged(self, pagenum):
+        logging.info('requesting page #%d of paginated results', pagenum)
+        self.params.update({
+            'page': pagenum
+        })
+        r = requests.get(
+            self.url,
+            params=self.params
+        )
+        parsed = json.loads(r.text).get('recenttracks', {}).get('track', [])
+        return parsed
+
+    def run(self):
+        r = requests.get(self.url,params=self.params)
+        js = json.loads(r.text)
+        js = js.get('recenttracks', {})
+        unordered = js.get('track', [])
+        ordered = {}
+
+        total = int(js.get('@attr').get('totalPages'))
+        current = int(js.get('@attr').get('page'))
+        cntr = total - current
+
+        while cntr > 0:
+            current = current + 1
+            paged = self.getpaged(current)
+            unordered = unordered + paged
+            cntr = total - current
+
+        for track in unordered:
+            # happens with nowplaying tracks
+            if 'date' not in track:
+                continue
+            time, data = self.hash2flat(track)
+            ordered[time] = data
+
+        # no results
+        if not len(ordered):
+            return
+
+        ordered = sorted(ordered.items())
+        with open(self.target, 'a') as f:
+            fieldnames = ordered[0][1].keys()
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            # only write csv header once, when the file is first created
+            if 'from' not in self.params:
+                writer.writeheader()
+            for time, track in ordered:
+                writer.writerow(track)
+
 
 class Favs(object):
     def __init__(self, confgroup):
@@ -865,3 +946,7 @@ if __name__ == '__main__':
     if shared.config.has_section('api_deviantart'):
         da = DAFavs()
         da.run()
+
+    if shared.config.has_section('api_lastfm'):
+        lfm = LastFM()
+        lfm.run()

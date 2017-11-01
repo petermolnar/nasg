@@ -892,12 +892,12 @@ class WebImage(object):
                 thumb.liquid_rescale(size, size, 1, 1)
 
             if self.meta.get('FileType', 'jpeg').lower() == 'jpeg':
-                thumb.compression_quality = 86
+                thumb.compression_quality = 94
                 thumb.unsharp_mask(
-                    radius=0,
+                    radius=2,
                     sigma=0.5,
-                    amount=1,
-                    threshold=0.03
+                    amount=0.7,
+                    threshold=0
                 )
                 thumb.format = 'pjpeg'
 
