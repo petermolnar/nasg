@@ -318,11 +318,21 @@ class TokenDB(object):
 
 class SearchDB(object):
     tmplfile = 'Search.html'
+    #snowball = '/usr/local/lib/fts5stemmer.so'
 
     def __init__(self):
         self.db = sqlite3.connect(
             "%s" % config.get('var', 'searchdb')
         )
+
+        #if os.path.exists(self.snowball):
+            #self.db.enable_load_extension(True)
+            #self.db.execute(" load_extension('%s');" % self.snowball)
+            #self.db.enable_load_extension(False)
+
+
+        self.db.execute('PRAGMA auto_vacuum=INCREMENTAL;')
+        self.db.execute('PRAGMA journal_mode = WAL;')
 
         cursor = self.db.cursor()
         cursor.execute('''CREATE VIRTUAL TABLE IF NOT EXISTS data USING FTS5(
@@ -331,7 +341,8 @@ class SearchDB(object):
                 mtime,
                 url,
                 category,
-                title
+                title,
+                tokenize = 'porter'
             )''')
         self.db.commit()
 
@@ -540,6 +551,13 @@ def __setup_sitevars():
         SiteVars[section].update({sub: {}})
         for o in config.options(sub):
             SiteVars[section][sub].update({o: config.get(sub, o)})
+
+    # add payment
+    section = 'payment'
+    SiteVars.update({section: {}})
+    for o in config.options(section):
+        SiteVars[section].update({o: config.get(section, o)})
+
 
     # push the whole thing into cache
     return SiteVars

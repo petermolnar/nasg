@@ -565,6 +565,13 @@ class Singular(object):
         return shared.baseN(self.pubtime)
 
     @property
+    def syndicate(self):
+        urls = []
+        if self.photo and self.photo.is_photo:
+            urls.append("https://brid.gy/publish/flickr")
+        return urls
+
+    @property
     def tmplvars(self):
         # very simple caching because we might use this 4 times:
         # post HTML, category, front posts and atom feed
@@ -585,6 +592,7 @@ class Singular(object):
                 'summary': self.summary,
                 'replies': self.replies,
                 'reactions': self.reactions,
+                'syndicate': self.syndicate
             }
         return self._tmplvars
 
@@ -605,7 +613,8 @@ class Singular(object):
         with open(o, 'wt') as out:
             logging.debug('writing file %s' % (o))
             out.write(r)
-        os.utime(o, (self.mtime, self.mtime))
+        # use the comment time, not the source file time for this
+        os.utime(o, (self.stime, self.stime))
 
     def __repr__(self):
         return "%s/%s" % (self.category, self.fname)
@@ -894,10 +903,10 @@ class WebImage(object):
             if self.meta.get('FileType', 'jpeg').lower() == 'jpeg':
                 thumb.compression_quality = 94
                 thumb.unsharp_mask(
-                    radius=2,
+                    radius=1,
                     sigma=0.5,
                     amount=0.7,
-                    threshold=0
+                    threshold=0.5
                 )
                 thumb.format = 'pjpeg'
 
@@ -1291,7 +1300,7 @@ def build():
     task = loop.create_task(magic.render())
     tasks.append(task)
 
-    # TODO: send webmentions to any url
+    # TODO: send webmentions
 
     # do all the things!
     w = asyncio.wait(tasks)

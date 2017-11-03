@@ -12,11 +12,13 @@
 						<svg class="icon"><use xlink:href="#icon-email" /></svg>
 						<a rel="me" class="u-email email" href="mailto:{{ site.author.email }}">{{ site.author.email }}</a>
 					</dd>
+{% if site.author.gpg %}
 					<dt>GPG/PGP public key</dt>
 					<dd>
 						<svg class="icon"><use xlink:href="#icon-key" /></svg>
-						<a rel="me" class="u-gpg gpg" href="{{ site.url }}/pgp.asc"> {{ site.author.gpg }}</a>
+						<a rel="me" class="u-gpg gpg" href="{{ site.url }}/{{ site.author.gpg }}">GPG key</a>
 					</dd>
+{% endif %}
 {% for silo, url in site.author.socials.items() %}
 					<dt>{{ silo }}</dt>
 					<dd>

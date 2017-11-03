@@ -41,6 +41,7 @@ html, body {
 
 html {
     position: relative;
+    background-color: #333336;
 }
 
 a {
@@ -309,11 +310,11 @@ code.sourceCode span.va { color: turquoise; }
 .content-footer {
     margin-top: 2rem;
     padding: 0.3rem 0;
-    opacity: 0.8;
     text-align: center;
 }
 
 .content-footer * {
+    opacity: 0.9;
     display: inline-block;
     vertical-align: top;
 }
@@ -334,6 +335,7 @@ code.sourceCode span.va { color: turquoise; }
 }
 
 .content-footer dl dd {
+    
     display:inline-block;
     
 }
@@ -571,31 +573,39 @@ figcaption {
     text-align: center;
 }
 
-.donation p {
-    color: #ccc;
-}
-
 .donation ul {
     list-style-type: none;
-    padding: 0 0 1rem 0;
 }
 
 .donation li {
     display: inline;
 }
 
+
 .donation li a {
     display: inline-block;
     border: 1px dashed #933;
-    padding: 0.6rem;
+    padding: 0.3rem;
     background-color: #111;
-    width: 5rem;
+    width: 7rem;
 }
+
+.donation li .method {
+    display: block;
+    font-size: 0.7rem;
+}
+
 
 .donation li a:hover {
     border: 1px solid #933;
     color: #fff;
 }
+/*
+.donation li a {
+    display: block;
+}
+
+*/
 
 /* above is mobile first; this is the desktop */
 @media all and (min-width: 50rem) {
