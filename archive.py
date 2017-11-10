@@ -17,8 +17,10 @@ from oauthlib.oauth2 import BackendApplicationClient
 
 import shared
 
+
 class LastFM(object):
     url = 'http://ws.audioscrobbler.com/2.0/'
+
     def __init__(self):
         self.service = 'lastfm'
         self.target = shared.config.get("api_%s" % self.service, 'logfile')
@@ -59,7 +61,7 @@ class LastFM(object):
         return parsed
 
     def run(self):
-        r = requests.get(self.url,params=self.params)
+        r = requests.get(self.url, params=self.params)
         js = json.loads(r.text)
         js = js.get('recenttracks', {})
         unordered = js.get('track', [])
@@ -129,7 +131,7 @@ class FlickrFavs(Favs):
             'method': 'flickr.favorites.getList',
             'api_key': shared.config.get('api_flickr', 'api_key'),
             'user_id': self.uid,
-            'extras':  ','.join([
+            'extras': ','.join([
                 'description',
                 'geo',
                 'tags',
@@ -142,7 +144,7 @@ class FlickrFavs(Favs):
                 'url_c',
                 'url_z',
             ]),
-            'per_page': 500, # maximim
+            'per_page': 500,  # maximim
             'format': 'json',
             'nojsoncallback': '1',
             'min_fave_date': self.lastpulled
@@ -163,7 +165,6 @@ class FlickrFavs(Favs):
         parsed = json.loads(r.text)
         self.uid = parsed.get('user', {}).get('id')
 
-
     def getpaged(self, offset):
         logging.info('requesting page #%d of paginated results', offset)
         self.params.update({
@@ -177,7 +178,7 @@ class FlickrFavs(Favs):
         return parsed.get('photos', {}).get('photo', [])
 
     def run(self):
-        r = requests.get(self.url,params=self.params)
+        r = requests.get(self.url, params=self.params)
         js = json.loads(r.text)
         js = js.get('photos', {})
 
@@ -197,14 +198,15 @@ class FlickrFavs(Favs):
             fav = FlickrFav(photo)
             if not fav.exists:
                 fav.run()
-            #fav.fix_extension()
+            # fav.fix_extension()
+
 
 class FivehpxFavs(Favs):
     def __init__(self):
         super(FivehpxFavs, self).__init__('500px')
         self.params = {
             'consumer_key': shared.config.get('api_500px', 'api_key'),
-            'rpp': 100, # maximum
+            'rpp': 100,  # maximum
             'image_size': 4,
             'include_tags': 1,
             'include_geo': 1,
@@ -227,13 +229,12 @@ class FivehpxFavs(Favs):
         r = self.oauth.request(
             'https://api.500px.com/v1/users/%s/galleries' % (self.uid),
             params={
-                'kinds': 5 # see https://github.com/500px/api-documentation/blob/master/basics/formats_and_terms.md#gallery-kinds
+                'kinds': 5  # see https://github.com/500px/api-documentation/blob/master/basics/formats_and_terms.md#gallery-kinds
             }
         )
         js = json.loads(r.text)
         g = js.get('galleries', []).pop()
         self.galid = g.get('id')
-
 
     @property
     def url(self):
@@ -258,7 +259,7 @@ class FivehpxFavs(Favs):
         self.get_uid()
         self.get_favgalid()
 
-        r = requests.get(self.url,params=self.params)
+        r = requests.get(self.url, params=self.params)
         js = json.loads(r.text)
         photos = js.get('photos')
 
@@ -276,7 +277,7 @@ class FivehpxFavs(Favs):
             fav = FivehpxFav(photo)
             if not fav.exists:
                 fav.run()
-            #fav.fix_extension()
+            # fav.fix_extension()
 
 
 class TumblrFavs(Favs):
@@ -330,7 +331,7 @@ class DAFavs(Favs):
         self.likes = []
         self.galid = None
         self.params = {
-            'limit': 24, # this is the max as far as I can tell
+            'limit': 24,  # this is the max as far as I can tell
             'mature_content': 'true',
             'username': self.username
         }
@@ -353,8 +354,8 @@ class DAFavs(Favs):
 
     @property
     def url(self):
-         return 'https://www.deviantart.com/api/v1/oauth2/collections/%s' % (self.galid)
-
+        return 'https://www.deviantart.com/api/v1/oauth2/collections/%s' % (
+            self.galid)
 
     def getpaged(self, offset):
         self.params.update({'offset': offset})
@@ -381,7 +382,7 @@ class DAFavs(Favs):
         try:
             meta = json.loads(r.text)
             return meta.get('metadata', []).pop()
-        except:
+        except BaseException:
             return meta
 
     def has_more(self, q):
@@ -421,9 +422,10 @@ class DAFavs(Favs):
         for fav in self.favs:
             f = DAFav(fav)
             if not f.exists:
-                f.fav.update({'meta': self.getsinglemeta(fav.get('deviationid'))})
+                f.fav.update(
+                    {'meta': self.getsinglemeta(fav.get('deviationid'))})
                 f.run()
-            #f.fix_extension()
+            # f.fix_extension()
 
 
 class ImgFav(object):
@@ -475,7 +477,7 @@ class ImgFav(object):
             return
 
         logging.info('populating EXIF data of %s' % self.target)
-        tags = list(set(self.meta.get('tags',[])))
+        tags = list(set(self.meta.get('tags', [])))
         dt = self.meta.get('dt').to('utc')
 
         geo_lat = False
@@ -510,13 +512,13 @@ class ImgFav(object):
             '-XMP:ReleaseDate=%s' % dt.format('YYYY:MM:DD HH:mm:ss'),
             '-XMP:Headline=%s' % self.meta.get('title'),
             '-XMP:Description=%s' % self.content,
-        ];
+        ]
         for t in tags:
             params.append('-XMP:HierarchicalSubject+=%s' % t)
             params.append('-XMP:Subject+=%s' % t)
         if geo_lat and geo_lon:
-            geo_lat = round(float(geo_lat),6)
-            geo_lon = round(float(geo_lon),6)
+            geo_lat = round(float(geo_lat), 6)
+            geo_lon = round(float(geo_lon), 6)
 
             if geo_lat < 0:
                 GPSLatitudeRef = 'S'
@@ -532,7 +534,7 @@ class ImgFav(object):
             params.append('-GPSLatitude=%s' % abs(geo_lat))
             params.append('-GPSLongitudeRef=%s' % GPSLongitudeRef)
             params.append('-GPSLatitudeRef=%s' % GPSLatitudeRef)
-        params.append(self.target);
+        params.append(self.target)
 
         p = subprocess.Popen(
             params,
@@ -553,7 +555,8 @@ class FlickrFav(ImgFav):
         self.photo = photo
         self.ownerid = photo.get('owner')
         self.photoid = photo.get('id')
-        self.url = "https://www.flickr.com/photos/%s/%s" % (self.ownerid, self.photoid)
+        self.url = "https://www.flickr.com/photos/%s/%s" % (
+            self.ownerid, self.photoid)
         self.target = os.path.join(
             shared.config.get('archive', 'favorite'),
             "flickr-%s-%s.jpg" % (self.ownerid, self.photoid)
@@ -567,20 +570,11 @@ class FlickrFav(ImgFav):
 
         # the bigger the better, see
         # https://www.flickr.com/services/api/misc.urls.html
-        img = self.photo.get(
-            'url_o',
-            self.photo.get('url_k',
-                self.photo.get('url_h',
-                    self.photo.get('url_b',
-                        self.photo.get('url_c',
-                            self.photo.get('url_z',
-                                False
-                            )
-                        )
-                    )
-                )
-            )
-        )
+        img = False
+        for x in ['url_o', 'url_k', 'url_h', 'url_b', 'url_c', 'url_z']:
+            if x in self.photo:
+                img = self.photo.get(x)
+                break
 
         if not img:
             logging.error("image url was empty for %s, skipping fav", self.url)
@@ -590,8 +584,8 @@ class FlickrFav(ImgFav):
         self.meta = {
             'dt': arrow.get(
                 self.photo.get('date_faved',
-                    arrow.utcnow().timestamp
-                )
+                               arrow.utcnow().timestamp
+                               )
             ),
             'title': '%s' % shared.Pandoc('plain').convert(
                 self.photo.get('title', '')
@@ -617,6 +611,7 @@ class FlickrFav(ImgFav):
         self.fix_extension()
         self.write_exif()
 
+
 class FivehpxFav(ImgFav):
     def __init__(self, photo):
         self.photo = photo
@@ -639,8 +634,8 @@ class FivehpxFav(ImgFav):
         self.meta = {
             'dt': arrow.get(
                 self.photo.get('created_at',
-                    arrow.utcnow().timestamp
-                )
+                               arrow.utcnow().timestamp
+                               )
             ),
             'title': '%s' % shared.Pandoc('plain').convert(
                 self.photo.get('name', '')
@@ -662,6 +657,7 @@ class FivehpxFav(ImgFav):
         self.content = shared.Pandoc('plain').convert(c)
         self.fix_extension()
         self.write_exif()
+
 
 class DAFav(ImgFav):
     def __init__(self, fav):
@@ -690,7 +686,9 @@ class DAFav(ImgFav):
 
     def run(self):
         if not self.imgurl:
-            logging.error('imgurl is empty for deviantart %s', self.deviationid)
+            logging.error(
+                'imgurl is empty for deviantart %s',
+                self.deviationid)
             return
 
         self.pull_image()
@@ -698,8 +696,8 @@ class DAFav(ImgFav):
         self.meta = {
             'dt': arrow.get(
                 self.fav.get('published_time',
-                    arrow.utcnow().timestamp
-                )
+                             arrow.utcnow().timestamp
+                             )
             ),
             'title': '%s' % shared.Pandoc('plain').convert(self.title).rstrip(),
             'favorite-of': self.url,
@@ -745,10 +743,10 @@ class TumblrFav(object):
         meta = {
             'dt': arrow.get(
                 self.like.get('liked_timestamp',
-                    self.like.get('date',
-                        arrow.utcnow().timestamp
-                    )
-                )
+                              self.like.get('date',
+                                            arrow.utcnow().timestamp
+                                            )
+                              )
             ),
             'title': title,
             'favorite-of': self.url,
@@ -823,7 +821,8 @@ class Oauth1Flow(object):
             self.request_oauth_token()
 
         t = self.tokendb.get_token(self.t)
-        if not t.get('access_token', None) or not t.get('access_token_secret', None):
+        if not t.get('access_token', None) or not t.get(
+                'access_token_secret', None):
             self.request_access_token()
 
     def request_oauth_token(self):
@@ -885,10 +884,10 @@ class Oauth1Flow(object):
                 access_token_secret=r.get('oauth_token_secret')
             )
         except oauth1_session.TokenRequestDenied as e:
-            logging.error('getting access token was denied, clearing former oauth tokens and re-running everyting')
+            logging.error(
+                'getting access token was denied, clearing former oauth tokens and re-running everyting')
             self.tokendb.clear_service(self.service)
             self.oauth_init()
-
 
     def request(self, url, params):
         t = self.tokendb.get_token(self.t)

@@ -64,6 +64,7 @@ class MagicPHP(object):
 
 class NoDupeContainer(object):
     ''' Base class to hold keys => data dicts with errors on dupes '''
+
     def __init__(self):
         self.data = {}
         self.default = None
@@ -110,7 +111,7 @@ class NoDupeContainer(object):
     def __next__(self):
         try:
             r = self.data.next()
-        except:
+        except BaseException:
             raise StopIteration()
         return r
 
@@ -123,6 +124,7 @@ class NoDupeContainer(object):
 class FContainer(NoDupeContainer):
     """ This is a container that holds a lists of files based on Container so
     it errors on duplicate slugs and is popolated with recorsive glob """
+
     def __init__(self, dirs, extensions=['*']):
         super().__init__()
         files = []
@@ -143,6 +145,7 @@ class Content(FContainer):
     """ This is a container that holds markdown files that are parsed when the
     container is populated on the fly; based on FContainer which is a Container
     """
+
     def __init__(self):
         dirs = [os.path.join(shared.config.get('dirs', 'content'), "**")]
         extensions = ['md', 'jpg']
@@ -227,7 +230,7 @@ class Category(NoDupeContainer):
         page = 1
         while page <= pages:
             # list relevant post templates
-            start = int((page-1) * pagination)
+            start = int((page - 1) * pagination)
             end = int(start + pagination)
             posttmpls = [
                 self.data[k].tmplvars
@@ -285,7 +288,7 @@ class Category(NoDupeContainer):
                 r = shared.j2.get_template(tmplfile).render(tmplvars)
                 self.write_html(o, r)
             # inc. page counter
-            page = page+1
+            page = page + 1
 
 
 class Singular(object):
@@ -406,7 +409,7 @@ class Singular(object):
         r = {}
         for mtime, c in self.comments:
             if c.type == 'webmention':
-                r.update({mtime:c.tmplvars})
+                r.update({mtime: c.tmplvars})
         return sorted(r.items())
 
     @property
@@ -417,7 +420,7 @@ class Singular(object):
                 continue
             if c.type not in r:
                 r[c.type] = {}
-            r[c.type].update({mtime:c.tmplvars})
+            r[c.type].update({mtime: c.tmplvars})
 
         for icon, comments in r.items():
             r[icon] = sorted(comments.items())
@@ -492,7 +495,7 @@ class Singular(object):
                 self.meta.get('title', ''),
                 self.content
             ]))
-        except:
+        except BaseException:
             pass
         return lang
 
@@ -682,10 +685,10 @@ class WebImage(object):
         if self.is_downsizeable:
             try:
                 src = [
-                    e for e in self.sizes \
+                    e for e in self.sizes
                     if e[0] == shared.config.getint('photo', 'default')
                 ][0][1]['url']
-            except:
+            except BaseException:
                 pass
         return src
 
@@ -743,15 +746,15 @@ class WebImage(object):
             return exif
 
         mapping = {
-            'camera':           ['Model'],
-            'aperture':         ['FNumber', 'Aperture'],
-            'shutter_speed':    ['ExposureTime'],
+            'camera': ['Model'],
+            'aperture': ['FNumber', 'Aperture'],
+            'shutter_speed': ['ExposureTime'],
             #'focallength':      ['FocalLengthIn35mmFormat', 'FocalLength'],
-            'focallength':      ['FocalLength'],
-            'iso':              ['ISO'],
-            'lens':             ['LensID', 'LensSpec', 'Lens'],
-            'geo_latitude':     ['GPSLatitude'],
-            'geo_longitude':    ['GPSLongitude'],
+            'focallength': ['FocalLength'],
+            'iso': ['ISO'],
+            'lens': ['LensID', 'LensSpec', 'Lens'],
+            'geo_latitude': ['GPSLatitude'],
+            'geo_longitude': ['GPSLongitude'],
         }
 
         for ekey, candidates in mapping.items():
@@ -891,7 +894,7 @@ class WebImage(object):
         """ Calculate intermediate resize dimension and return a tuple of width, height """
         size = int(size)
         if (width > height and not crop) \
-        or (width < height and crop):
+                or (width < height and crop):
             w = size
             h = int(float(size / width) * height)
         else:
@@ -953,7 +956,8 @@ class WebImage(object):
         if not self.is_downsizeable:
             return self._copy()
 
-        if not self.needs_downsize and not shared.config.getboolean('params', 'regenerate'):
+        if not self.needs_downsize and not shared.config.getboolean(
+                'params', 'regenerate'):
             return
 
         build_files = os.path.join(
@@ -1309,7 +1313,7 @@ def build():
 
     # render front
     if not collector_front.is_uptodate or \
-    shared.config.getboolean('params', 'force'):
+            shared.config.getboolean('params', 'force'):
         worker.append(collector_front.render())
 
     # render categories
@@ -1334,6 +1338,7 @@ def build():
         if not os.path.exists(d):
             logging.debug("copying static file %s to %s", s, d)
             shutil.copy2(s, d)
+
 
 if __name__ == '__main__':
     build()

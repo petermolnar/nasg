@@ -10,6 +10,7 @@ import requests
 from slugify import slugify
 import jinja2
 
+
 class CMDLine(object):
     def __init__(self, executable):
         self.executable = self._which(executable)
@@ -79,6 +80,7 @@ class XRay(CMDLine):
             logging.error("Error with XRay: %s", stderr)
 
         return json.loads(stdout.decode('utf-8').strip())
+
 
 class Pandoc(CMDLine):
     """ Pandoc command line call with piped in- and output """
@@ -233,7 +235,8 @@ class ExifTool(CMDLine):
 
         exif = json.loads(stdout.decode('utf-8').strip()).pop()
         if 'ReleaseDate' in exif and 'ReleaseTime' in exif:
-            exif['DateTimeRelease'] = "%s %s" % (exif.get('ReleaseDate'), exif.get('ReleaseTime')[:8])
+            exif['DateTimeRelease'] = "%s %s" % (
+                exif.get('ReleaseDate'), exif.get('ReleaseTime')[:8])
             del(exif['ReleaseDate'])
             del(exif['ReleaseTime'])
 
@@ -241,6 +244,7 @@ class ExifTool(CMDLine):
             exif[k] = self.exifdate2iso(v)
 
         return exif
+
 
 class BaseDB(object):
     def __init__(self, fpath):
@@ -260,24 +264,23 @@ class BaseDB(object):
         cursor.execute('PRAGMA auto_vacuum;')
         self.db.close()
 
-#class TokenDBng(BaseDB):
-    #def __init__(self):
+# class TokenDBng(BaseDB):
+    # def __init__(self):
         #self.fpath = config.get('var', 'tokendb')
-        #super().__init__(self.fpath)
+        # super().__init__(self.fpath)
         #cursor = self.db.cursor()
-        #cursor.execute('''
-            #CREATE TABLE IF NOT EXISTS  `tokens` (
-                #`service` TEXT PRIMARY KEY NOT NULL UNIQUE,
-                #`timestamp` TIMESTAMP NOT NULL DEFAULT (strftime('%s', 'now'))
-                #`oauth_token` TEXT NOT NULL,
-                #`oauth_token_secret` TEXT NOT NULL,
-                #`access_token` TEXT NOT NULL,
-                #`access_token_secret` TEXT NOT NULL,
-                #`verifier` TEXT NOT NULL
-            #);
+        # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS  `tokens` (
+        #`service` TEXT PRIMARY KEY NOT NULL UNIQUE,
+        #`timestamp` TIMESTAMP NOT NULL DEFAULT (strftime('%s', 'now'))
+        #`oauth_token` TEXT NOT NULL,
+        #`oauth_token_secret` TEXT NOT NULL,
+        #`access_token` TEXT NOT NULL,
+        #`access_token_secret` TEXT NOT NULL,
+        #`verifier` TEXT NOT NULL
+        #);
         #''')
-        #self.db.commit()
-
+        # self.db.commit()
 
 
 # TODO class SearchDBng(object):
@@ -315,11 +318,11 @@ class TokenDB(object):
         self.save()
 
     def update_token(self,
-        token,
-        oauth_token_secret=None,
-        access_token=None,
-        access_token_secret=None,
-        verifier=None):
+                     token,
+                     oauth_token_secret=None,
+                     access_token=None,
+                     access_token_secret=None,
+                     verifier=None):
 
         t = self.tokens.get(token, {})
         if oauth_token_secret:
@@ -355,8 +358,10 @@ class TokenDB(object):
         del(self.tokens[service])
         self.save()
 
+
 class SearchDB(BaseDB):
     tmplfile = 'Search.html'
+
     def __init__(self):
         self.fpath = "%s" % config.get('var', 'searchdb')
         super().__init__(self.fpath)
@@ -402,8 +407,8 @@ class SearchDB(BaseDB):
         cursor.execute('''SELECT mtime
             FROM data
             WHERE id = ? AND mtime = ?''',
-            (fname,mtime)
-        )
+                       (fname, mtime)
+                       )
         rows = cursor.fetchall()
 
         if len(rows):
@@ -435,7 +440,6 @@ class SearchDB(BaseDB):
             if category not in ret:
                 ret.update({category: {}})
 
-
             maybe_fpath = os.path.join(
                 config.get('dirs', 'content'),
                 category,
@@ -451,7 +455,6 @@ class SearchDB(BaseDB):
                 }
             })
         return ret
-
 
     def cli(self, query):
         results = self.search_by_query(query)
@@ -509,7 +512,12 @@ class WebmentionQueue(BaseDB):
         logging.debug('getting queued webmentions for %s', fname)
         ret = []
         cursor = self.db.cursor()
-        cursor.execute('''SELECT * FROM queue WHERE target LIKE ? AND status = 0''', ('%'+fname+'%',))
+        cursor.execute(
+            '''SELECT * FROM queue WHERE target LIKE ? AND status = 0''',
+            ('%' +
+             fname +
+             '%',
+             ))
         rows = cursor.fetchall()
         for r in rows:
             ret.append({
@@ -541,6 +549,7 @@ def __expandconfig():
             c.set(s, o, os.path.expanduser(curr))
     return c
 
+
 def baseN(num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
     """ Used to create short, lowercase slug for a number (an epoch) passed """
     num = int(num)
@@ -559,6 +568,7 @@ def slugfname(url):
         only_ascii=True,
         lower=True
     )[:200]
+
 
 def __setup_sitevars():
     SiteVars = {}
@@ -584,7 +594,6 @@ def __setup_sitevars():
     for o in config.options(section):
         SiteVars[section].update({o: config.get(section, o)})
 
-
     # push the whole thing into cache
     return SiteVars
 
@@ -604,7 +613,7 @@ def notify(msg):
     # fire and forget
     try:
         requests.post(url, data=data)
-    except:
+    except BaseException:
         pass
 
 
