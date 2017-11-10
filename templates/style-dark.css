@@ -5,7 +5,7 @@
 }
 
 html, body, div, span,
-h1, h2, h3, h4, h5, h6, 
+h1, h2, h3, h4, h5, h6,
 a, p, blockquote, pre, cite, code,
 del, em, ins, strong, sub, sup, tt, b, u, i,
 dl, dt, dd, ol, ul, li,
@@ -34,18 +34,24 @@ html, body {
     line-height: 1.2rem;
     font-family: "Liberation Sans", "Helvetica Neue", "Roboto", "Arial", sans-serif;
     font-weight: normal;
-    color: #999999;
+    color: #ccc;
     text-shadow: 1px 1px 1px rgba(0,0,0,0.004);
     background-color: #222;
 }
 
 html {
     position: relative;
-    background-color: #333336;
+}
+
+html,
+.content-header,
+.content-footer {
+    background-color: #111;
+    color: #bbb;
 }
 
 a {
-    color: #cccccc;
+    color: #eee;
     text-decoration:none;
 }
 
@@ -155,7 +161,7 @@ pre {
     tab-size: 2;
 }
 
-pre {   
+pre {
     overflow: auto;
     padding: 0.3rem;
 }
@@ -283,17 +289,12 @@ code.sourceCode span.va { color: turquoise; }
     content: "back to text";
     margin: 0 0 0 0.2rem;
     color: #666;
-}       
+}
 
 .footnotes ol li a[href^="#"]:hover:after {
     color: #ccc;
 }
 
-.content-header,
-.content-footer {
-    background-color: #333336;
-    color: #bbb;
-}
 
 .content-header a,
 .content-footer a {
@@ -335,9 +336,9 @@ code.sourceCode span.va { color: turquoise; }
 }
 
 .content-footer dl dd {
-    
+
     display:inline-block;
-    
+
 }
 
 .content-footer dl dd:after {
@@ -660,7 +661,7 @@ figcaption {
     p, li, blockquote, figure, .footnotes {
         page-break-inside: avoid !important;
     }
-    
+
     figure {
         max-height: 45vh;
     }
@@ -718,7 +719,3 @@ figcaption {
     code.sourceCode span.st { color: magenta; }
     code.sourceCode span.va { color: darkturquoise; }
 }
-	
-	
-	
-	

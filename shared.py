@@ -133,7 +133,6 @@ class Pandoc(CMDLine):
             ])
             self.i = 'html'
 
-
     def convert(self, text):
         cmd = (
             self.executable,
@@ -243,6 +242,46 @@ class ExifTool(CMDLine):
 
         return exif
 
+class BaseDB(object):
+    def __init__(self, fpath):
+        self.db = sqlite3.connect(fpath)
+        self.db.execute('PRAGMA auto_vacuum = INCREMENTAL;')
+        self.db.execute('PRAGMA journal_mode = MEMORY;')
+        self.db.execute('PRAGMA temp_store = MEMORY;')
+        self.db.execute('PRAGMA locking_mode = NORMAL;')
+        self.db.execute('PRAGMA synchronous = FULL;')
+        self.db.execute('PRAGMA encoding = "UTF-8";')
+
+    def __exit__(self):
+        self.finish()
+
+    def finish(self):
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA auto_vacuum;')
+        self.db.close()
+
+#class TokenDBng(BaseDB):
+    #def __init__(self):
+        #self.fpath = config.get('var', 'tokendb')
+        #super().__init__(self.fpath)
+        #cursor = self.db.cursor()
+        #cursor.execute('''
+            #CREATE TABLE IF NOT EXISTS  `tokens` (
+                #`service` TEXT PRIMARY KEY NOT NULL UNIQUE,
+                #`timestamp` TIMESTAMP NOT NULL DEFAULT (strftime('%s', 'now'))
+                #`oauth_token` TEXT NOT NULL,
+                #`oauth_token_secret` TEXT NOT NULL,
+                #`access_token` TEXT NOT NULL,
+                #`access_token_secret` TEXT NOT NULL,
+                #`verifier` TEXT NOT NULL
+            #);
+        #''')
+        #self.db.commit()
+
+
+
+# TODO class SearchDBng(object):
+# TODO class EXIFDBng(object):
 
 class TokenDB(object):
     def __init__(self, uuid='tokens'):
@@ -316,24 +355,11 @@ class TokenDB(object):
         del(self.tokens[service])
         self.save()
 
-class SearchDB(object):
+class SearchDB(BaseDB):
     tmplfile = 'Search.html'
-    #snowball = '/usr/local/lib/fts5stemmer.so'
-
     def __init__(self):
-        self.db = sqlite3.connect(
-            "%s" % config.get('var', 'searchdb')
-        )
-
-        #if os.path.exists(self.snowball):
-            #self.db.enable_load_extension(True)
-            #self.db.execute(" load_extension('%s');" % self.snowball)
-            #self.db.enable_load_extension(False)
-
-
-        self.db.execute('PRAGMA auto_vacuum=INCREMENTAL;')
-        self.db.execute('PRAGMA journal_mode = WAL;')
-
+        self.fpath = "%s" % config.get('var', 'searchdb')
+        super().__init__(self.fpath)
         cursor = self.db.cursor()
         cursor.execute('''CREATE VIRTUAL TABLE IF NOT EXISTS data USING FTS5(
                 id,
@@ -350,6 +376,8 @@ class SearchDB(object):
         self.finish()
 
     def finish(self):
+        cursor = self.db.cursor()
+        cursor.execute('''PRAGMA auto_vacuum;''')
         self.db.close()
 
     def append(self, id, corpus, mtime, url, category, title):
@@ -442,12 +470,10 @@ class SearchDB(object):
         return j2.get_template(self.tmplfile).render(tmplvars)
 
 
-class WebmentionQueue(object):
+class WebmentionQueue(BaseDB):
     def __init__(self):
-        self.db = sqlite3.connect(
-            "%s" % config.get('var', 'webmentiondb')
-        )
-
+        self.fpath = "%s" % config.get('var', 'webmentiondb')
+        super().__init__(self.fpath)
         cursor = self.db.cursor()
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS  `queue` (

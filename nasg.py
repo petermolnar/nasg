@@ -3,7 +3,6 @@
 import os
 import re
 import logging
-import configparser
 import json
 import glob
 import argparse
@@ -12,35 +11,32 @@ from urllib.parse import urlparse
 import asyncio
 from math import ceil
 import csv
-import sqlite3
-
 import frontmatter
 import arrow
 import langdetect
 import wand.image
 from emoji import UNICODE_EMOJI
-
 import shared
 
-from pprint import pprint
 
 class MagicPHP(object):
+    ''' router PHP generator '''
     name = 'index.php'
 
     def __init__(self):
         # init 'gone 410' array
         self.gones = []
-        f = shared.config.get('var', 'gone')
-        if os.path.isfile(f):
-            with open(f) as csvfile:
+        f_gone = shared.config.get('var', 'gone')
+        if os.path.isfile(f_gone):
+            with open(f_gone) as csvfile:
                 reader = csv.reader(csvfile, delimiter=' ')
                 for row in reader:
                     self.gones.append(row[0])
         # init manual redirects array
         self.redirects = []
-        f = shared.config.get('var', 'redirects')
-        if os.path.isfile(f):
-            with open(f) as csvfile:
+        f_redirect = shared.config.get('var', 'redirects')
+        if os.path.isfile(f_redirect):
+            with open(f_redirect) as csvfile:
                 reader = csv.reader(csvfile, delimiter=' ')
                 for row in reader:
                     self.redirects.append((row[0], row[1]))
@@ -53,21 +49,21 @@ class MagicPHP(object):
         )
 
     async def render(self):
-        logging.info('saving %s' % (self.name))
+        logging.info('saving %s', self.name)
         o = self.phpfile
-        tmplfile = "%s.html" % (__class__.__name__)
+        tmplfile = "%s.html" % (self.__class__.__name__)
         r = shared.j2.get_template(tmplfile).render({
             'site': shared.site,
             'redirects': self.redirects,
             'gones': self.gones
         })
         with open(o, 'wt') as out:
-            logging.debug('writing file %s' % (o))
+            logging.debug('writing file %s', o)
             out.write(r)
 
 
 class NoDupeContainer(object):
-    """ Base class to hold keys => data dicts with errors on dupes """
+    ''' Base class to hold keys => data dicts with errors on dupes '''
     def __init__(self):
         self.data = {}
         self.default = None
@@ -81,17 +77,17 @@ class NoDupeContainer(object):
         # problem
         logging.error(
             "duplicate key error when populating %s: %s",
-                self.__class__.__name__,
-                key
-            )
+            self.__class__.__name__,
+            key
+        )
         logging.error(
             "current: %s",
-                self.data.get(key)
-            )
+            self.data.get(key)
+        )
         logging.error(
             "problem: %s",
-                value
-            )
+            value
+        )
 
         return
 
@@ -99,9 +95,6 @@ class NoDupeContainer(object):
 
     def __getitem__(self, key):
         return self.data.get(key, self.default)
-
-    #def __delitem__(self, key):
-        #return del(self.data[key])
 
     def __setitem__(self, key, value):
         return self.append(key, value)
@@ -126,22 +119,17 @@ class NoDupeContainer(object):
             yield (k, v)
         return
 
-    #def __repr__(self):
-        #return json.dumps(self.data)
-
-    #def __str__(self):
-        #return "iteration container with %s items" % (len(self.data.keys()))
-
 
 class FContainer(NoDupeContainer):
-    """ This is a container that holds a lists of files based on Container so it errors on duplicate slugs and is popolated with recorsive glob """
-    def __init__(self, dirs=[''], extensions=['*']):
+    """ This is a container that holds a lists of files based on Container so
+    it errors on duplicate slugs and is popolated with recorsive glob """
+    def __init__(self, dirs, extensions=['*']):
         super().__init__()
         files = []
         for ext in extensions:
             for p in dirs:
                 files.extend(glob.iglob(
-                    os.path.join(p,'*.%s' % (ext)),
+                    os.path.join(p, '*.%s' % (ext)),
                     recursive=True
                 ))
         # eliminate duplicates
@@ -150,14 +138,18 @@ class FContainer(NoDupeContainer):
             fname = os.path.basename(fpath)
             self.append(fname, fpath)
 
+
 class Content(FContainer):
-    """ This is a container that holds markdown files that are parsed when the container is populated on the fly; based on FContainer which is a Container """
+    """ This is a container that holds markdown files that are parsed when the
+    container is populated on the fly; based on FContainer which is a Container
+    """
     def __init__(self):
-        dirs=[os.path.join(shared.config.get('dirs', 'content'), "**")]
-        extensions=['md', 'jpg']
+        dirs = [os.path.join(shared.config.get('dirs', 'content'), "**")]
+        extensions = ['md', 'jpg']
         super().__init__(dirs, extensions)
         for fname, fpath in self.data.items():
             self.data.update({fname: Singular(fpath)})
+
 
 class Category(NoDupeContainer):
     """ A Category which holds pubtime (int) => Singular data """
@@ -223,13 +215,11 @@ class Category(NoDupeContainer):
             os.makedirs(x)
         return x
 
-
     def write_html(self, path, content):
         with open(path, 'wt') as out:
-            logging.debug('writing file %s' % (path))
+            logging.debug('writing file %s', path)
             out.write(content)
         os.utime(path, (self.mtime, self.mtime))
-
 
     async def render(self):
         pagination = shared.config.getint('display', 'pagination')
@@ -254,7 +244,9 @@ class Category(NoDupeContainer):
                     'page': page,
                     'total': pages,
                     'perpage': pagination,
-                    'lastmod': arrow.get(self.mtime).format(shared.ARROWFORMAT['rcf']),
+                    'lastmod': arrow.get(self.mtime).format(
+                        shared.ARROWFORMAT['rcf']
+                    ),
                     'url': self.url,
                     'feed': "%s/%s/" % (
                         self.url,
@@ -267,16 +259,29 @@ class Category(NoDupeContainer):
             # render HTML
             dirname = self.path_paged(page)
             o = os.path.join(dirname, self.indexfile)
-            logging.info("Rendering page %d/%d of category %s to %s", page, pages, self.name, o)
-            tmplfile = "%s.html" % (__class__.__name__)
+            logging.info(
+                "Rendering page %d/%d of category %s to %s",
+                page,
+                pages,
+                self.name,
+                o
+            )
+            tmplfile = "%s.html" % (self.__class__.__name__)
             r = shared.j2.get_template(tmplfile).render(tmplvars)
             self.write_html(o, r)
             # render feed
-            if 1 == page:
+            if page == 1:
                 dirname = self.path_paged(page, feed=True)
                 o = os.path.join(dirname, self.feedfile)
-                logging.info("Rendering feed of category %s to  %s", self.name, o)
-                tmplfile = "%s_%s.html" % (__class__.__name__, self.feeddir)
+                logging.info(
+                    "Rendering feed of category %s to  %s",
+                    self.name,
+                    o
+                )
+                tmplfile = "%s_%s.html" % (
+                    self.__class__.__name__,
+                    self.feeddir
+                )
                 r = shared.j2.get_template(tmplfile).render(tmplvars)
                 self.write_html(o, r)
             # inc. page counter
@@ -295,18 +300,17 @@ class Singular(object):
         self.category = os.path.basename(os.path.dirname(self.fpath))
         self._images = NoDupeContainer()
 
-        if '.md' == self.fext:
+        if self.fext == '.md':
             with open(self.fpath, mode='rt') as f:
                 self.fm = frontmatter.parse(f.read())
             self.meta, self.content = self.fm
             self.photo = None
-        elif '.jpg' == self.fext:
+        elif self.fext == '.jpg':
             self.photo = WebImage(self.fpath)
             self.meta = self.photo.fm_meta
             self.content = self.photo.fm_content
             self.photo.inline = False
             self.photo.cssclass = 'u-photo'
-
 
     def init_extras(self):
         self.receive_webmentions()
@@ -331,13 +335,13 @@ class Singular(object):
         if not self.is_reply:
             return
         wdb = shared.WebmentionQueue()
-        id = wdb.queue(self.url, self.is_reply)
+        wid = wdb.queue(self.url, self.is_reply)
         wm = Webmention(
             self.url,
             self.is_reply
         )
         wm.send()
-        wdb.entry_done(id)
+        wdb.entry_done(wid)
         wdb.finish()
 
     @property
@@ -401,7 +405,7 @@ class Singular(object):
     def replies(self):
         r = {}
         for mtime, c in self.comments:
-            if 'webmention' == c.type:
+            if c.type == 'webmention':
                 r.update({mtime:c.tmplvars})
         return sorted(r.items())
 
@@ -409,7 +413,7 @@ class Singular(object):
     def reactions(self):
         r = {}
         for mtime, c in self.comments:
-            if 'webmention' == c.type:
+            if c.type == 'webmention':
                 continue
             if c.type not in r:
                 r[c.type] = {}
@@ -453,8 +457,11 @@ class Singular(object):
 
     @property
     def licence(self):
-        l = shared.config.get('licence', self.category,
-            fallback=shared.config.get('licence', 'default',))
+        l = shared.config.get(
+            'licence',
+            self.category,
+            fallback=shared.config.get('licence', 'default',)
+        )
         return {
             'text': 'CC %s 4.0' % l.upper(),
             'url': 'https://creativecommons.org/licenses/%s/4.0/' % l,
@@ -507,7 +514,7 @@ class Singular(object):
         logging.debug('image found: %s', maybe)
         if fname not in self._images:
             im = WebImage(maybe)
-            self._images.append(fname,im)
+            self._images.append(fname, im)
         return self._images[fname]
 
     @property
@@ -578,9 +585,15 @@ class Singular(object):
         if not hasattr(self, '_tmplvars'):
             self._tmplvars = {
                 'title': self.title,
-                'pubtime': self.published.format(shared.ARROWFORMAT['iso']),
-                'pubdate': self.published.format(shared.ARROWFORMAT['display']),
-                'pubrfc': self.published.format(shared.ARROWFORMAT['rcf']),
+                'pubtime': self.published.format(
+                    shared.ARROWFORMAT['iso']
+                ),
+                'pubdate': self.published.format(
+                    shared.ARROWFORMAT['display']
+                ),
+                'pubrfc': self.published.format(
+                    shared.ARROWFORMAT['rcf']
+                ),
                 'category': self.category,
                 'html': self.html,
                 'lang': self.lang,
@@ -597,10 +610,10 @@ class Singular(object):
         return self._tmplvars
 
     async def render(self):
-        logging.info('rendering %s' % (self.fname))
+        logging.info('rendering %s', self.fname)
         o = self.htmlfile
 
-        tmplfile = "%s.html" % (__class__.__name__)
+        tmplfile = "%s.html" % (self.__class__.__name__)
         r = shared.j2.get_template(tmplfile).render({
             'post': self.tmplvars,
             'site': shared.site,
@@ -608,10 +621,10 @@ class Singular(object):
 
         d = os.path.dirname(o)
         if not os.path.isdir(d):
-            logging.debug('creating directory %s' % (d))
+            logging.debug('creating directory %s', d)
             os.makedirs(d)
         with open(o, 'wt') as out:
-            logging.debug('writing file %s' % (o))
+            logging.debug('writing file %s', o)
             out.write(r)
         # use the comment time, not the source file time for this
         os.utime(o, (self.stime, self.stime))
@@ -639,7 +652,8 @@ class WebImage(object):
     @property
     def fm_meta(self):
         return {
-            'published': self.meta.get('ReleaseDate',
+            'published': self.meta.get(
+                'ReleaseDate',
                 self.meta.get('ModifyDate')
             ),
             'title': self.meta.get('Headline', self.fname),
@@ -667,11 +681,13 @@ class WebImage(object):
 
         if self.is_downsizeable:
             try:
-                src = [e for e in self.sizes if e[0] == shared.config.getint('photo', 'default')][0][1]['url']
+                src = [
+                    e for e in self.sizes \
+                    if e[0] == shared.config.getint('photo', 'default')
+                ][0][1]['url']
             except:
                 pass
         return src
-
 
     @property
     def meta(self):
@@ -728,12 +744,12 @@ class WebImage(object):
 
         mapping = {
             'camera':           ['Model'],
-            'aperture':         ['FNumber','Aperture'],
+            'aperture':         ['FNumber', 'Aperture'],
             'shutter_speed':    ['ExposureTime'],
-            'focallength':      ['FocalLengthIn35mmFormat', 'FocalLength'],
+            #'focallength':      ['FocalLengthIn35mmFormat', 'FocalLength'],
+            'focallength':      ['FocalLength'],
             'iso':              ['ISO'],
-            'lens':             ['LensID', 'LensSpec', 'Lens',],
-            #'date':            ['CreateDate','DateTimeOriginal'],
+            'lens':             ['LensID', 'LensSpec', 'Lens'],
             'geo_latitude':     ['GPSLatitude'],
             'geo_longitude':    ['GPSLongitude'],
         }
@@ -775,8 +791,8 @@ class WebImage(object):
             )
 
             exists = os.path.isfile(fpath)
-            # in case there is a downsized image compare against the main file's
-            # mtime and invalidate the existing if it's older
+            # in case there is a downsized image compare against the main
+            # file's mtime and invalidate the existing if it's older
             if exists:
                 mtime = os.path.getmtime(fpath)
                 if self.mtime > mtime:
@@ -810,12 +826,11 @@ class WebImage(object):
         elif ftype.lower() != 'jpeg' and ftype.lower() != 'png':
             return False
 
-
         _max = max(
             int(self.meta.get('ImageWidth')),
             int(self.meta.get('ImageHeight'))
         )
-        _min = shared.config.getint('photo','default')
+        _min = shared.config.getint('photo', 'default')
         if _max > _min:
             return True
 
@@ -920,9 +935,17 @@ class WebImage(object):
         needed = False
         for (size, downsized) in self.sizes:
             if downsized.get('exists', False):
-                logging.debug("size %d exists: %s", size, downsized.get('fpath'))
+                logging.debug(
+                    "size %d exists: %s",
+                    size,
+                    downsized.get('fpath')
+                )
                 continue
-            logging.debug("size %d missing: %s", size, downsized.get('fpath'))
+            logging.debug(
+                "size %d missing: %s",
+                size,
+                downsized.get('fpath')
+            )
             needed = True
         return needed
 
@@ -972,8 +995,10 @@ class WebImage(object):
         )
 
     def __str__(self):
-        tmplfile = "%s.html" % (__class__.__name__)
-        return shared.j2.get_template(tmplfile).render({'photo': self.tmplvars})
+        tmplfile = "%s.html" % (self.__class__.__name__)
+        return shared.j2.get_template(tmplfile).render({
+            'photo': self.tmplvars
+        })
 
 
 class Comment(object):
@@ -1019,7 +1044,7 @@ class Comment(object):
         if not hasattr(self, '_type'):
             self._type = 'webmention'
             t = self.meta.get('type', 'webmention')
-            if 'webmention' != t:
+            if t != 'webmention':
                 self._type = '★'
 
             if len(self.content):
@@ -1048,11 +1073,13 @@ class Comment(object):
 
     def __str__(self):
         tmplfile = "%s.html" % (__class__.__name__)
-        return shared.j2.get_template(tmplfile).render({'comment': self.tmplvars})
+        return shared.j2.get_template(tmplfile).render({
+            'comment': self.tmplvars
+        })
 
 
 class Webmention(object):
-    def __init__ (self, source, target, dt=arrow.utcnow().timestamp):
+    def __init__(self, source, target, dt=arrow.utcnow().timestamp):
         self.source = source
         self.target = target
         self.dt = arrow.get(dt).to('utc')
@@ -1086,7 +1113,7 @@ class Webmention(object):
             return
         requests.post(
             self.target,
-            data = {
+            data={
                 'source': self.source,
                 'target': self.target
             }
@@ -1130,7 +1157,7 @@ class Webmention(object):
             what = self._source.get('data').get('content').get('text')
         else:
             return ''
-        return  shared.Pandoc('html').convert(what)
+        return shared.Pandoc('html').convert(what)
 
     @property
     def fname(self):
@@ -1152,6 +1179,22 @@ class Webmention(object):
             self.fname
         )
 
+
+class Worker(object):
+    def __init__(self):
+        self._tasks = []
+        self._loop = asyncio.get_event_loop()
+
+    def append(self, job):
+        task = self._loop.create_task(job)
+        self._tasks.append(task)
+
+    def run(self):
+        w = asyncio.wait(self._tasks)
+        self._loop.run_until_complete(w)
+        self._loop.close()
+
+
 def setup():
     """ parse input parameters and add them as params section to config """
     parser = argparse.ArgumentParser(description='Parameters for NASG')
@@ -1166,7 +1209,7 @@ def setup():
             '--%s' % (k),
             action='store_true',
             default=False,
-            help = v
+            help=v
         )
 
     parser.add_argument(
@@ -1191,6 +1234,7 @@ def setup():
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
 
+
 def youngest_mtime(root):
     youngest = 0
     files = glob.glob(os.path.join(root, '**'), recursive=True)
@@ -1200,31 +1244,11 @@ def youngest_mtime(root):
             youngest = mtime
     return youngest
 
+
 def build():
     setup()
 
-    #if not shared.config.getboolean('params', 'force'):
-        #last_run = youngest_mtime(shared.config.get('common', 'build'))
-        #lookin = [
-            #shared.config.get('dirs', 'content'),
-            #shared.config.get('dirs', 'comment'),
-        #]
-        #youngest = 0
-        #for root in lookin:
-            #maybe = youngest_mtime(root)
-            #if maybe > youngest:
-                #youngest = maybe
-
-        #if last_run > youngest:
-            #logging.info("last build happened at %s which is later than the last modification at %s; exiting silently",
-                #arrow.get(last_run),
-                #arrow.get(youngest)
-            #)
-            #return
-
-
-    loop = asyncio.get_event_loop()
-    tasks = []
+    worker = Worker()
     content = Content()
     sdb = shared.SearchDB()
     magic = MagicPHP()
@@ -1253,13 +1277,11 @@ def build():
 
         # add render task, if needed
         if not post.is_uptodate or shared.config.getboolean('params', 'force'):
-            task = loop.create_task(post.render())
-            tasks.append(task)
+            worker.append(post.render())
 
         # collect images to downsize
         for fname, im in post.images:
-            task = loop.create_task(im.downsize())
-            tasks.append(task)
+            worker.append(im.downsize())
 
         # skip adding future posts to any category
         if post.is_future:
@@ -1268,8 +1290,9 @@ def build():
         # skip categories starting with _
         if post.category.startswith('_'):
             continue
+
         # get the category otherwise
-        elif post.category not in collector_categories :
+        if post.category not in collector_categories:
             c = Category(post.category)
             collector_categories.append(post.category, c)
         else:
@@ -1281,38 +1304,33 @@ def build():
         # add post to front
         collector_front.append(post)
 
-
     # write search db
     sdb.finish()
 
     # render front
-    if not collector_front.is_uptodate or shared.config.getboolean('params', 'force'):
-        task = loop.create_task(collector_front.render())
-        tasks.append(task)
+    if not collector_front.is_uptodate or \
+    shared.config.getboolean('params', 'force'):
+        worker.append(collector_front.render())
 
     # render categories
     for name, c in collector_categories:
         if not c.is_uptodate or shared.config.getboolean('params', 'force'):
-            task = loop.create_task(c.render())
-            tasks.append(task)
+            worker.append(c.render())
 
     # add magic.php rendering
-    task = loop.create_task(magic.render())
-    tasks.append(task)
+    worker.append(magic.render())
 
     # TODO: send webmentions
 
     # do all the things!
-    w = asyncio.wait(tasks)
-    loop.run_until_complete(w)
-    loop.close()
+    worker.run()
 
     # copy static
     logging.info('copying static files')
     src = shared.config.get('dirs', 'static')
     for item in os.listdir(src):
-        s = os.path.join(src,item)
-        d = os.path.join(shared.config.get('common', 'build'),item)
+        s = os.path.join(src, item)
+        d = os.path.join(shared.config.get('common', 'build'), item)
         if not os.path.exists(d):
             logging.debug("copying static file %s to %s", s, d)
             shutil.copy2(s, d)
