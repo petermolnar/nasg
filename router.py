@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
 
-#import asyncio
-#import uvloop
 from sanic import Sanic
 import sanic.response
-import logging
+from sanic.log import log as logging
 import validators
 import urllib.parse
 import shared
 
 if __name__ == '__main__':
-    logging_format = "[%(asctime)s] %(process)d-%(levelname)s "
-    logging_format += "%(module)s::%(funcName)s():l%(lineno)d: "
-    logging_format += "%(message)s"
+    #logging_format = "[%(asctime)s] %(process)d-%(levelname)s "
+    #logging_format += "%(module)s::%(funcName)s():l%(lineno)d: "
+    #logging_format += "%(message)s"
 
-    logging.basicConfig(
-        format=logging_format,
-        level=logging.DEBUG
-    )
-    log = logging.getLogger()
+    #logging.basicConfig(
+        #format=logging_format,
+        #level=logging.DEBUG
+    #)
+    #log = logging.getLogger()
 
     # log_config=None prevents creation of access_log and error_log files
     # since I'm running this from systemctl it already goes into syslog
@@ -26,18 +24,17 @@ if __name__ == '__main__':
     # this is ok to be read-only
     sdb = shared.SearchDB()
 
-
     @app.route("/oauth1", methods=["GET"])
     async def oauth1(request):
         token = request.args.get('oauth_token')
         verifier = request.args.get('oauth_verifier')
+        logging.info("incoming oauth request: token was %s ; verifier was %s", token, verifier)
         tokendb = shared.TokenDB()
         tokendb.update_token(
             token,
             verifier=verifier
         )
-        return sanic.response.text("OK",status=200)
-
+        return sanic.response.text("OK", status=200)
 
     @app.route("/search", methods=["GET"])
     async def search(request):
@@ -46,11 +43,9 @@ if __name__ == '__main__':
         response = sanic.response.html(r, status=200)
         return response
 
-
-    @app.route("/micropub", methods=["POST","GET"])
+    @app.route("/micropub", methods=["POST", "GET"])
     async def micropub(request):
         return sanic.response.text("Not Implemented", status=501)
-
 
     @app.route("/webmention", methods=["POST"])
     async def webmention(request):
@@ -77,7 +72,7 @@ if __name__ == '__main__':
         # otherwise it'll become read-only for reasons I'm yet to grasp
         # the actual parsing will be done at site generation time
         wdb = shared.WebmentionQueue()
-        wdb.queue(source,target)
+        wdb.queue(source, target)
 
         # telegram notification, if set
         shared.notify(
@@ -89,5 +84,4 @@ if __name__ == '__main__':
         response = sanic.response.text("Accepted", status=202)
         return response
 
-
-    app.run(host="127.0.0.1",port=8008, log_config=None)
+    app.run(host="127.0.0.1", port=8008, log_config=None)
