@@ -8,6 +8,7 @@ import subprocess
 import imghdr
 import arrow
 import csv
+import re
 
 from requests_oauthlib import OAuth1Session
 from requests_oauthlib import oauth1_session
@@ -117,7 +118,7 @@ class Favs(object):
                 mtime = ftime
 
         mtime = mtime + 1
-        logging.debug("last flickr fav timestamp: %s", mtime)
+        logging.debug("last fav timestamp: %s", mtime)
         return mtime
 
 
@@ -125,7 +126,7 @@ class FlickrFavs(Favs):
     url = 'https://api.flickr.com/services/rest/'
 
     def __init__(self):
-        super(FlickrFavs, self).__init__('flickr')
+        super().__init__('flickr')
         self.get_uid()
         self.params = {
             'method': 'flickr.favorites.getList',
@@ -203,7 +204,7 @@ class FlickrFavs(Favs):
 
 class FivehpxFavs(Favs):
     def __init__(self):
-        super(FivehpxFavs, self).__init__('500px')
+        super().__init__('500px')
         self.params = {
             'consumer_key': shared.config.get('api_500px', 'api_key'),
             'rpp': 100,  # maximum
@@ -284,7 +285,7 @@ class TumblrFavs(Favs):
     url = 'https://api.tumblr.com/v2/user/likes'
 
     def __init__(self):
-        super(TumblrFavs, self).__init__('tumblr')
+        super().__init__('tumblr')
         self.oauth = TumblrOauth()
         self.params = {
             'after': self.lastpulled
@@ -325,7 +326,7 @@ class TumblrFavs(Favs):
 class DAFavs(Favs):
     def __init__(self):
         from pprint import pprint
-        super(DAFavs, self).__init__('deviantart')
+        super().__init__('deviantart')
         self.username = shared.config.get('api_deviantart', 'username'),
         self.oauth = DAOauth()
         self.likes = []
@@ -770,6 +771,108 @@ class TumblrFav(object):
             icntr = icntr + 1
 
 
+class TwitterFav(object):
+    def __init__(self, like):
+        self.like = like
+        self.postid = like.get('id')
+        self.target = os.path.join(
+            shared.config.get('archive', 'favorite'),
+            "twitter-%s.jpg" % (self.postid)
+        )
+
+    @property
+    def exists(self):
+        maybe = glob.glob(self.target.replace('.jpg', '_*.*'))
+        if len(maybe):
+            return True
+        return False
+
+    def run(self):
+        content = "%s" % self.like.get('text', '')
+        title = self.like.get('id')
+        user = self.like.get('user')
+
+        meta = {
+            'dt': arrow.get(
+                self.like.get('created_at'),
+                shared.ARROWFORMAT.get('twitter')
+            ),
+            'title': title,
+            'favorite-of': "https://twitter.com/%s/status/%s" % (
+                user.get('id'),
+                self.like.get('id')
+            ),
+            'tags': self.like.get('hashtags'),
+            'author': {
+                'name': user.get('name'),
+                'username': user.get('screen_name'),
+                'id': user.get('id'),
+                'url': 'http://twitter.com/%s' % user.get('screen_name')
+            },
+        }
+
+        for p in self.like.get('entities', {}).get('media', []):
+            img = ImgFav()
+            img.imgurl = p.get('media_url_https')
+
+            img.target = self.target.replace(
+                '.jpg',
+                '_%s.jpg' % p.get('id')
+            )
+            img.content = content
+            img.meta = meta
+            img.pull_image()
+            img.fix_extension()
+            img.write_exif()
+
+class TwitterFavs(Favs):
+    url = 'https://api.twitter.com/1.1/favorites/list.json'
+
+    def __init__(self):
+        super().__init__('twitter')
+        self.oauth = TwitterOauth()
+        self.params = {
+            'user_id': shared.config.get('api_twitter', 'userid'),
+            'count': 200
+        }
+
+    @property
+    def lastpulled(self):
+        lastid = 0
+        d = os.path.join(
+            shared.config.get('archive', 'favorite'),
+            "%s-*" % self.confgroup
+        )
+        files = glob.glob(d)
+        for f in files:
+            tweetid = int(re.sub(
+                '.*twitter-(?P<tweetid>[0-9]+)_.*',
+                '\g<tweetid>',
+                f
+            ))
+            if tweetid > lastid:
+                lastid = tweetid
+
+        logging.debug("last fav id: %s", lastid)
+        return lastid
+
+    def run(self):
+        if self.lastpulled > 0:
+            self.params.update({
+                'since_id': self.lastpulled
+            })
+
+        r = self.oauth.request(
+            self.url,
+            params=self.params
+        )
+
+        for like in json.loads(r.text):
+            fav = TwitterFav(like)
+            if not fav.exists:
+                fav.run()
+
+
 class Oauth2Flow(object):
     token_url = ''
 
@@ -800,7 +903,7 @@ class DAOauth(Oauth2Flow):
     token_url = 'https://www.deviantart.com/oauth2/token'
 
     def __init__(self):
-        super(DAOauth, self).__init__('deviantart')
+        super().__init__('deviantart')
 
 
 class Oauth1Flow(object):
@@ -906,7 +1009,7 @@ class FivehpxOauth(Oauth1Flow):
     authorize_url = 'https://api.500px.com/v1/oauth/authorize'
 
     def __init__(self):
-        super(FivehpxOauth, self).__init__('500px')
+        super().__init__('500px')
 
 
 class FlickrOauth(Oauth1Flow):
@@ -915,7 +1018,7 @@ class FlickrOauth(Oauth1Flow):
     authorize_url = 'https://www.flickr.com/services/oauth/authorize'
 
     def __init__(self):
-        super(FlickrOauth, self).__init__('flickr')
+        super().__init__('flickr')
 
 
 class TumblrOauth(Oauth1Flow):
@@ -924,7 +1027,16 @@ class TumblrOauth(Oauth1Flow):
     authorize_url = 'https://www.tumblr.com/oauth/authorize'
 
     def __init__(self):
-        super(TumblrOauth, self).__init__('tumblr')
+        super().__init__('tumblr')
+
+
+class TwitterOauth(Oauth1Flow):
+    request_token_url = 'https://api.twitter.com/oauth/request_token'
+    access_token_url = 'https://api.twitter.com/oauth/access_token'
+    authorize_url = 'https://api.twitter.com/oauth/authorize'
+
+    def __init__(self):
+        super().__init__('twitter')
 
 
 if __name__ == '__main__':
@@ -949,3 +1061,7 @@ if __name__ == '__main__':
     if shared.config.has_section('api_lastfm'):
         lfm = LastFM()
         lfm.run()
+
+    if shared.config.has_section('api_twitter'):
+        tw = TwitterFavs()
+        tw.run()
