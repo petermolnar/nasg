@@ -576,25 +576,20 @@ def __setup_sitevars():
     for o in config.options(section):
         SiteVars.update({o: config.get(section, o)})
 
-    # add site author
-    section = 'author'
-    SiteVars.update({section: {}})
-    for o in config.options(section):
-        SiteVars[section].update({o: config.get(section, o)})
+    # TODO this should be a nice recursive function instead
+    # extra site section
+    for section in config.get('site', 'appendwith').split():
+        SiteVars.update({section: {}})
+        for o in config.options(section):
+            SiteVars[section].update({o: config.get(section, o)})
+        if not config.get(section, 'appendwith', fallback=False):
+            continue
+        # subsections
+        for sub in config.get(section, 'appendwith').split():
+            SiteVars[section].update({sub: {}})
+            for o in config.options(sub):
+                SiteVars[section][sub].update({o: config.get(sub, o)})
 
-    # add extra sections to author
-    for sub in config.get('author', 'appendwith').split():
-        SiteVars[section].update({sub: {}})
-        for o in config.options(sub):
-            SiteVars[section][sub].update({o: config.get(sub, o)})
-
-    # add payment
-    section = 'payment'
-    SiteVars.update({section: {}})
-    for o in config.options(section):
-        SiteVars[section].update({o: config.get(section, o)})
-
-    # push the whole thing into cache
     return SiteVars
 
 
@@ -620,7 +615,8 @@ def notify(msg):
 ARROWFORMAT = {
     'iso': 'YYYY-MM-DDTHH:mm:ssZ',
     'display': 'YYYY-MM-DD HH:mm',
-    'rcf': 'ddd, DD MMM YYYY HH:mm:ss Z'
+    'rcf': 'ddd, DD MMM YYYY HH:mm:ss Z',
+    'twitter': 'ddd MMM DD HH:mm:ss Z YYYY'
 }
 
 LLEVEL = {
