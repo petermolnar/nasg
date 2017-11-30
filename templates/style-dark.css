@@ -94,15 +94,25 @@ blockquote {
 table {
     border-collapse: collapse;
     border-spacing: 0;
+    width: 100%;
 }
 
 td, th {
     padding: 0.3rem;
-    border: 1px solid #333;
+    border: 1px solid #111;
+    text-align:left;
 }
 
 th {
     font-weight: bold;
+}
+
+th,
+tr:nth-child(odd) { 
+    background-color: #333;
+}
+tr:nth-child(even) { 
+    background-color: #444;
 }
 
 hr {
@@ -225,9 +235,17 @@ code.sourceCode span.va { color: turquoise; }
 
 /* licence, time, author */
 .h-entry footer p {
-    opacity: 0.7;
-    padding: 0 0.6rem 0 0;
+    color: #999;
+    padding: 0.3rem 0;
     display: inline-block;
+}
+
+.h-entry footer a {
+    color: #ccc;
+}
+
+.h-entry footer a:hover {
+    color: #eee;
 }
 
 .e-content a {
@@ -315,9 +333,17 @@ code.sourceCode span.va { color: turquoise; }
 }
 
 .content-footer * {
-    opacity: 0.9;
+    color: #999;
     display: inline-block;
     vertical-align: top;
+}
+
+.content-footer a {
+    color: #999;
+}
+
+.content-footer a:hover {
+    color: #eee;
 }
 
 .content-footer img {
@@ -633,19 +659,18 @@ figcaption {
 
 @media print {
     * {
-       background-color: #fff !important;
+        background-color: #fff !important;
         color: #222;
     }
 
     html, body {
-        font-size: 10pt !important;
+        font-size: 11pt !important;
         text-shadow: unset !important;
+        font-family: Verdana, sans-serif !important;
     }
 
     @page {
-        margin: 0.5in;
-        orphans: 4;
-        widows: 3;
+        margin: 0.6in 0.5in;
     }
 
     .limit,
@@ -661,20 +686,21 @@ figcaption {
     p, li, blockquote, figure, .footnotes {
         page-break-inside: avoid !important;
     }
-
-    figure {
-        max-height: 45vh;
-    }
-
+ 
     a {
         border: none;
         color: #000;
+    }
+    td, th {
+        border: 1pt solid #666;
     }
 
     .content-note, .content-header, .content-footer,
     video, audio,
     .footnotes ol li a[href^="#"],
-    .footnotes ol li a[href^="#"]:after {
+    .footnotes ol li a[href^="#"]:after,
+    .exif svg,
+    .donation {
         display:none;
         visibility: hidden;
     }
@@ -718,4 +744,15 @@ figcaption {
     code.sourceCode span.ss { color: black; }
     code.sourceCode span.st { color: magenta; }
     code.sourceCode span.va { color: darkturquoise; }
+    
+    figcaption {
+        font-size: 0.9em;
+    }
+  
+    .adaptimg {
+        max-height: 35vh;
+        max-width: 90vw;
+        outline: none;
+        border: 1px solid #000;
+    }
 }

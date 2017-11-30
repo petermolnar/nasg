@@ -1,6 +1,7 @@
 {% include 'block_header_open.html' %}
 	<title>{{ taxonomy.title }}</title>
-	<link rel="alternate" type="application/rss+xml" title="{{ taxonomy.title }} feed" href="{{ taxonomy.feed }}" />
+	<link rel="alternate" type="application/atom+xml" title="{{ taxonomy.title }} feed" href="{{ taxonomy.feed }}" />
+	<link rel="self" href="{{ site.url }}{{ taxonomy.feed }}/" />
 
 {% include 'block_header_close.html' %}
 
@@ -8,7 +9,7 @@
 	<aside class="follow">
 		<p>
 			<svg class="icon"><use xlink:href="#icon-rss" /></svg>
-			<a title="follow {{ taxonomy.title }}" href="{{ site.url }}{{ taxonomy.feed }}">RSS/Atom feed</a>
+			<a title="follow {{ taxonomy.title }}" href="{{ site.url }}{{ taxonomy.feed }}">Atom feed</a>
 		</p>
 	</aside>
 
