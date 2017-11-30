@@ -12,10 +12,12 @@ import asyncio
 from math import ceil
 import csv
 import frontmatter
+import requests
 import arrow
 import langdetect
 import wand.image
 from emoji import UNICODE_EMOJI
+from feedgen.feed import FeedGenerator
 import shared
 
 
@@ -185,7 +187,10 @@ class Category(NoDupeContainer):
 
     @property
     def title(self):
-        return self.name
+        return ' - '.join([
+            self.name,
+            shared.config.get('common', 'domain')
+        ])
 
     @property
     def url(self):
@@ -218,6 +223,64 @@ class Category(NoDupeContainer):
             os.makedirs(x)
         return x
 
+    def write_feed(self, posttmpls):
+        dirname = self.path_paged(1, feed=True)
+        o = os.path.join(dirname, self.feedfile)
+        logging.info(
+            "Rendering feed of category %s to  %s",
+            self.name,
+            o
+        )
+
+        flink = "%s%s%s" % (
+            shared.config.get('site', 'url'),
+            self.url,
+            shared.config.get('site', 'feed')
+        )
+        fg = FeedGenerator()
+        fg.id(flink)
+        fg.link(
+            href=flink,
+            rel='self'
+        )
+        fg.title(self.title)
+        fg.author({
+            'name': shared.site.get('author').get('name'),
+            'email': shared.site.get('author').get('email')
+        })
+        fg.logo('%s/favicon.png' % shared.site.get('url'))
+        fg.updated(arrow.get(self.mtime).to('utc').datetime)
+
+        for p in reversed(posttmpls):
+            link = '%s/%s' % (shared.site.get('url'), p.get('slug'))
+            dt =  arrow.get(p.get('pubtime')).to('utc')
+
+            fe = fg.add_entry()
+            fe.id(link)
+            fe.link(href='%s/' % (link))
+            fe.title(p.get('title'))
+            fe.published(dt.datetime)
+            fe.updated(dt.datetime)
+            fe.content(content=p.get('html'), type='CDATA')
+            fe.rights('%s %s %s' % (
+                dt.format('YYYY'),
+                shared.site.get('author').get('name'),
+                p.get('licence').get('text')
+            ))
+
+        with open(o, 'wb') as f:
+            f.write(fg.atom_str(pretty=True))
+
+        # ping pubsub
+        r = requests.post(
+            shared.site.get('websub').get('hub'),
+            data={
+                'hub.mode': 'publish',
+                'hub.url': flink
+            }
+        )
+        logging.info(r.text)
+
     def write_html(self, path, content):
         with open(path, 'wt') as out:
             logging.debug('writing file %s', path)
@@ -240,6 +303,8 @@ class Category(NoDupeContainer):
                 ))[start:end]
             ]
             # define data for template
+            # TODO move the pagination links here, the one in jinja
+            # is overcomplicated
             tmplvars = {
                 'taxonomy': {
                     'title': self.title,
@@ -274,19 +339,7 @@ class Category(NoDupeContainer):
             self.write_html(o, r)
             # render feed
             if page == 1:
-                dirname = self.path_paged(page, feed=True)
-                o = os.path.join(dirname, self.feedfile)
-                logging.info(
-                    "Rendering feed of category %s to  %s",
-                    self.name,
-                    o
-                )
-                tmplfile = "%s_%s.html" % (
-                    self.__class__.__name__,
-                    self.feeddir
-                )
-                r = shared.j2.get_template(tmplfile).render(tmplvars)
-                self.write_html(o, r)
+                self.write_feed(posttmpls)
             # inc. page counter
             page = page + 1
 
@@ -1320,6 +1373,8 @@ def build():
     for name, c in collector_categories:
         if not c.is_uptodate or shared.config.getboolean('params', 'force'):
             worker.append(c.render())
+            # TODO move ping to separate function and add it as a task
+            # TODO separate an aiohttpworker?
 
     # add magic.php rendering
     worker.append(magic.render())
