@@ -1,3 +1,34 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim: set fileencoding=utf-8 :
+
+__author__ = "Peter Molnar"
+__copyright__ = "Copyright 2017, Peter Molnar"
+__license__ = "GPLv3"
+__version__ = "2.0"
+__maintainer__ = "Peter Molnar"
+__email__ = "hello@petermolnar.eu"
+__status__ = "Production"
+
+"""
+    silo archiver module of NASG
+    Copyright (C) 2017 Peter Molnar
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+"""
+
 import configparser
 import os
 import re
@@ -264,27 +295,6 @@ class BaseDB(object):
         cursor.execute('PRAGMA auto_vacuum;')
         self.db.close()
 
-# class TokenDBng(BaseDB):
-    # def __init__(self):
-        #self.fpath = config.get('var', 'tokendb')
-        # super().__init__(self.fpath)
-        #cursor = self.db.cursor()
-        # cursor.execute('''
-        # CREATE TABLE IF NOT EXISTS  `tokens` (
-        #`service` TEXT PRIMARY KEY NOT NULL UNIQUE,
-        #`timestamp` TIMESTAMP NOT NULL DEFAULT (strftime('%s', 'now'))
-        #`oauth_token` TEXT NOT NULL,
-        #`oauth_token_secret` TEXT NOT NULL,
-        #`access_token` TEXT NOT NULL,
-        #`access_token_secret` TEXT NOT NULL,
-        #`verifier` TEXT NOT NULL
-        #);
-        #''')
-        # self.db.commit()
-
-
-# TODO class SearchDBng(object):
-# TODO class EXIFDBng(object):
 
 class TokenDB(object):
     def __init__(self, uuid='tokens'):
@@ -576,8 +586,9 @@ def __setup_sitevars():
     for o in config.options(section):
         SiteVars.update({o: config.get(section, o)})
 
-    # TODO this should be a nice recursive function instead
-    # extra site section
+    # this should be a nice recursive function instead
+    # extra site section - nope, because it relies on order
+    # and author won't get appended
     for section in config.get('site', 'appendwith').split():
         SiteVars.update({section: {}})
         for o in config.options(section):

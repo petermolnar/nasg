@@ -76,21 +76,28 @@
 			{% endif %}
 			</p>
 			<ul>
-				{% for value in [3] %}
-					{% for name, url in site.payment.items() %}
-					<li>
-						<a rel="payment" title="pay {{ site.author.name }} via {{ name }} {{ site.currency }}{{ value }}" href="{{ url }}{{value}}">
-							{{ site.currency }}{{value}}
-							<span class="method">
-								<svg class="icon"><use xlink:href="#icon-{{ name }}"></use></svg>
-								with {{ name }}
-							</span>
-						</a>
-					</li>
-					{% endfor %}
+				{% for name, url in site.payment.items() %}
+				<li>
+					<a rel="payment" title="pay {{ site.author.name }} via {{ name }} {{ site.donation.currency }}{{ site.donation.amount }}" href="{{ url }}{{ site.donation.amount }}">
+						{{ site.donation.currency }}{{ site.donation.amount }}
+						<span class="method">
+							<svg class="icon"><use xlink:href="#icon-{{ name }}"></use></svg>
+							with {{ name }}
+						</span>
+					</a>
+				</li>
+				{% endfor %}
+				{% for name, walletid in site.cryptocurrencies.items() %}
+				<!--
+				<li>
+					<a rel="payment" title="pay {{ site.author.name }} with {{ name }}" href="#">
+						<span class="wallet">{{ walletid }}</span>
+						<span class="method">{{ name }}</span>
+					</a>
+				</li>
+				-->
 				{% endfor %}
 			</ul>
-
 		</aside>
 
 

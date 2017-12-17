@@ -27,6 +27,12 @@
 					</dd>
 {% endfor %}
 				</dl>
+				<dl class="cryptocurrencies">
+{% for name, walletid in site.cryptocurrencies.items() %}
+					<dt>{{ name }}</dt>
+					<dd>{{ walletid }}</dd>
+{% endfor %}
+				</dl>
 			</nav>
 		</footer>
 

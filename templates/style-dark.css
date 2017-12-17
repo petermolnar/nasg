@@ -376,6 +376,18 @@ code.sourceCode span.va { color: turquoise; }
     content: '';
 }
 
+.content-footer dl.cryptocurrencies {
+    font-size: 0.7rem;
+    margin-top: 0.3rem;
+}
+    
+.content-footer dl.cryptocurrencies dt {
+    display: inline-block;
+    visibility: visible;
+    text-transform: uppercase;
+}
+
+
 input {
     vertical-align:middle;
     border: none;
