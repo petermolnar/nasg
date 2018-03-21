@@ -506,6 +506,22 @@ class WebmentionQueue(BaseDB):
     def finish(self):
         self.db.close()
 
+    def exists(self, source, target):
+        logging.debug(
+            'checking webmention existence for source: %s ; target: %s',
+            source,
+            target
+        )
+        cursor = self.db.cursor()
+        cursor.execute(
+            '''SELECT id FROM queue WHERE source=? AND target=? LIMIT 1''',
+            (source,target)
+        )
+        rows = cursor.fetchall()
+        if not rows:
+            return False
+        return int(rows.pop()[0])
+
     def queue(self, source, target):
         cursor = self.db.cursor()
         cursor.execute(
@@ -518,16 +534,26 @@ class WebmentionQueue(BaseDB):
         self.db.commit()
         return r
 
+    def requeue(self, id):
+        logging.debug('setting %s webmention to undone', id)
+        cursor = self.db.cursor()
+        cursor.execute("UPDATE queue SET status = 0 where ID=?", (id,))
+        self.db.commit()
+
     def get_queued(self, fname=None):
         logging.debug('getting queued webmentions for %s', fname)
         ret = []
         cursor = self.db.cursor()
-        cursor.execute(
-            '''SELECT * FROM queue WHERE target LIKE ? AND status = 0''',
-            ('%' +
-             fname +
-             '%',
-             ))
+        if fname:
+            cursor.execute(
+                '''SELECT * FROM queue WHERE target LIKE ? AND status = 0''',
+                ('%' + fname + '%',)
+            )
+        else:
+            cursor.execute(
+                '''SELECT * FROM queue WHERE status = 0'''
+            )
+
         rows = cursor.fetchall()
         for r in rows:
             ret.append({
@@ -543,6 +569,33 @@ class WebmentionQueue(BaseDB):
         cursor = self.db.cursor()
         cursor.execute("UPDATE queue SET status = 1 where ID=?", (id,))
         self.db.commit()
+
+    def maybe_queue(self, source, target):
+        exists = self.exists(source, target)
+        cursor = self.db.cursor()
+        if exists:
+            self.requeue(exists)
+            return exists
+
+        return self.queue(source, target)
+
+    def get_outbox(self):
+        logging.debug('getting queued outgoing webmentions')
+        cursor = self.db.cursor()
+        ret = []
+        cursor.execute(
+            '''SELECT * FROM queue WHERE source LIKE ? AND status = 0''',
+            ('%' + config.get('common', 'domain') + '%',)
+        )
+        rows = cursor.fetchall()
+        for r in rows:
+            ret.append({
+                'id': r[0],
+                'dt': r[1],
+                'source': r[2],
+                'target': r[3],
+            })
+        return ret
 
 
 def __expandconfig():
@@ -601,6 +654,15 @@ def __setup_sitevars():
             for o in config.options(sub):
                 SiteVars[section][sub].update({o: config.get(sub, o)})
 
+    tips = {}
+    for s in config.sections():
+        if s.startswith('tip_'):
+            for key in config.options(s):
+                if key not in tips:
+                    tips.update({key: {}})
+                tips[key].update({s.replace('tip_', ''): config.get(s, key)})
+
+    SiteVars.update({'tips': tips})
     return SiteVars
 
 
