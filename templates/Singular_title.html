@@ -1,14 +1,12 @@
 {% if post.is_reply %}
-	<p class="p-name">
+	<span class="p-name">
 		<svg class="icon"><use xlink:href="#icon-reply" /></svg>
 		<a href="{{ post.is_reply }}" class="u-in-reply-to" title="Reply to: {{ post.is_reply }}">
 			{{ post.is_reply }}
 		</a>
-	</p>
+	</span>
 {% else %}
-	<p>
-		<a href="/{{ post.slug }}/" title="{{ post.title }}">
-			<span class="entry-title p-name">{{ post.title }}</span>
-		</a>
-	</p>
+	<a href="/{{ post.slug }}/" title="{{ post.title }}">
+		<span class="entry-title p-name">{{ post.title }}</span>
+	</a>
 {% endif %}

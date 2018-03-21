@@ -1,9 +1,9 @@
 {% include 'block_header_open.html' %}
 
-	<title>{{ post.title }} | {{ site.domain }}</title>
+	<title>{{ post.title }}</title>
 	<meta name="author" content="{{ site.author.name }}">
 	<meta name="keywords" content="{{ post.tags|join(',') }}">
-	<meta name="description" content="{{ post.summary|e }}">
+	<meta name="description" content="{{ post.description|e }}">
 
 	<link rel="canonical" href="{{ site.url }}/{{ post.slug }}/" />
 	<link rel="shortlink" href="{{ site.url }}/{{ post.shortslug }}" />
@@ -32,6 +32,9 @@
 
 		<div class="e-content entry-content">
 			<div class="content-inner">
+				{% if post.photo %}
+					{{ post.photo }}
+				{% endif %}
 				{{ post.html }}
 			</div>
 		</div>
@@ -66,9 +69,9 @@
 		<aside class="donation">
 			<p>
 			{% if post.category == 'photo' %}
-				Did you like this photo?<br />Leave a tip!
+				Did you like this photo?<br />Leave a tip! If you're interested in prints, please get in touch.
 			{% elif post.category == 'article' %}
-				Did you find this article useful?<br />Buy me a coffee, so I can write more like this.<br />If you want my help with for your project, get in touch.
+				Did you find this article useful?<br />Buy me a coffee, so I can write more like this.<br />If you want my help for your project, get in touch.
 			{% elif post.category == 'journal' %}
 				Did you like this entry?<br />Encourage me to write more of them.
 			{% else %}
@@ -76,26 +79,16 @@
 			{% endif %}
 			</p>
 			<ul>
-				{% for name, url in site.payment.items() %}
+				{% for method, data in site.tips.items() %}
 				<li>
-					<a rel="payment" title="pay {{ site.author.name }} via {{ name }} {{ site.donation.currency }}{{ site.donation.amount }}" href="{{ url }}{{ site.donation.amount }}">
-						{{ site.donation.currency }}{{ site.donation.amount }}
+					<a rel="payment" title="pay {{ site.author.name }} via {{ data.label }} {{ data.value }}" href="{{ data.url }}">
+						{{ data.value }}
 						<span class="method">
-							<svg class="icon"><use xlink:href="#icon-{{ name }}"></use></svg>
-							with {{ name }}
+							<svg class="icon"><use xlink:href="#icon-{{ method }}"></use></svg>
+							with {{ data.label }}
 						</span>
 					</a>
 				</li>
-				{% endfor %}
-				{% for name, walletid in site.cryptocurrencies.items() %}
-				<!--
-				<li>
-					<a rel="payment" title="pay {{ site.author.name }} with {{ name }}" href="#">
-						<span class="wallet">{{ walletid }}</span>
-						<span class="method">{{ name }}</span>
-					</a>
-				</li>
-				-->
 				{% endfor %}
 			</ul>
 		</aside>

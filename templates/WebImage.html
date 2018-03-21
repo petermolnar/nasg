@@ -1,6 +1,6 @@
 <figure class="photo">
 {% if photo.target %}<a href="{{ photo.target }}" class="{{ photo.css }}">{% endif %}
-<img src="{{ photo.src }}" title="{{ photo.title }}" alt="{{ photo.alt }}" class="adaptimg" />
+<img src="{{ photo.src }}" title="{{ photo.title }}" alt="{{ photo.alt }}" class="adaptimg" width="{{ photo.width }}" height="{{ photo.height }}" />
 {% if photo.target %}</a>{% endif %}
 <figcaption>
 {{ photo.alt }}{% if photo.is_photo %}<span class="author"> - photo by {{ photo.author }}</span>

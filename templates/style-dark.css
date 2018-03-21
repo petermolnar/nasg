@@ -30,9 +30,9 @@ footer, header, hgroup, menu, nav, section {
 
 html, body {
     min-height: 100%;
-    font-size:19px;
-    line-height: 1.2rem;
-    font-family: "Liberation Sans", "Helvetica Neue", "Roboto", "Arial", sans-serif;
+    font-size:20px;
+    line-height: 1.3em;
+    font-family: "Liberation Sans", "Helvetica Neue", "Roboto", "Helvetica", sans-serif;
     font-weight: normal;
     color: #ccc;
     text-shadow: 1px 1px 1px rgba(0,0,0,0.004);
@@ -85,10 +85,10 @@ li p {
 }
 
 blockquote {
-    margin: 0.3rem;
+    margin: 0.6rem;
     padding-left: 0.6rem;
-    border-left: 2px solid #999;
-    font-family: "Times New Roman", serif;
+    border-left: 4px solid #999;
+    color: #999;
 }
 
 table {
@@ -108,10 +108,10 @@ th {
 }
 
 th,
-tr:nth-child(odd) { 
+tr:nth-child(odd) {
     background-color: #333;
 }
-tr:nth-child(even) { 
+tr:nth-child(even) {
     background-color: #444;
 }
 
@@ -147,21 +147,26 @@ h2 {
 
 h3 {
     font-size: 1rem;
+    border-bottom: 1px dotted #777;
+    
 }
 
 .icon {
-    transform: rotate(0.01deg);
-    width: 19px;
-    height: 19px;
-    display: inline;
+    /* svg sharpness hack */
+    transform: rotate(0deg);
+    width: 16px;
+    height: 16px;
+    display: inline-block;
     fill: currentColor;
     vertical-align:middle;
     overflow: visible;
+    vertical-align:calc;
+    margin-right: 0.1rem;
 }
 
 code,
 pre {
-    font-family: "Inconsolata", "Courier New", monospace;
+    font-family: "Courier New", "Courier", monospace;
     font-size: 0.8rem;
     color: limegreen;
     background-color: #222;
@@ -178,6 +183,7 @@ pre {
 
 code {
     padding: 0.1rem;
+    
 }
 
 pre code {
@@ -210,7 +216,7 @@ code.sourceCode span.va { color: turquoise; }
 
 .limit,
 .content-body {
-    max-width: 70ch;
+    max-width: 72ch;
     margin: 1rem auto;
 }
 
@@ -362,9 +368,7 @@ code.sourceCode span.va { color: turquoise; }
 }
 
 .content-footer dl dd {
-
     display:inline-block;
-
 }
 
 .content-footer dl dd:after {
@@ -375,18 +379,6 @@ code.sourceCode span.va { color: turquoise; }
 .content-footer dl dd:last-of-type:after {
     content: '';
 }
-
-.content-footer dl.cryptocurrencies {
-    font-size: 0.7rem;
-    margin-top: 0.3rem;
-}
-    
-.content-footer dl.cryptocurrencies dt {
-    display: inline-block;
-    visibility: visible;
-    text-transform: uppercase;
-}
-
 
 input {
     vertical-align:middle;
@@ -495,7 +487,7 @@ figcaption {
 .follow a:hover,
 .more a:hover,
 .pagination a:hover {
-    border-bottom-color: #000;
+    border-bottom-color: #fff;
 }
 
 .more {
@@ -626,7 +618,7 @@ figcaption {
     border: 1px dashed #933;
     padding: 0.3rem;
     background-color: #111;
-    width: 7rem;
+    width: 8rem;
 }
 
 .donation li .method {
@@ -678,7 +670,7 @@ figcaption {
     html, body {
         font-size: 11pt !important;
         text-shadow: unset !important;
-        font-family: Verdana, sans-serif !important;
+        font-family: Helvetica, sans-serif !important;
     }
 
     @page {
@@ -698,17 +690,21 @@ figcaption {
     p, li, blockquote, figure, .footnotes {
         page-break-inside: avoid !important;
     }
- 
+
     a {
         border: none;
         color: #000;
     }
+
     td, th {
         border: 1pt solid #666;
     }
 
-    .content-note, .content-header, .content-footer,
-    video, audio,
+    .content-note,
+    .content-header,
+    .content-footer,
+    video,
+    audio,
     .footnotes ol li a[href^="#"],
     .footnotes ol li a[href^="#"]:after,
     .exif svg,
@@ -724,13 +720,21 @@ figcaption {
         border: none;
     }
 
-    pre.sourceCode, code, pre {
+    code, pre {
+       max-width: 96%;
+       border: none;
        color: #222;
        word-break: break-all;
        word-wrap: break-word;
-       overflow: initial;
+       white-space: pre-wrap;
+       overflow:initial;
        line-height: 1rem;
        page-break-inside: enabled;
+       font-family: "Courier", "Courier New", monospace !important;
+    }
+
+    pre {
+        border: 1pt solid #999;
     }
 
     code.sourceCode span    { color: black; }
@@ -756,15 +760,20 @@ figcaption {
     code.sourceCode span.ss { color: black; }
     code.sourceCode span.st { color: magenta; }
     code.sourceCode span.va { color: darkturquoise; }
-    
+
     figcaption {
         font-size: 0.9em;
     }
-  
+
     .adaptimg {
         max-height: 35vh;
         max-width: 90vw;
         outline: none;
         border: 1px solid #000;
+    }
+
+    .h-feed .h-entry {
+        page-break-after:always;
+        border:none;
     }
 }

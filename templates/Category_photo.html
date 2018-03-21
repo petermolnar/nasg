@@ -5,7 +5,7 @@
 
 {% include 'block_header_close.html' %}
 
-<section class="content-body h-feed">
+<section class="content-body h-feed photos">
 	<aside class="follow">
 		<p>
 			<svg class="icon"><use xlink:href="#icon-rss" /></svg>
@@ -13,32 +13,8 @@
 		</p>
 	</aside>
 
-	<h1 class="p-name hide">{{ taxonomy.name }}</h1>
 	{% for post in posts %}
-		<article class="h-entry hentry">
-			<header>
-				<h2>{% include 'Singular_title.html' %}</h2>
-			</header>
-
-
-			{% if post.summary %}
-			<div class="e-summary entry-summary">
-				{{ post.summary }}
-				<span class="more">
-					<a href="/{{ post.slug }}" title="{{ post.title }}"></a>
-				</span>
-				<br class="clear" />
-			</div>
-			{% else %}
-			<div class="e-content entry-content">
-				{% if post.photo %}
-					{{ post.photo }}
-				{% endif %}
-				{{ post.html }}
-			</div>
-			{% endif %}
-		</article>
-
+		{{ post.photo }}
 	{% endfor %}
 </section>
 
