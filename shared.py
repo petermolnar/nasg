@@ -40,6 +40,8 @@ import sqlite3
 import requests
 from slugify import slugify
 import jinja2
+from inspect import getsourcefile
+import sys
 
 
 class CMDLine(object):
@@ -603,7 +605,12 @@ def __expandconfig():
         interpolation=configparser.ExtendedInterpolation(),
         allow_no_value=True
     )
-    c.read('config.ini')
+    conffile = os.path.join(
+        os.path.dirname(os.path.abspath(getsourcefile(lambda:0))),
+        'config.ini'
+    )
+    c.read(conffile)
+
     for s in c.sections():
         for o in c.options(s):
             curr = c.get(s, o)
