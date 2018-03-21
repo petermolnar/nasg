@@ -30,7 +30,8 @@ __status__ = "Production"
 """
 from sanic import Sanic
 import sanic.response
-from sanic.log import log as logging
+#from sanic.log import log as logging
+import logging
 import validators
 import urllib.parse
 import shared
@@ -48,7 +49,8 @@ if __name__ == '__main__':
 
     # log_config=None prevents creation of access_log and error_log files
     # since I'm running this from systemctl it already goes into syslog
-    app = Sanic('router', log_config=None)
+    app = Sanic('router')
+    #app = Sanic('router', log_config=None)
     # this is ok to be read-only
     sdb = shared.SearchDB()
 
@@ -100,7 +102,7 @@ if __name__ == '__main__':
         # otherwise it'll become read-only for reasons I'm yet to grasp
         # the actual parsing will be done at site generation time
         wdb = shared.WebmentionQueue()
-        wdb.queue(source, target)
+        wdb.maybe_queue(source, target)
 
         # telegram notification, if set
         shared.notify(
@@ -112,4 +114,5 @@ if __name__ == '__main__':
         response = sanic.response.text("Accepted", status=202)
         return response
 
-    app.run(host="127.0.0.1", port=8008, log_config=None)
+    #app.run(host="127.0.0.1", port=9002, log_config=None)
+    app.run(host="127.0.0.1", port=9002)

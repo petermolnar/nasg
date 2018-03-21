@@ -40,6 +40,7 @@ from urllib.parse import urlparse
 import asyncio
 from math import ceil
 import csv
+import html
 import frontmatter
 import requests
 import arrow
@@ -366,6 +367,7 @@ class Category(NoDupeContainer):
             tmplfile = "%s.html" % (self.__class__.__name__)
             r = shared.j2.get_template(tmplfile).render(tmplvars)
             self.write_html(o, r)
+
             # render feed
             if page == 1:
                 self.write_feed(posttmpls)
@@ -437,12 +439,13 @@ class Singular(object):
 
     @property
     def is_uptodate(self):
-        if not os.path.isfile(self.htmlfile):
-            return False
-        mtime = os.path.getmtime(self.htmlfile)
-        if mtime >= self.stime:
-            return True
-        return False
+        for f in [self.htmlfile]:
+            if not os.path.isfile(f):
+                return False
+            mtime = os.path.getmtime(f)
+            if mtime < self.stime:
+                return False
+        return True
 
     @property
     def htmlfile(self):
@@ -562,7 +565,7 @@ class Singular(object):
         ])
 
         if self.photo:
-            corpus = corpus + "\n".join(self.meta.get('tags', []))
+            corpus = corpus + "\n".join(self.tags)
 
         return corpus
 
@@ -630,9 +633,9 @@ class Singular(object):
     def html(self):
         html = "%s" % (self.body)
 
-        # add photo
-        if self.photo:
-            html = "%s\n%s" % (str(self.photo), html)
+        ## add photo
+        #if self.photo:
+            #html = "%s\n%s" % (str(self.photo), html)
 
         return shared.Pandoc().convert(html)
 
@@ -650,7 +653,9 @@ class Singular(object):
         s = self.meta.get('summary', '')
         if not s:
             return s
-        return shared.Pandoc().convert(s)
+        if not hasattr(self, '_summary'):
+            self._summary = shared.Pandoc().convert(s)
+        return self._summary
 
     @property
     def shortslug(self):
@@ -662,6 +667,14 @@ class Singular(object):
         if self.photo and self.photo.is_photo:
             urls.append("https://brid.gy/publish/flickr")
         return urls
+
+    @property
+    def tags(self):
+        return self.meta.get('tags', [])
+
+    @property
+    def description(self):
+        return html.escape(self.meta.get('summary', ''))
 
     @property
     def tmplvars(self):
@@ -688,10 +701,17 @@ class Singular(object):
                 'is_reply': self.is_reply,
                 'age': int(self.published.format('YYYY')) - int(arrow.utcnow().format('YYYY')),
                 'summary': self.summary,
+                'description': self.description,
                 'replies': self.replies,
                 'reactions': self.reactions,
-                'syndicate': self.syndicate
+                'syndicate': self.syndicate,
+                'tags': self.tags,
+                'photo': False
             }
+            if self.photo:
+                self._tmplvars.update({
+                    'photo': str(self.photo)
+                })
         return self._tmplvars
 
     async def render(self):
@@ -1063,9 +1083,28 @@ class WebImage(object):
                 )
 
     @property
+    def src_size(self):
+        width = int(self.meta.get('ImageWidth'))
+        height = int(self.meta.get('ImageHeight'))
+
+        if not self.is_downsizeable:
+            return width, height
+
+        return self._intermediate_dimension(
+            shared.config.getint('photo', 'default'),
+            width,
+            height
+        )
+
+
+    @property
     def tmplvars(self):
+        src_width, src_height = self.src_size
+
         return {
             'src': self.src,
+            'width': src_width,
+            'height': src_height,
             'target': self.href,
             'css': self.cssclass,
             'title': self.title,
@@ -1116,13 +1155,22 @@ class Comment(object):
 
     @property
     def author(self):
-        url = self.meta.get('author').get('url', self.source)
-        name = self.meta.get('author').get('name', urlparse(url).hostname)
-
-        return {
-            'name': name,
-            'url': url
+        r = {
+            'name': urlparse(self.source).hostname,
+            'url': self.source
         }
+
+        author = self.meta.get('author')
+        if not author:
+            return r
+
+        if 'name' in author:
+            r.update({ 'name': self.meta.get('author').get('name')})
+
+        if 'url' in author:
+            r.update({ 'name': self.meta.get('author').get('url')})
+
+        return r
 
     @property
     def type(self):
@@ -1341,10 +1389,15 @@ def build():
 
     collector_front = Category()
     collector_categories = NoDupeContainer()
+    sitemap = {}
+
 
     for f, post in content:
         logging.info("PARSING %s", f)
         post.init_extras()
+
+        # add to sitemap
+        sitemap.update({ post.url: post.mtime })
 
         # extend redirects
         for r in post.redirects:
@@ -1419,9 +1472,26 @@ def build():
     for item in os.listdir(src):
         s = os.path.join(src, item)
         d = os.path.join(shared.config.get('common', 'build'), item)
-        if not os.path.exists(d):
+        if not os.path.exists(d) or shared.config.getboolean('params', 'force'):
             logging.debug("copying static file %s to %s", s, d)
             shutil.copy2(s, d)
+        if '.html' in item:
+            url = "%s/%s" % (shared.config.get('site', 'url'), item)
+            sitemap.update({
+                url: os.path.getmtime(s)
+            })
+
+    # dump sitemap, if needed
+    sitemapf = os.path.join(shared.config.get('common', 'build'), 'sitemap.txt')
+    sitemap_update = True
+    if os.path.exists(sitemapf):
+        if int(max(sitemap.values())) <= int(os.path.getmtime(sitemapf)):
+            sitemap_update = False
+
+    if sitemap_update:
+        logging.info('writing updated sitemap')
+        with open(sitemapf, 'wt') as smap:
+            smap.write("\n".join(sorted(sitemap.keys())))
 
 
 if __name__ == '__main__':
