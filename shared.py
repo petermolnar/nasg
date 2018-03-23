@@ -43,7 +43,6 @@ import jinja2
 from inspect import getsourcefile
 import sys
 
-
 class CMDLine(object):
     def __init__(self, executable):
         self.executable = self._which(executable)
@@ -673,24 +672,46 @@ def __setup_sitevars():
     return SiteVars
 
 
-def notify(msg):
-    # telegram notification, if set
-    if not config.has_section('api_telegram'):
-        return
+#def notify(msg):
 
-    url = "https://api.telegram.org/bot%s/sendMessage" % (
-        config.get('api_telegram', 'api_token')
-    )
-    data = {
-        'chat_id': config.get('api_telegram', 'chat_id'),
-        'text': msg
-    }
-    # fire and forget
-    try:
-        requests.post(url, data=data)
-    except BaseException:
-        pass
+    ### telegram notification, if set
+    ##if not config.has_section('api_telegram'):
+        ##return
 
+    ##url = "https://api.telegram.org/bot%s/sendMessage" % (
+        ##config.get('api_telegram', 'api_token')
+    ##)
+    ##data = {
+        ##'chat_id': config.get('api_telegram', 'chat_id'),
+        ##'text': msg
+    ##}
+    ### fire and forget
+    ##try:
+        ##requests.post(url, data=data)
+    ##except BaseException:
+        ##pass
+
+    #headers = {
+        #'Subject': 'notification from NASG',
+        #'Content-Type': 'text/plain; charset=utf-8',
+        #'Content-Disposition': 'inline',
+        #'Content-Transfer-Encoding': '8bit',
+        #'From': 'nasg@%s' % (socket.getfqdn()),
+        #'To': config.get('author', 'email'),
+        #'Date': arrow.now().strftime('%a, %d %b %Y  %H:%M:%S %Z'),
+    #}
+
+    ## create the message
+    #mail = ''
+    #for key, value in headers.items():
+        #mail += "%s: %s\n" % ( key, value )
+
+    ## add contents
+    #mail += "\n%s\n"  % ( msg )
+
+    #s = smtplib.SMTP( '127.0.0.1', 25 )
+    #s.sendmail( headers['From'], headers['To'], msg.encode("utf8") )
+    #s.quit()
 
 ARROWFORMAT = {
     'iso': 'YYYY-MM-DDTHH:mm:ssZ',

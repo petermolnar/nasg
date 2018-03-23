@@ -35,6 +35,8 @@ import logging
 import validators
 import urllib.parse
 import shared
+import envelope
+import socket
 
 if __name__ == '__main__':
     #logging_format = "[%(asctime)s] %(process)d-%(levelname)s "
@@ -105,12 +107,23 @@ if __name__ == '__main__':
         wdb.maybe_queue(source, target)
 
         # telegram notification, if set
-        shared.notify(
-            'incoming webmention from %s to %s' % (
+        l = envelope.Letter(
+            sender=(
+                'NASG',
+                'nasg@%s' % socket.getfqdn()
+            ),
+            recipient=(
+                shared.config.get('author', 'name'),
+                shared.config.get('author', 'email')
+            ),
+            subject="[webmention] from %s" % _source.hostname,
+            text='incoming webmention from %s to %s' % (
                 source,
                 target
             )
         )
+        l.make()
+        l.send()
         response = sanic.response.text("Accepted", status=202)
         return response
 
