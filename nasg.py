@@ -196,9 +196,17 @@ class Category(NoDupeContainer):
 
     def __init__(self, name=''):
         self.name = name
+        self.topics = NoDupeContainer()
         super().__init__()
 
     def append(self, post):
+        if len(post.tags) == 1:
+            topic = post.tags[0]
+            if topic not in self.topics:
+                t = NoDupeContainer()
+                self.topics.append(topic, t)
+            t = self.topics[topic]
+            t.append(post.pubtime, post)
         return super().append(post.pubtime, post)
 
     @property
@@ -221,6 +229,19 @@ class Category(NoDupeContainer):
             self.name,
             shared.config.get('common', 'domain')
         ])
+
+    @property
+    def is_altrender(self):
+        return os.path.exists(
+            os.path.join(
+                shared.config.get('dirs', 'tmpl'),
+                "%s_%s.html" % (
+                    self.__class__.__name__,
+                    self.name
+                )
+            )
+        )
+
 
     @property
     def url(self):
@@ -253,7 +274,70 @@ class Category(NoDupeContainer):
             os.makedirs(x)
         return x
 
-    def write_feed(self, posttmpls):
+    def write_html(self, path, content):
+        with open(path, 'wt') as out:
+            logging.debug('writing file %s', path)
+            out.write(content)
+        os.utime(path, (self.mtime, self.mtime))
+
+
+    async def render(self):
+        if self.is_altrender:
+            self.render_onepage()
+        else:
+            self.render_paginated()
+        self.render_feed()
+
+    def render_onepage(self):
+        years = {}
+        for k in list(sorted(self.data.keys(), reverse=True)):
+            post = self.data[k]
+            year = int(arrow.get(post.pubtime).format('YYYY'))
+            if year not in years:
+                years.update({year: []})
+            years[year].append(post.tmplvars)
+
+        tmplvars = {
+            'taxonomy': {
+                'title': self.title,
+                'name': self.name,
+                'lastmod': arrow.get(self.mtime).format(
+                    shared.ARROWFORMAT['rcf']
+                ),
+                'url': self.url,
+                'feed': "%s/%s/" % (
+                    self.url,
+                    shared.config.get('site', 'feed')
+                ),
+            },
+            'site': shared.site,
+            'by_year': years
+        }
+        dirname = self.path_paged(1)
+        o = os.path.join(dirname, self.indexfile)
+        logging.info(
+            "Rendering category %s to %s",
+            self.name,
+            o
+        )
+        tmplfile = "%s_%s.html" % (
+            self.__class__.__name__,
+            self.name
+        )
+        r = shared.j2.get_template(tmplfile).render(tmplvars)
+        self.write_html(o, r)
+
+
+    def render_feed(self):
+        start = 0
+        end = int(shared.config.getint('display', 'pagination'))
+        posttmpls = [
+            self.data[k].tmplvars
+            for k in list(sorted(
+                self.data.keys(),
+                reverse=True
+            ))[start:end]
+        ]
         dirname = self.path_paged(1, feed=True)
         o = os.path.join(dirname, self.feedfile)
         logging.info(
@@ -311,13 +395,7 @@ class Category(NoDupeContainer):
         )
         logging.info(r.text)
 
-    def write_html(self, path, content):
-        with open(path, 'wt') as out:
-            logging.debug('writing file %s', path)
-            out.write(content)
-        os.utime(path, (self.mtime, self.mtime))
-
-    async def render(self):
+    def render_paginated(self):
         pagination = shared.config.getint('display', 'pagination')
         pages = ceil(len(self.data) / pagination)
         page = 1
@@ -367,11 +445,6 @@ class Category(NoDupeContainer):
             tmplfile = "%s.html" % (self.__class__.__name__)
             r = shared.j2.get_template(tmplfile).render(tmplvars)
             self.write_html(o, r)
-
-            # render feed
-            if page == 1:
-                self.write_feed(posttmpls)
-            # inc. page counter
             page = page + 1
 
 
@@ -632,10 +705,6 @@ class Singular(object):
     @property
     def html(self):
         html = "%s" % (self.body)
-
-        ## add photo
-        #if self.photo:
-            #html = "%s\n%s" % (str(self.photo), html)
 
         return shared.Pandoc().convert(html)
 
@@ -1455,6 +1524,7 @@ def build():
     for name, c in collector_categories:
         if not c.is_uptodate or shared.config.getboolean('params', 'force'):
             worker.append(c.render())
+
             # TODO move ping to separate function and add it as a task
             # TODO separate an aiohttpworker?
 
@@ -1471,8 +1541,13 @@ def build():
     src = shared.config.get('dirs', 'static')
     for item in os.listdir(src):
         s = os.path.join(src, item)
+        stime = os.path.getmtime(s)
         d = os.path.join(shared.config.get('common', 'build'), item)
-        if not os.path.exists(d) or shared.config.getboolean('params', 'force'):
+        dtime = 0
+        if os.path.exists(d):
+            dtime = os.path.getmtime(d)
+
+        if not os.path.exists(d) or shared.config.getboolean('params', 'force') or dtime < stime:
             logging.debug("copying static file %s to %s", s, d)
             shutil.copy2(s, d)
         if '.html' in item:

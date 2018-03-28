@@ -1,6 +1,9 @@
 {% if post.is_reply %}
 	<span class="p-name">
-		<svg class="icon"><use xlink:href="#icon-reply" /></svg>
+		<svg class="icon" width="16" height="16"><use xlink:href="#icon-reply" /></svg>
+		<a href="{{ post.slug }}" class="u-url" title="{{ post.title }}">
+			RE:
+		</a>
 		<a href="{{ post.is_reply }}" class="u-in-reply-to" title="Reply to: {{ post.is_reply }}">
 			{{ post.is_reply }}
 		</a>

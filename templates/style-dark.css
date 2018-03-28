@@ -148,7 +148,7 @@ h2 {
 h3 {
     font-size: 1rem;
     border-bottom: 1px dotted #777;
-    
+
 }
 
 .icon {
@@ -183,7 +183,7 @@ pre {
 
 code {
     padding: 0.1rem;
-    
+
 }
 
 pre code {
@@ -220,51 +220,6 @@ code.sourceCode span.va { color: turquoise; }
     margin: 1rem auto;
 }
 
-.h-entry {
-    padding: 0 0.6rem;
-    font-size: 0.9rem;
-}
-
-.h-feed .h-entry {
-    margin: 2rem 0 0 0;
-    padding: 1rem;
-    border-bottom: 2px solid #333;
-}
-
-/* titles in taxonomy pages */
-.h-feed .h-entry h2 {
-    border: none;
-    font-size: 1rem;
-    margin: 0;
-    padding: 0;
-}
-
-/* licence, time, author */
-.h-entry footer p {
-    color: #999;
-    padding: 0.3rem 0;
-    display: inline-block;
-}
-
-.h-entry footer a {
-    color: #ccc;
-}
-
-.h-entry footer a:hover {
-    color: #eee;
-}
-
-.e-content a {
-    color:#5193D4;
-}
-
-.e-content a:hover {
-    color:#71B3F4;
-}
-
-.singular footer {
-    margin: 2rem 0;
-}
 
 .footnoteRef,
 .footnoteRef:hover {
@@ -319,7 +274,6 @@ code.sourceCode span.va { color: turquoise; }
     color: #ccc;
 }
 
-
 .content-header a,
 .content-footer a {
     color: #cccccc;
@@ -361,6 +315,7 @@ code.sourceCode span.va { color: turquoise; }
     font-size: 0.86rem;
 }
 
+.content-footer h2,
 .content-footer svg,
 .content-footer dl dt {
     display:none;
@@ -445,18 +400,84 @@ input[type=submit]:hover {
     border-bottom: 3px solid #fefefe;
 }
 
+
+.h-feed h2 {
+    margin-bottom: 1rem;
+}
+
+.h-feed .h-entry {
+    margin-left: 1rem;
+}
+
+.h-feed .h-entry h3 {
+    font-size: 0.9rem;
+}
+
+.h-feed .h-entry .e-summary,
+.h-feed .h-entry .e-content {
+    font-size: 0.8rem;
+}
+
+.h-feed .h-entry .e-content {
+    margin-bottom: 3rem;
+}
+
+.h-entry.singular {
+    padding: 0 0.6rem;
+    font-size: 0.9rem;
+}
+
+.h-entry.singular .e-content a,
+.h-entry.singular .e-summary a {
+    color:#5193D4;
+}
+
+.h-feed .h-entry h2 a:hover,
+.h-entry.singular .e-content a:hover,
+.h-entry.singular .e-summary a:hover {
+    color:#71B3F4;
+}
+
+
+.h-entry.singular footer p {
+    color: #999;
+    padding: 0.3rem 0;
+    display: inline-block;
+}
+
+.h-entry.singular footer a {
+    color: #ccc;
+}
+
+.h-entry.singular footer a:hover {
+    color: #eee;
+}
+
+.h-entry.singular footer {
+    margin: 2rem 0;
+}
+
+.reactions h2,
+.replies h2,
+.syndication h2 {
+    border:none;
+}
+
 figure {
     margin: 1rem 0;
+    position:relative;
+}
+
+figcaption dl * {
+    font-size: 0.5rem;
 }
 
 figcaption {
-    background-color: #111;
-    text-align: left;
-    max-width: 722px;
+    max-width: 72ch;
     margin: 0 auto;
+    background-color: #111;
     padding: 0.6rem;
 }
-
 
 .adaptimg {
     display: block;
@@ -490,14 +511,11 @@ figcaption {
     border-bottom-color: #fff;
 }
 
-.more {
-    display:block;
-    font-weight:bold;
-}
-
+/*
 .more a:before {
     content:'Continue \00BB';
 }
+*/
 
 .pagination ul {
     text-align:center;
@@ -542,14 +560,14 @@ figcaption {
 .w25 {
     width: 24%;
 }
-
+/*
 .u-in-reply-to::before {
     content: 'RE:';
     dislay: inline-block;
     margin-right: 0.3rem;
     font-weight: bold;
 }
-
+*/
 
 .search-section {
     margin-bottom: 1rem;
@@ -639,7 +657,7 @@ figcaption {
 */
 
 /* above is mobile first; this is the desktop */
-@media all and (min-width: 50rem) {
+@media all and (min-width: 56rem) {
 
     .content-navigation ul li a {
         font-size: 0.9rem;
@@ -656,6 +674,19 @@ figcaption {
     .search-form {
         float:right;
         margin: 0.1rem;
+    }
+
+    figcaption {
+        position: absolute;
+        right: 0;
+        top: 0;
+        max-width: 28%;
+    }
+
+
+    .adaptimg {
+        max-width: 70%;
+        margin: 0;
     }
 
 }

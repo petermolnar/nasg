@@ -1,6 +1,7 @@
 
 		<footer class="content-footer" id="main-footer">
 			<nav class="footer-contact p-author h-card vcard limit">
+				<h2>Author</h2>
 				<dl>
 					<dt>name</dt>
 					<dd>
@@ -9,20 +10,17 @@
 					</dd>
 					<dt>email</dt>
 					<dd>
-						<svg class="icon"><use xlink:href="#icon-email" /></svg>
 						<a rel="me" class="u-email email" href="mailto:{{ site.author.email }}">{{ site.author.email }}</a>
 					</dd>
 {% if site.author.sip %}
 					<dt>SIP</dt>
 					<dd>
-						<svg class="icon"><use xlink:href="#icon-phone" /></svg>
 						<a rel="me" class="u-sip sip" href="sip:{{ site.author.sip }}">sip:{{ site.author.sip }}</a>
 					</dd>
 {% endif %}
 {% if site.author.gpg %}
 					<dt>GPG/PGP public key</dt>
 					<dd>
-						<svg class="icon"><use xlink:href="#icon-key" /></svg>
 						<a rel="me" class="u-gpg gpg" href="{{ site.url }}/{{ site.author.gpg }}">GPG key</a>
 					</dd>
 {% endif %}
@@ -32,13 +30,14 @@
 
 					<dt>{{ silo }}</dt>
 					<dd>
-						<svg class="icon"><use xlink:href="#icon-{{ silo }}" /></svg>
 						<a rel="me" class="u-{{ silo }} url u-url" href="{{ url }}">{{ silo }}</a>
 					</dd>
 {% endfor %}
 				</dl>
 			</nav>
 		</footer>
+
+{% include 'symbols.svg' %}
 
 	</body>
 </html>

@@ -15,12 +15,6 @@
 	<article class="h-entry hentry singular" lang="{{ post.lang }}">
 		<header>
 			<h1>{% include 'Singular_title.html' %}</h1>
-			{% if 'article' == post.category and post.age >= 2 %}
-				<h2 class="old-warning">WARNING: this entry was published at {{ post.pubdate }}.<br />It might be outdated.</h2>
-			{% endif %}
-			{% for url in post.syndicate %}
-			<a href="{{ url }}"></a>
-			{% endfor %}
 		</header>
 
 {% if post.summary %}
@@ -52,15 +46,21 @@
 			<p class="license">
 				{% if post.licence.text == 'CC BY 4.0' %}
 					<a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="hide u-license">CC BY 4.0</a>
-					<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+					<svg class="icon" width="16" height="16">
+						<use xlink:href="#icon-creative-commons" />
+					</svg>
 					Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, even for commercial use.
 				{% elif post.licence.text == 'CC BY-NC 4.0' %}
 					<a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="hide u-license">CC BY-NC 4.0</a>
-					<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+					<svg class="icon" width="16" height="16">
+						<use xlink:href="#icon-creative-commons" />
+					</svg>
 					Licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, for non commercial use. For commercial use please contact the author.
 				{% else %}
 					<a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="hide u-license">CC BY-NC-ND 4.0</a>
-					<svg class="icon"><use xlink:href="#icon-creative-commons" /></svg>
+					<svg class="icon" width="16" height="16">
+						<use xlink:href="#icon-creative-commons" />
+					</svg>
 					Licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International</a>. You are free to share if you link back here for non commercial use, but you can't publish any altered versions of it. For commercial use please contact the author.
 				{% endif %}
 			</p>
@@ -84,7 +84,9 @@
 					<a rel="payment" title="pay {{ site.author.name }} via {{ data.label }} {{ data.value }}" href="{{ data.url }}">
 						{{ data.value }}
 						<span class="method">
-							<svg class="icon"><use xlink:href="#icon-{{ method }}"></use></svg>
+							<svg class="icon" width="16" height="16">
+								<use xlink:href="#icon-{{ method }}"></use>
+							</svg>
 							with {{ data.label }}
 						</span>
 					</a>
@@ -93,10 +95,26 @@
 			</ul>
 		</aside>
 
+{% if post.syndicate|length %}
+		<section class="syndication">
+			<!-- <h2><a name="syndication"></a>Syndicated copies</h2>
+			<ul>
+				{% for url in post.syndicate %}
+					<li>
+						<a href="{{ url }}" class="u-syndication"></a>
+					</li>
+				{% endfor %}
+			</ul>
+			 -->
+			 {% for url in post.syndicate %}
+			<a href="{{ url }}" class="u-syndication"></a>
+			{% endfor %}
+{% endif %}
+
 
 {% if post.replies|length %}
 		<section class="replies">
-			<h6><a name="replies"></a>Replies</h6>
+			<h2><a name="replies"></a>Replies</h2>
 			<ol>
 				{% for mtime, comment in post.replies %}
 					{% include 'Comment.html' %}
@@ -106,7 +124,7 @@
 {% endif %}
 {% if post.reactions|length %}
 		<section class="reactions">
-			<h6><a name="reactions"></a>Reactions</h6>
+			<h2><a name="reactions"></a>Reactions</h2>
 			<dl>
 				{% for character, comments in post.reactions.items() %}
 				<dt>{{ character }}</dt>

@@ -7,27 +7,27 @@
 <dl class="exif">
 {% if photo.exif.camera %}
 <dt>Camera</dt>
-<dd><svg class="icon"><use xlink:href="#icon-camera" /></svg>{{ photo.exif.camera }}</dd>
+<dd><svg class="icon" width="16" height="16"><use xlink:href="#icon-camera" /></svg>{{ photo.exif.camera }}</dd>
 {% endif %}
 {% if photo.exif.aperture %}
 <dt>Aperture</dt>
-<dd><svg class="icon"><use xlink:href="#icon-aperture" /></svg>f/{{ photo.exif.aperture }}</dd>
+<dd><svg class="icon" width="16" height="16"><use xlink:href="#icon-aperture" /></svg>f/{{ photo.exif.aperture }}</dd>
 {% endif %}
 {% if photo.exif.shutter_speed %}
 <dt>Shutter speed</dt>
-<dd><svg class="icon"><use xlink:href="#icon-clock" /></svg>{{ photo.exif.shutter_speed }} sec</dd>
+<dd><svg class="icon" width="16" height="16"><use xlink:href="#icon-clock" /></svg>{{ photo.exif.shutter_speed }} sec</dd>
 {% endif %}
 {% if photo.exif.focallength %}
 <dt>Focal length (as set)</dt>
-<dd><svg class="icon"><use xlink:href="#icon-focallength" /></svg>{{ photo.exif.focallength }}</dd>
+<dd><svg class="icon" width="16" height="16"><use xlink:href="#icon-focallength" /></svg>{{ photo.exif.focallength }}</dd>
 {% endif %}
 {% if photo.exif.iso %}
 <dt>Sensitivity</dt>
-<dd><svg class="icon"><use xlink:href="#icon-sensitivity" /></svg>ISO {{ photo.exif.iso }}</dd>
+<dd><svg class="icon" width="16" height="16"><use xlink:href="#icon-sensitivity" /></svg>ISO {{ photo.exif.iso }}</dd>
 {% endif %}
 {% if photo.exif.lens %}
 <dt>Lens</dt>
-<dd><svg class="icon"><use xlink:href="#icon-lens" /></svg>{{ photo.exif.lens }}</dd>
+<dd><svg class="icon" width="16" height="16"><use xlink:href="#icon-lens" /></svg>{{ photo.exif.lens }}</dd>
 {% endif %}
 </dl>
 {% endif %}
