@@ -5,7 +5,7 @@ It is most probably not suitable for anyone else, but feel free to use it for id
 
 ## Why not [insert static generator here]?
 
-- DRY - Don't Repeat Yourself - is good, so instead of sidefiles for images, I'm using XMP metadata, which most of the ones availabe don't handle well;
+- I'm using embedded XMP metadata in photos, which most of the ones availabe don't handle well;
 - writing plugins to existing generators - Pelican, Nicola, etc - might have taken longer and I wanted to extend my Python knowledge
 - I wanted to use the best available utilities for some tasks, like `Pandoc` and  `exiftool` instead of Python libraries trying to achive the same
 - I needed to handle webmentions and comments

@@ -3,16 +3,16 @@
 # vim: set fileencoding=utf-8 :
 
 __author__ = "Peter Molnar"
-__copyright__ = "Copyright 2017, Peter Molnar"
+__copyright__ = "Copyright 2017-2018, Peter Molnar"
 __license__ = "GPLv3"
-__version__ = "2.0"
+__version__ = "2.1.0"
 __maintainer__ = "Peter Molnar"
 __email__ = "hello@petermolnar.eu"
 __status__ = "Production"
 
 """
     silo archiver module of NASG
-    Copyright (C) 2017 Peter Molnar
+    Copyright (C) 2017-2018 Peter Molnar
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,6 +42,7 @@ from slugify import slugify
 import jinja2
 from inspect import getsourcefile
 import sys
+import arrow
 
 class CMDLine(object):
     def __init__(self, executable):
@@ -485,6 +486,8 @@ class SearchDB(BaseDB):
 
 
 class WebmentionQueue(BaseDB):
+    tsform = 'YYYY-MM-DD HH:mm:ss'
+
     def __init__(self):
         self.fpath = "%s" % config.get('var', 'webmentiondb')
         super().__init__(self.fpath)
@@ -507,7 +510,7 @@ class WebmentionQueue(BaseDB):
     def finish(self):
         self.db.close()
 
-    def exists(self, source, target):
+    def exists(self, source, target, dt=arrow.now()):
         logging.debug(
             'checking webmention existence for source: %s ; target: %s',
             source,
@@ -515,15 +518,22 @@ class WebmentionQueue(BaseDB):
         )
         cursor = self.db.cursor()
         cursor.execute(
-            '''SELECT id FROM queue WHERE source=? AND target=? LIMIT 1''',
+            '''SELECT id,timestamp FROM queue WHERE source=? AND target=? ORDER BY timestamp DESC LIMIT 1''',
             (source,target)
         )
+
         rows = cursor.fetchall()
         if not rows:
             return False
-        return int(rows.pop()[0])
+
+        row = rows.pop()
+        if arrow.get(row[1], self.tsform).timestamp >= dt.timestamp:
+            return int(row[0])
+        else:
+            return False
 
     def queue(self, source, target):
+        logging.debug("Queueing webmention: %s to %s", source, target)
         cursor = self.db.cursor()
         cursor.execute(
             '''INSERT INTO queue (source,target) VALUES (?,?);''', (
@@ -585,14 +595,14 @@ class WebmentionQueue(BaseDB):
         cursor = self.db.cursor()
         ret = []
         cursor.execute(
-            '''SELECT * FROM queue WHERE source LIKE ? AND status = 0''',
+            '''SELECT id,timestamp,source,target FROM queue WHERE source LIKE ? AND status = 0''',
             ('%' + config.get('common', 'domain') + '%',)
         )
         rows = cursor.fetchall()
         for r in rows:
             ret.append({
                 'id': r[0],
-                'dt': r[1],
+                'dt': arrow.get(r[1], self.tsform).timestamp,
                 'source': r[2],
                 'target': r[3],
             })

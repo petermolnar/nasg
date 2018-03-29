@@ -3,16 +3,16 @@
 # vim: set fileencoding=utf-8 :
 
 __author__ = "Peter Molnar"
-__copyright__ = "Copyright 2017, Peter Molnar"
+__copyright__ = "Copyright 2017-2018, Peter Molnar"
 __license__ = "GPLv3"
-__version__ = "2.0"
+__version__ = "2.1.0"
 __maintainer__ = "Peter Molnar"
 __email__ = "hello@petermolnar.eu"
 __status__ = "Production"
 
 """
     silo archiver module of NASG
-    Copyright (C) 2017 Peter Molnar
+    Copyright (C) 2017-2018 Peter Molnar
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,21 +39,10 @@ import envelope
 import socket
 
 if __name__ == '__main__':
-    #logging_format = "[%(asctime)s] %(process)d-%(levelname)s "
-    #logging_format += "%(module)s::%(funcName)s():l%(lineno)d: "
-    #logging_format += "%(message)s"
-
-    #logging.basicConfig(
-        #format=logging_format,
-        #level=logging.DEBUG
-    #)
-    #log = logging.getLogger()
-
     # log_config=None prevents creation of access_log and error_log files
     # since I'm running this from systemctl it already goes into syslog
     app = Sanic('router')
-    #app = Sanic('router', log_config=None)
-    # this is ok to be read-only
+    # this is read only this way!
     sdb = shared.SearchDB()
 
     @app.route("/oauth1", methods=["GET"])

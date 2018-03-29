@@ -3,16 +3,16 @@
 # vim: set fileencoding=utf-8 :
 
 __author__ = "Peter Molnar"
-__copyright__ = "Copyright 2017, Peter Molnar"
+__copyright__ = "Copyright 2017-2018, Peter Molnar"
 __license__ = "GPLv3"
-__version__ = "2.0"
+__version__ = "2.1.0"
 __maintainer__ = "Peter Molnar"
 __email__ = "hello@petermolnar.eu"
 __status__ = "Production"
 
 """
     silo archiver module of NASG
-    Copyright (C) 2017 Peter Molnar
+    Copyright (C) 2017-2018 Peter Molnar
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -242,7 +242,6 @@ class Category(NoDupeContainer):
             )
         )
 
-
     @property
     def url(self):
         if self.name:
@@ -279,7 +278,6 @@ class Category(NoDupeContainer):
             logging.debug('writing file %s', path)
             out.write(content)
         os.utime(path, (self.mtime, self.mtime))
-
 
     async def render(self):
         if self.is_altrender:
@@ -490,19 +488,31 @@ class Singular(object):
             wdb.entry_done(incoming.get('id'))
         wdb.finish()
 
-    # note: due to SQLite locking, this will not be async for now
-    def send_webmentions(self):
-        if not self.is_reply:
-            return
+    def queue_webmentions(self):
         wdb = shared.WebmentionQueue()
-        wid = wdb.queue(self.url, self.is_reply)
-        wm = Webmention(
-            self.url,
-            self.is_reply
-        )
-        wm.send()
-        wdb.entry_done(wid)
+        for target in self.urls_to_ping:
+            if not wdb.exists(self.url, target, self.published):
+                wdb.queue(self.url, target)
+            else:
+                logging.debug("not queueing - webmention already queued from %s to %s", self.url, target)
         wdb.finish()
+
+    @property
+    def urls_to_ping(self):
+        urls = [x.strip() for x in shared.REGEX.get('urls').findall(self.content)]
+        if self.is_reply:
+            urls.append(self.is_reply)
+        for url in self.syndicate:
+            urls.append(url)
+        r = {}
+        for link in urls:
+            parsed = urlparse(link)
+            if parsed.netloc in shared.config.get('site', 'domains'):
+                continue
+            if link in r:
+                continue
+            r.update({link: True})
+        return r.keys()
 
     @property
     def redirects(self):
@@ -684,7 +694,7 @@ class Singular(object):
 
     @property
     def url(self):
-        return "%s/%s" % (shared.config.get('site', 'url'), self.fname)
+        return "%s/%s/" % (shared.config.get('site', 'url'), self.fname)
 
     @property
     def body(self):
@@ -732,7 +742,7 @@ class Singular(object):
 
     @property
     def syndicate(self):
-        urls = []
+        urls = self.meta.get('syndicate', [])
         if self.photo and self.photo.is_photo:
             urls.append("https://brid.gy/publish/flickr")
         return urls
@@ -1300,27 +1310,42 @@ class Webmention(object):
         fm.content = self.content
         fm.metadata = self.meta
         with open(self.fpath, 'wt') as f:
+            logging.info("Saving webmention to %s", self.fpath)
             f.write(frontmatter.dumps(fm))
         return
 
     def send(self):
-        rels = shared.XRay(self.source).set_discover().parse()
+        rels = shared.XRay(self.target).set_discover().parse()
         endpoint = False
         if 'rels' not in rels:
-            return
+            logging.debug("no rel found for %s", self.target)
+            return True
         for k in rels.get('rels').keys():
             if 'webmention' in k:
-                endpoint = rels.get('rels').get(k)
+                endpoint = rels.get('rels').get(k).pop()
                 break
         if not endpoint:
-            return
-        requests.post(
+            logging.debug("no endpoint found for %s", self.target)
+            return True
+        logging.info(
+            "Sending webmention to endpoint: %s, source: %s, target: %s",
+            endpoint,
+            self.source,
             self.target,
-            data={
-                'source': self.source,
-                'target': self.target
-            }
         )
+        try:
+            p = requests.post(
+                endpoint,
+                data={
+                    'source': self.source,
+                    'target': self.target
+                }
+            )
+            if p.status_code == requests.codes.ok:
+                return True
+        except Exception as e:
+            logging.error("sending webmention failed: %s", e)
+        return False
 
     def receive(self):
         self._fetch()
@@ -1464,6 +1489,7 @@ def build():
     for f, post in content:
         logging.info("PARSING %s", f)
         post.init_extras()
+        post.queue_webmentions()
 
         # add to sitemap
         sitemap.update({ post.url: post.mtime })
@@ -1525,16 +1551,23 @@ def build():
         if not c.is_uptodate or shared.config.getboolean('params', 'force'):
             worker.append(c.render())
 
-            # TODO move ping to separate function and add it as a task
-            # TODO separate an aiohttpworker?
-
     # add magic.php rendering
     worker.append(magic.render())
 
-    # TODO: send webmentions
-
     # do all the things!
     worker.run()
+
+    # send webmentions - this is synchronous due to the SQLite locking
+    wdb = shared.WebmentionQueue()
+    for out in wdb.get_outbox():
+        wm = Webmention(
+            out.get('source'),
+            out.get('target'),
+            out.get('dt')
+        )
+        if wm.send():
+            wdb.entry_done(out.get('id'))
+    wdb.finish()
 
     # copy static
     logging.info('copying static files')
