@@ -9,7 +9,7 @@
 		</a>
 	</span>
 {% else %}
-	<a href="/{{ post.slug }}/" title="{{ post.title }}">
+	<a href="/{{ post.slug }}/" title="{{ post.title }}" class="{% if post.summary %}has-summary{% endif %}">
 		<span class="entry-title p-name">{{ post.title }}</span>
 	</a>
 {% endif %}

@@ -29,7 +29,9 @@
 			<div class="e-summary entry-summary">
 				{{ post.summary }}
 				<span class="more">
-					<a href="/{{ post.slug }}" title="{{ post.title }}">[…]</a>
+					<a href="/{{ post.slug }}" title="{{ post.title }}">
+					{% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
+					</a>
 				</span>
 				<br class="clear" />
 			</div>

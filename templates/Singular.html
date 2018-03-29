@@ -97,18 +97,10 @@
 
 {% if post.syndicate|length %}
 		<section class="syndication">
-			<!-- <h2><a name="syndication"></a>Syndicated copies</h2>
-			<ul>
-				{% for url in post.syndicate %}
-					<li>
-						<a href="{{ url }}" class="u-syndication"></a>
-					</li>
-				{% endfor %}
-			</ul>
-			 -->
-			 {% for url in post.syndicate %}
-			<a href="{{ url }}" class="u-syndication"></a>
+			{% for url in post.syndicate %}
+				<a href="{{ url }}" class="u-syndication"></a>
 			{% endfor %}
+		</section>
 {% endif %}
 
 

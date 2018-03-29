@@ -213,13 +213,11 @@ code.sourceCode span.ss { color: limegreen; }
 code.sourceCode span.st { color: magenta; }
 code.sourceCode span.va { color: turquoise; }
 
-
 .limit,
 .content-body {
     max-width: 72ch;
-    margin: 1rem auto;
+    margin: 0 auto;
 }
-
 
 .footnoteRef,
 .footnoteRef:hover {
@@ -315,14 +313,13 @@ code.sourceCode span.va { color: turquoise; }
     font-size: 0.86rem;
 }
 
-.content-footer h2,
-.content-footer svg,
-.content-footer dl dt {
+.content-footer h2 {
     display:none;
     visibility: hidden;
 }
 
-.content-footer dl dd {
+.content-footer dl dd,
+.content-footer dl dt,{
     display:inline-block;
 }
 
@@ -400,13 +397,12 @@ input[type=submit]:hover {
     border-bottom: 3px solid #fefefe;
 }
 
-
 .h-feed h2 {
     margin-bottom: 1rem;
 }
 
 .h-feed .h-entry {
-    margin-left: 1rem;
+    margin: 0 1rem;
 }
 
 .h-feed .h-entry h3 {
@@ -427,17 +423,24 @@ input[type=submit]:hover {
     font-size: 0.9rem;
 }
 
-.h-entry.singular .e-content a,
-.h-entry.singular .e-summary a {
+.h-entry .e-content a,
+.h-entry .e-summary a {
     color:#5193D4;
 }
 
-.h-feed .h-entry h2 a:hover,
-.h-entry.singular .e-content a:hover,
-.h-entry.singular .e-summary a:hover {
+.h-entry a:hover {
     color:#71B3F4;
 }
 
+/*
+.h-feed .h-entry a.has-summary::after {
+    content: '\00BB';
+}
+*/
+
+.h-entry.singular h1 {
+    margin: 2rem 0 1rem 0;
+}
 
 .h-entry.singular footer p {
     color: #999;
@@ -499,23 +502,15 @@ figcaption {
 }
 
 .follow a,
-.more a,
 .pagination a {
     padding: 0 0 0.3rem 0;
     border-bottom: 3px solid #999;
 }
 
 .follow a:hover,
-.more a:hover,
 .pagination a:hover {
     border-bottom-color: #fff;
 }
-
-/*
-.more a:before {
-    content:'Continue \00BB';
-}
-*/
 
 .pagination ul {
     text-align:center;
@@ -560,14 +555,6 @@ figcaption {
 .w25 {
     width: 24%;
 }
-/*
-.u-in-reply-to::before {
-    content: 'RE:';
-    dislay: inline-block;
-    margin-right: 0.3rem;
-    font-weight: bold;
-}
-*/
 
 .search-section {
     margin-bottom: 1rem;
