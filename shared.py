@@ -5,9 +5,9 @@
 __author__ = "Peter Molnar"
 __copyright__ = "Copyright 2017-2018, Peter Molnar"
 __license__ = "GPLv3"
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __maintainer__ = "Peter Molnar"
-__email__ = "hello@petermolnar.eu"
+__email__ = "mail@petermolnar.net"
 __status__ = "Production"
 
 """
@@ -431,6 +431,7 @@ class SearchDB(BaseDB):
         return False
 
     def search_by_query(self, query):
+        logging.info("query is: %s", query)
         ret = {}
         cursor = self.db.cursor()
         cursor.execute('''SELECT

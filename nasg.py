@@ -5,9 +5,9 @@
 __author__ = "Peter Molnar"
 __copyright__ = "Copyright 2017-2018, Peter Molnar"
 __license__ = "GPLv3"
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __maintainer__ = "Peter Molnar"
-__email__ = "hello@petermolnar.eu"
+__email__ = "mail@petermolnar.net"
 __status__ = "Production"
 
 """
@@ -194,9 +194,10 @@ class Category(NoDupeContainer):
     pagedir = 'page'
     taxonomy = 'category'
 
-    def __init__(self, name=''):
+    def __init__(self, name='', is_front=False):
         self.name = name
         self.topics = NoDupeContainer()
+        self.is_front = is_front
         super().__init__()
 
     def append(self, post):
@@ -297,6 +298,7 @@ class Category(NoDupeContainer):
 
         tmplvars = {
             'taxonomy': {
+                'add_welcome': self.is_front,
                 'title': self.title,
                 'name': self.name,
                 'lastmod': arrow.get(self.mtime).format(
@@ -364,16 +366,23 @@ class Category(NoDupeContainer):
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
 
         for p in reversed(posttmpls):
-            link = '%s/%s' % (shared.site.get('url'), p.get('slug'))
+            link = '%s/%s/' % (shared.site.get('url'), p.get('slug'))
             dt =  arrow.get(p.get('pubtime')).to('utc')
+
+            content = p.get('html')
+            if p.get('photo'):
+                content = "%s\n\n%s" % (p.get('photo'), content)
 
             fe = fg.add_entry()
             fe.id(link)
-            fe.link(href='%s/' % (link))
+            fe.link(href=link)
             fe.title(p.get('title'))
             fe.published(dt.datetime)
             fe.updated(dt.datetime)
-            fe.content(content=p.get('html'), type='CDATA')
+            fe.content(
+                content,
+                type='CDATA'
+            )
             fe.rights('%s %s %s' % (
                 dt.format('YYYY'),
                 shared.site.get('author').get('name'),
@@ -382,6 +391,9 @@ class Category(NoDupeContainer):
 
         with open(o, 'wb') as f:
             f.write(fg.atom_str(pretty=True))
+
+        #with open(o.replace('.xml', '.rss'), 'wb') as f:
+            #f.write(fg.rss_str(pretty=True))
 
         # ping pubsub
         r = requests.post(
@@ -397,7 +409,12 @@ class Category(NoDupeContainer):
         pagination = shared.config.getint('display', 'pagination')
         pages = ceil(len(self.data) / pagination)
         page = 1
+
+
         while page <= pages:
+            add_welcome = False
+            if (self.is_front and page == 1):
+                add_welcome = True
             # list relevant post templates
             start = int((page - 1) * pagination)
             end = int(start + pagination)
@@ -413,6 +430,7 @@ class Category(NoDupeContainer):
             # is overcomplicated
             tmplvars = {
                 'taxonomy': {
+                    'add_welcome': add_welcome,
                     'title': self.title,
                     'name': self.name,
                     'page': page,
@@ -489,6 +507,8 @@ class Singular(object):
         wdb.finish()
 
     def queue_webmentions(self):
+        if self.is_future:
+            return
         wdb = shared.WebmentionQueue()
         for target in self.urls_to_ping:
             if not wdb.exists(self.url, target, self.published):
@@ -728,6 +748,10 @@ class Singular(object):
         return self.published.format(shared.ARROWFORMAT['display'])
 
     @property
+    def review(self):
+        return self.meta.get('review', False)
+
+    @property
     def summary(self):
         s = self.meta.get('summary', '')
         if not s:
@@ -785,12 +809,20 @@ class Singular(object):
                 'reactions': self.reactions,
                 'syndicate': self.syndicate,
                 'tags': self.tags,
-                'photo': False
+                'photo': False,
+                'enclosure': False,
+                'review': self.review
             }
             if self.photo:
                 self._tmplvars.update({
-                    'photo': str(self.photo)
+                    'photo': str(self.photo),
+                    'enclosure': {
+                        'mime': self.photo.mime_type,
+                        'size': self.photo.mime_size,
+                        'url': self.photo.href
+                    }
                 })
+
         return self._tmplvars
 
     async def render(self):
@@ -843,6 +875,16 @@ class WebImage(object):
             'title': self.meta.get('Headline', self.fname),
             'tags': list(set(self.meta.get('Subject', []))),
         }
+
+    @property
+    def mime_type(self):
+        return str(self.meta.get('MIMEType', 'image/jpeg'))
+
+    @property
+    def mime_size(self):
+        if not self.is_downsizeable:
+            return int(os.path.getsize(self.fpath))
+        return int(self.sizes[-1][1]['fsize'])
 
     @property
     def href(self):
@@ -996,7 +1038,8 @@ class WebImage(object):
                         'crop',
                         size,
                         fallback=False
-                    )
+                    ),
+                    'fsize': os.path.getsize(fpath)
                 }
             ))
         return sorted(sizes, reverse=False)
@@ -1174,7 +1217,6 @@ class WebImage(object):
             width,
             height
         )
-
 
     @property
     def tmplvars(self):
@@ -1481,7 +1523,7 @@ def build():
     sdb = shared.SearchDB()
     magic = MagicPHP()
 
-    collector_front = Category()
+    collector_front = Category(is_front=True)
     collector_categories = NoDupeContainer()
     sitemap = {}
 

@@ -17,6 +17,23 @@
 			<h1>{% include 'Singular_title.html' %}</h1>
 		</header>
 
+{% if post.review %}
+		<div class="h-review hreview">
+			<h2>Review summary</h2>
+			<p>
+				<a href="{{ post.review.url }}" class="p-name url fn p-item h-product">{{ post.review.title }}</a>
+			</p>
+			<p>
+				<span class="rating">
+					<span class="value">{{ post.review.rating }}</span>
+					out of
+					<span class="best">5</span>
+				</span>
+			</p>
+			<p class="p-summary">{{ post.review.summary }}</p>
+		</div>
+{% endif %}
+
 {% if post.summary %}
 		<div class="e-summary entry-summary">
 			{{ post.summary }}
@@ -34,66 +51,72 @@
 		</div>
 
 		<footer>
-			<p class="published">
-				<time class="dt-published" datetime="{{ post.pubtime }}">{{ post.pubdate }}</time>
-			</p>
-			<div class="hide">
-			{% include 'block_author.html' %}
-			</div>
-			<p class="hide">
-				<a class="u-url u-uuid" rel="bookmark" href="{{ site.url}}/{{ post.slug }}/"></a>
-			</p>
-			<p class="license">
+			<dl>
+				<dt>Published</dt>
+				<dd class="published">
+					<time class="dt-published" datetime="{{ post.pubtime }}">{{ post.pubdate }}</time>
+				</dd>
+				<dt>Author</dt>
+				<dd>
+					{% include 'block_author.html' %}
+				</dd>
+				<dt>Entry URL</dt>
+				<dd>
+					<a class="u-url u-uuid" rel="bookmark" href="{{ site.url}}/{{ post.slug }}/">{{ site.url}}/{{ post.slug }}/</a>
+				</dd>
+				<dt>License</dt>
+				<dd class="license">
 				{% if post.licence.text == 'CC BY 4.0' %}
-					<a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="hide u-license">CC BY 4.0</a>
+					<a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license">CC BY 4.0</a>
 					<svg class="icon" width="16" height="16">
 						<use xlink:href="#icon-creative-commons" />
-					</svg>
+					</svg><br />
 					Licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, even for commercial use.
 				{% elif post.licence.text == 'CC BY-NC 4.0' %}
-					<a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="hide u-license">CC BY-NC 4.0</a>
+					<a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license">CC BY-NC 4.0</a>
 					<svg class="icon" width="16" height="16">
 						<use xlink:href="#icon-creative-commons" />
-					</svg>
+					</svg><br />
 					Licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International</a>. You are free to share or republish, even if modified, if you link back here and indicate the modifications, for non commercial use. For commercial use please contact the author.
 				{% else %}
-					<a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="hide u-license">CC BY-NC-ND 4.0</a>
+					<a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license">CC BY-NC-ND 4.0</a>
 					<svg class="icon" width="16" height="16">
 						<use xlink:href="#icon-creative-commons" />
-					</svg>
+					</svg><br />
 					Licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International</a>. You are free to share if you link back here for non commercial use, but you can't publish any altered versions of it. For commercial use please contact the author.
 				{% endif %}
-			</p>
+				</dd>
+				<dt class="noprint">Leave a tip</dt>
+				<dd class="donation">
+					<p>
+					{% if post.category == 'photo' %}
+						Did you like this photo?<br />Leave a tip! If you're interested in prints, please get in touch.
+					{% elif post.category == 'article' %}
+						Did you find this article useful?<br />Support me, so I can write more like this.<br />If you want my help for your project, get in touch.
+					{% elif post.category == 'journal' %}
+						Did you like this entry?<br />Encourage me to write more of them.
+					{% else %}
+						Did you like what you read?<br />Leave a tip!</a>
+					{% endif %}
+					</p>
+					<ul>
+						{% for method, data in site.tips.items() %}
+						<li>
+							<a rel="payment" title="pay {{ site.author.name }} via {{ data.label }} {{ data.value }}" href="{{ data.url }}">
+								{{ data.value }}
+								<span class="method">
+									<svg class="icon" width="16" height="16">
+										<use xlink:href="#icon-{{ method }}"></use>
+									</svg>
+									with {{ data.label }}
+								</span>
+							</a>
+						</li>
+						{% endfor %}
+					</ul>
+				</dd>
 		</footer>
 
-		<aside class="donation">
-			<p>
-			{% if post.category == 'photo' %}
-				Did you like this photo?<br />Leave a tip! If you're interested in prints, please get in touch.
-			{% elif post.category == 'article' %}
-				Did you find this article useful?<br />Buy me a coffee, so I can write more like this.<br />If you want my help for your project, get in touch.
-			{% elif post.category == 'journal' %}
-				Did you like this entry?<br />Encourage me to write more of them.
-			{% else %}
-				Did you like what you read?<br />Leave a tip!</a>
-			{% endif %}
-			</p>
-			<ul>
-				{% for method, data in site.tips.items() %}
-				<li>
-					<a rel="payment" title="pay {{ site.author.name }} via {{ data.label }} {{ data.value }}" href="{{ data.url }}">
-						{{ data.value }}
-						<span class="method">
-							<svg class="icon" width="16" height="16">
-								<use xlink:href="#icon-{{ method }}"></use>
-							</svg>
-							with {{ data.label }}
-						</span>
-					</a>
-				</li>
-				{% endfor %}
-			</ul>
-		</aside>
 
 {% if post.syndicate|length %}
 		<section class="syndication">

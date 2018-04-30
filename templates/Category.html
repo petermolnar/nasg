@@ -5,13 +5,21 @@
 
 {% include 'block_header_close.html' %}
 
+{% if taxonomy.add_welcome %}
+<aside class="siteinfo limit">
+	<p>Hi!</p>
+	<p>Your are on a personal homepage. It has been my home one the Internet for many years, although the URL had changed a few times. It's <a href="https://indieweb.org/">IndieWeb</a>-compatible, and all content is produced by me. </p>
+	<p>This page is a feed of everything that gets on the site.</p>
+</aside>
+{% endif %}
+
 <section class="content-body h-feed">
 	<aside class="follow">
 		<p>
 			<svg class="icon" width="16" height="16">
 				<use xlink:href="#icon-rss" />
 			</svg>
-			<a title="follow {{ taxonomy.title }}" href="{{ site.url }}{{ taxonomy.feed }}">Atom feed</a>
+			<a title="follow {{ taxonomy.title }}" rel="feed" href="{{ site.url }}{{ taxonomy.feed }}">Atom feed</a>
 		</p>
 	</aside>
 

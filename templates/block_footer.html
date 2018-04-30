@@ -1,13 +1,13 @@
 
 		<footer class="content-footer" id="main-footer">
 			<nav class="footer-contact p-author h-card vcard limit">
-				<h2>Author</h2>
+				<h2>Site author</h2>
 				<dl>
 					<dt>
 						<img class="photo avatar u-photo u-avatar" src="{{ site.author.avatar }}" alt="Photo of {{ site.author.name }}" />
 					</dt>
 					<dd>
-						<a class="fn p-name url u-url u-uid" href="{{ site.author.url }}/about.html">
+						<a class="fn p-name url u-url u-uid" href="/about.html">
 							{{ site.author.name }}
 						</a>
 					</dd>
@@ -34,7 +34,7 @@
 {% if site.author.gpg %}
 					<dt>GPG</dt>
 					<dd>
-						<a rel="me" class="u-gpg gpg" href="{{ site.url }}/{{ site.author.gpg }}">key</a>
+						<a rel="me" class="u-gpg gpg" href="/{{ site.author.gpg }}">key</a>
 					</dd>
 {% endif %}
 {% if site.author.flickr %}

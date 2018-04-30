@@ -3,7 +3,7 @@
 <img src="{{ photo.src }}" title="{{ photo.title }}" alt="{{ photo.alt }}" class="adaptimg" width="{{ photo.width }}" height="{{ photo.height }}" />
 {% if photo.target %}</a>{% endif %}
 <figcaption>
-{{ photo.alt }}{% if photo.is_photo %}<span class="author"> - photo by {{ photo.author }}</span>
+<span class="alt">{{ photo.alt }}</span>{% if photo.is_photo %}<span class="author"> - photo by {{ photo.author }}</span>
 <dl class="exif">
 {% if photo.exif.camera %}
 <dt>Camera</dt>
