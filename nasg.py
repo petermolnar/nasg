@@ -388,6 +388,13 @@ class Category(NoDupeContainer):
                 shared.site.get('author').get('name'),
                 p.get('licence').get('text')
             ))
+            if p.get('enclosure'):
+                enclosure = p.get('enclosure')
+                fe.enclosure(
+                    enclosure.get('url'),
+                    "%d" % enclosure.get('size'),
+                    enclosure.get('mime')
+                )
 
         with open(o, 'wb') as f:
             f.write(fg.atom_str(pretty=True))
@@ -882,9 +889,12 @@ class WebImage(object):
 
     @property
     def mime_size(self):
-        if not self.is_downsizeable:
-            return int(os.path.getsize(self.fpath))
-        return int(self.sizes[-1][1]['fsize'])
+        if self.is_downsizeable:
+            try:
+                return int(self.sizes[-1][1]['fsize'])
+            except Exception as e:
+                pass
+        return int(self.meta.get('FileSize'))
 
     @property
     def href(self):
@@ -1024,23 +1034,31 @@ class WebImage(object):
                 if self.mtime > mtime:
                     exists = False
 
+            smeta = {
+                'fpath': fpath,
+                'exists': False,
+                'url': "%s/%s/%s" % (
+                    shared.config.get('site', 'url'),
+                    shared.config.get('common', 'files'),
+                    name
+                ),
+                'crop': shared.config.getboolean(
+                    'crop',
+                    size,
+                    fallback=False
+                ),
+                'fsize': int(self.meta.get('FileSize'))
+            }
+
+            if os.path.isfile(fpath):
+                smeta.update({
+                    'exists': True,
+                    'fsize': os.path.getsize(fpath)
+                })
+
             sizes.append((
                 int(size),
-                {
-                    'fpath': fpath,
-                    'exists': os.path.isfile(fpath),
-                    'url': "%s/%s/%s" % (
-                        shared.config.get('site', 'url'),
-                        shared.config.get('common', 'files'),
-                        name
-                    ),
-                    'crop': shared.config.getboolean(
-                        'crop',
-                        size,
-                        fallback=False
-                    ),
-                    'fsize': os.path.getsize(fpath)
-                }
+                smeta
             ))
         return sorted(sizes, reverse=False)
 
@@ -1287,9 +1305,8 @@ class Comment(object):
 
         if 'name' in author:
             r.update({ 'name': self.meta.get('author').get('name')})
-
-        if 'url' in author:
-            r.update({ 'name': self.meta.get('author').get('url')})
+        elif 'url' in author:
+            r.update({ 'name': urlparse(self.meta.get('author').get('url')).hostname})
 
         return r
 
@@ -1343,18 +1360,7 @@ class Webmention(object):
             self.source,
             self.target
         )
-
-    def _fetch(self):
-        self._source = shared.XRay(self.source).parse()
-
-    def _save(self):
-        fm = frontmatter.loads('')
-        fm.content = self.content
-        fm.metadata = self.meta
-        with open(self.fpath, 'wt') as f:
-            logging.info("Saving webmention to %s", self.fpath)
-            f.write(frontmatter.dumps(fm))
-        return
+        self._source = None
 
     def send(self):
         rels = shared.XRay(self.target).set_discover().parse()
@@ -1384,16 +1390,52 @@ class Webmention(object):
                 }
             )
             if p.status_code == requests.codes.ok:
+                logging.info("webmention sent")
                 return True
+            elif p.status_code == 400 and 'brid.gy' in self.target:
+                logging.warning("potential bridgy duplicate: %s %s", p.status_code, p.text)
+                return True
+            else:
+                logging.error("webmention failure: %s %s", p.status_code, p.text)
+                return False
         except Exception as e:
             logging.error("sending webmention failed: %s", e)
         return False
 
     def receive(self):
-        self._fetch()
+        head = requests.head(self.source)
+        if head.status_code == 410:
+            self._delete()
+            return
+        elif head.status_code != requests.codes.ok:
+            logging.error(
+                "webmention source failure: %s %s",
+                head.status_code,
+                self.source
+            )
+            return
+
+        self._source = shared.XRay(self.source).parse()
         if 'data' not in self._source:
+            logging.error("no data found in webmention source: %s", self.source)
             return
         self._save()
+
+    def _delete(self):
+        if os.path.isfile(self.fpath):
+            logging.info("Deleting webmention %s", self.fpath)
+            os.unlink(self.fpath)
+        return
+
+    def _save(self):
+        fm = frontmatter.loads('')
+        fm.content = self.content
+        fm.metadata = self.meta
+        with open(self.fpath, 'wt') as f:
+            logging.info("Saving webmention to %s", self.fpath)
+            f.write(frontmatter.dumps(fm))
+        return
+
 
     @property
     def relation(self):
