@@ -227,6 +227,7 @@ class ExifTool(CMDLine):
             '-MIMEType',
             '-FileType',
             '-FileName',
+            '-FileSize#',
             '-ModifyDate',
             '-CreateDate',
             '-DateTimeOriginal',
