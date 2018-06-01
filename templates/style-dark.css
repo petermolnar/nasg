@@ -293,7 +293,7 @@ code.sourceCode span.va { color: turquoise; }
 
 .content-footer {
     margin-top: 2em;
-    padding: 1em 0 0.6em 0;
+    padding: 1.6em 0;
     text-align: center;
 }
 
@@ -332,6 +332,8 @@ code.sourceCode span.va { color: turquoise; }
 
 .content-footer dl dd:last-of-type:after {
     content: '';
+    display: none;
+    visibility: hidden;
 }
 
 input {
@@ -455,24 +457,9 @@ input.search-submit:hover {
     color: #eee;
 }
 
-.h-entry.singular footer dl,
-.h-entry.singular footer dt,
 .h-entry.singular footer dd {
-    vertical-align:top;
+    margin: 0 0 1em 0;
 }
-
-.h-entry.singular footer dt {
-    display: inline-block;
-    width: 18%;
-    margin: 0 1% 0 0;
-    text-align: right;
-}
-
-.h-entry.singular footer dd {
-    display: inline-block;
-    width: 80%;
-}
-
 
 .h-entry.singular footer img {
     width: 1em;
@@ -714,12 +701,12 @@ figcaption .author,
     h1, h2, h3, h4, h5, h6 {
         page-break-after: avoid;
     }
-    
+
     h3,
     a,
     .footnotes ol li a,
     .h-feed .h-entry,
-    code, 
+    code,
     pre {
         border: none;
     }

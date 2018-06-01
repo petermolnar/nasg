@@ -1,59 +1,59 @@
 
-		<footer class="content-footer" id="main-footer">
-			<nav class="footer-contact p-author h-card vcard limit">
-				<h2>Site author</h2>
-				<dl>
-					<dt>
-						<img class="photo avatar u-photo u-avatar" src="{{ site.author.avatar }}" alt="Photo of {{ site.author.name }}" />
-					</dt>
-					<dd>
-						<a class="fn p-name url u-url u-uid" href="/about.html">
-							{{ site.author.name }}
-						</a>
-					</dd>
-					<dt>email</dt>
-					<dd>
-						<a rel="me" class="u-email email" href="mailto:{{ site.author.email }}">
-							{{ site.author.email }}
-						</a>
-					</dd>
+        <footer class="content-footer" id="main-footer">
+            <nav class="footer-contact p-author h-card vcard limit">
+                <h2>Site author</h2>
+                <dl>
+                    <dt>
+                        <img class="photo avatar u-photo u-avatar" src="{{ site.author.avatar }}" alt="Photo of {{ site.author.name }}" />
+                    </dt>
+                    <dd>
+                        <a class="fn p-name url u-url u-uid" href="/about.html">
+                            {{ site.author.name }}
+                        </a>
+                    </dd>
+                    <dt>email</dt>
+                    <dd>
+                        <a rel="me" class="u-email email" href="mailto:{{ site.author.email }}">
+                            {{ site.author.email }}
+                        </a>
+                    </dd>
 {% if site.author.sip %}
-					<dt>SIP</dt>
-					<dd>
-						<a rel="me" class="u-sip sip" href="sip:{{ site.author.sip }}">
-							{{ site.author.sip }}
-						</a>
-					</dd>
+                    <dt>SIP</dt>
+                    <dd>
+                        <a rel="me" class="u-sip sip" href="sip:{{ site.author.sip }}">
+                            {{ site.author.sip }}
+                        </a>
+                    </dd>
 {% endif %}
 {% if site.author.xmpp %}
-					<dt>XMPP</dt>
-					<dd>
-						<a rel="me" class="u-xmpp xmpp" href="xmpp:{{ site.author.xmpp }}">{{ site.author.xmpp }}</a>
-					</dd>
+                    <dt>XMPP</dt>
+                    <dd>
+                        <a rel="me" class="u-xmpp xmpp" href="xmpp:{{ site.author.xmpp }}">{{ site.author.xmpp }}</a>
+                    </dd>
 {% endif %}
 {% if site.author.gpg %}
-					<dt>GPG</dt>
-					<dd>
-						<a rel="me" class="u-gpg gpg" href="/{{ site.author.gpg }}">key</a>
-					</dd>
+                    <dt>GPG</dt>
+                    <dd>
+                        <a rel="me" class="u-gpg gpg" href="/{{ site.author.gpg }}">key</a>
+                    </dd>
 {% endif %}
 {% if site.author.flickr %}
-					<dt>flickr</dt>
-					<dd>
-						<a rel="me" class="u-flickr" href="https://flickr.com/people/{{ site.author.flickr }}">{{ site.author.flickr }}</a>
-					</dd>
+                    <dt>flickr</dt>
+                    <dd>
+                        <a rel="me" class="u-flickr" href="https://flickr.com/people/{{ site.author.flickr }}">{{ site.author.flickr }}</a>
+                    </dd>
 {% endif %}
 {% if site.author.github %}
-					<dt>github</dt>
-					<dd>
-						<a rel="me" class="u-github" href="https://github.com/{{ site.author.github }}">{{ site.author.github }}</a>
-					</dd>
+                    <dt>github</dt>
+                    <dd>
+                        <a rel="me" class="u-github" href="https://github.com/{{ site.author.github }}">{{ site.author.github }}</a>
+                    </dd>
 {% endif %}
-				</dl>
-			</nav>
-		</footer>
+                </dl>
+            </nav>
+        </footer>
 
 {% include 'symbols.svg' %}
 
-	</body>
+    </body>
 </html>

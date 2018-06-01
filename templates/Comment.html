@@ -1,27 +1,27 @@
 <li class="h-entry p-comment">
 {% if 'webmention' != comment.type %}
-	<span class="reaction">
-		<a class="u-url" href="{{ comment.source }}">{{ comment.type }} </a>
-	</span>
+    <span class="reaction">
+        <a class="u-url" href="{{ comment.source }}">{{ comment.type }} </a>
+    </span>
 {% endif %}
-	<time class="dt-published" datetime="{{ comment.pubtime }}">
-		{{ comment.pubdate }}
-	</time> from
-	<span class="p-author h-card">
-	{% if comment.author.url %}
-		<a class="url u-url" href="{{ comment.author.url }}">
-			<span class="p-name fn">{{ comment.author.name }}</span>
-		</a>
-	{% else %}
-		<span class="p-name fn">{{ comment.author.name }}</span>
-	{% endif %}
-	</span><br />
+    <time class="dt-published" datetime="{{ comment.pubtime }}">
+        {{ comment.pubdate }}
+    </time> from
+    <span class="p-author h-card">
+    {% if comment.author.url %}
+        <a class="url u-url" href="{{ comment.author.url }}">
+            <span class="p-name fn">{{ comment.author.name }}</span>
+        </a>
+    {% else %}
+        <span class="p-name fn">{{ comment.author.name }}</span>
+    {% endif %}
+    </span><br />
 {% if 'webmention' == comment.type %}
-	<span class="source">
-		<svg class="icon" width="16" height="16">
-			<use xlink:href="#icon-link"></use>
-		</svg>
-		<a class="u-url" href="{{ comment.source }}">{{ comment.source }}</a>
-	</span>
+    <span class="source">
+        <svg class="icon" width="16" height="16">
+            <use xlink:href="#icon-link"></use>
+        </svg>
+        <a class="u-url" href="{{ comment.source }}">{{ comment.source }}</a>
+    </span>
 {% endif %}
 </li>

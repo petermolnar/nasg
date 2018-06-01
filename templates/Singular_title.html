@@ -1,15 +1,15 @@
 {% if post.is_reply %}
-	<span class="p-name">
-		<svg class="icon" width="16" height="16"><use xlink:href="#icon-reply" /></svg>
-		<a href="{{ post.slug }}" class="u-url" title="{{ post.title }}">
-			RE:
-		</a>
-		<a href="{{ post.is_reply }}" class="u-in-reply-to" title="Reply to: {{ post.is_reply }}">
-			{{ post.is_reply }}
-		</a>
-	</span>
+    <span class="p-name">
+        <svg class="icon" width="16" height="16"><use xlink:href="#icon-reply" /></svg>
+        <a href="/{{ post.slug }}/" class="u-url" title="{{ post.title }}">
+            RE:
+        </a>
+        <a href="{{ post.is_reply }}" class="u-in-reply-to" title="Reply to: {{ post.is_reply }}">
+            {{ post.is_reply }}
+        </a>
+    </span>
 {% else %}
-	<a href="/{{ post.slug }}/" title="{{ post.title }}" class="{% if post.summary %}has-summary{% endif %}">
-		<span class="entry-title p-name">{{ post.title }}</span>
-	</a>
+    <a href="/{{ post.slug }}/" title="{{ post.title }}" class="{% if post.summary %}has-summary{% endif %}">
+        <span class="entry-title p-name">{{ post.title }}</span>
+    </a>
 {% endif %}

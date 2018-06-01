@@ -1,120 +1,120 @@
 {% include 'block_header_open.html' %}
-	<title>{{ taxonomy.title }}</title>
-	<link rel="alternate" type="application/atom+xml" title="{{ taxonomy.title }} feed" href="{{ taxonomy.feed }}" />
-	<link rel="self" href="{{ site.url }}{{ taxonomy.feed }}/" />
+    <title>{{ taxonomy.title }}</title>
+    <link rel="alternate" type="application/atom+xml" title="{{ taxonomy.title }} feed" href="{{ taxonomy.feed }}" />
+    <link rel="self" href="{{ site.url }}{{ taxonomy.feed }}/" />
 
 {% include 'block_header_close.html' %}
 
 {% if taxonomy.add_welcome %}
 <aside class="siteinfo limit">
-	<p>Hi!</p>
-	<p>Your are on a personal homepage. It has been my home one the Internet for many years, although the URL had changed a few times. It's <a href="https://indieweb.org/">IndieWeb</a>-compatible, and all content is produced by me. </p>
-	<p>This page is a feed of everything that gets on the site.</p>
+    <p>Hi!</p>
+    <p>Your are on a personal homepage. It has been my home one the Internet for many years, although the URL had changed a few times. It's <a href="https://indieweb.org/">IndieWeb</a>-compatible, and all content is produced by me. </p>
+    <p>This page is a feed of everything that gets on the site.</p>
 </aside>
 {% endif %}
 
 <section class="content-body h-feed">
-	<aside class="follow">
-		<p>
-			<svg class="icon" width="16" height="16">
-				<use xlink:href="#icon-rss" />
-			</svg>
-			<a title="follow {{ taxonomy.title }}" rel="feed" href="{{ site.url }}{{ taxonomy.feed }}">Atom feed</a>
-		</p>
-	</aside>
+    <aside class="follow">
+        <p>
+            <svg class="icon" width="16" height="16">
+                <use xlink:href="#icon-rss" />
+            </svg>
+            <a title="follow {{ taxonomy.title }}" rel="feed" href="{{ site.url }}{{ taxonomy.feed }}">Atom feed</a>
+        </p>
+    </aside>
 
-	<h1 class="p-name hide">{{ taxonomy.name }}</h1>
-	{% for post in posts %}
-		<article class="h-entry hentry" lang="{{ post.lang }}">
-			<header>
-				<h2>{% include 'Singular_title.html' %}</h2>
-			</header>
+    <h1 class="p-name hide">{{ taxonomy.name }}</h1>
+    {% for post in posts %}
+        <article class="h-entry hentry" lang="{{ post.lang }}">
+            <header>
+                <h2>{% include 'Singular_title.html' %}</h2>
+            </header>
 
 
-			{% if post.summary %}
-			<div class="e-summary entry-summary">
-				{{ post.summary }}
-				<span class="more">
-					<a href="/{{ post.slug }}" title="{{ post.title }}">
-					{% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
-					</a>
-				</span>
-			</div>
-			{% else %}
-			<div class="e-content entry-content">
-				{% if post.photo %}
-					{{ post.photo }}
-				{% endif %}
-				{{ post.html }}
-			</div>
-			{% endif %}
-		</article>
+            {% if post.summary %}
+            <div class="e-summary entry-summary">
+                {{ post.summary }}
+                <span class="more">
+                    <a href="/{{ post.slug }}" title="{{ post.title }}">
+                    {% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
+                    </a>
+                </span>
+            </div>
+            {% else %}
+            <div class="e-content entry-content">
+                {% if post.photo %}
+                    {{ post.photo }}
+                {% endif %}
+                {{ post.html }}
+            </div>
+            {% endif %}
+        </article>
 
-	{% endfor %}
+    {% endfor %}
 </section>
 
 {% if taxonomy.total > 1 %}
 
-	{# based on: http://dev.dbl-a.com/symfony-2-0/symfony2-and-twig-pagination/ #}
-	<nav class="pagination">
-		<ul>
-	{% if taxonomy.page > 1 %}
-	{% set prev = taxonomy.page - 1 %}
-			<li>
-				<a rel="prev" href="{{ taxonomy.url }}page/{{ prev }}">«</a>
-			</li>
-			<li>
-				<a rel="prev" href="{{ taxonomy.url }}">1</a>
-			</li>
-	{% endif %}
+    {# based on: http://dev.dbl-a.com/symfony-2-0/symfony2-and-twig-pagination/ #}
+    <nav class="pagination">
+        <ul>
+    {% if taxonomy.page > 1 %}
+    {% set prev = taxonomy.page - 1 %}
+            <li>
+                <a rel="prev" href="{{ taxonomy.url }}page/{{ prev }}">«</a>
+            </li>
+            <li>
+                <a rel="prev" href="{{ taxonomy.url }}">1</a>
+            </li>
+    {% endif %}
 
-	{% if taxonomy.page - 4 > 0 %}
-			<li>
-				<span class="page-numbers dots">…</span>
-			</li>
-	{% endif %}
-
-
-		{% if ( taxonomy.page - 1 > 1 ) %}
-			<li>
-				<a href="{{ taxonomy.url }}page/{{ taxonomy.page - 1 }}">{{ taxonomy.page - 1 }}</a>
-			</li>
-		{% endif %}
+    {% if taxonomy.page - 4 > 0 %}
+            <li>
+                <span class="page-numbers dots">…</span>
+            </li>
+    {% endif %}
 
 
-			<li>
-				<span class="page-numbers taxonomy.page">{{ taxonomy.page }}</span>
-			</li>
+        {% if ( taxonomy.page - 1 > 1 ) %}
+            <li>
+                <a href="{{ taxonomy.url }}page/{{ taxonomy.page - 1 }}">{{ taxonomy.page - 1 }}</a>
+            </li>
+        {% endif %}
 
 
-		{% if ( taxonomy.page + 1 <= taxonomy.total -1 ) %}
-			<li>
-				<a href="{{ taxonomy.url }}page/{{ taxonomy.page + 1 }}">{{ taxonomy.page + 1 }}</a>
-			</li>
-		{% endif %}
+            <li>
+                <span class="page-numbers taxonomy.page">{{ taxonomy.page }}</span>
+            </li>
 
 
-	{% if taxonomy.page  + 3 < taxonomy.total %}
-			<li>
-				<span class="page-numbers dots">…</span>
-			</li>
-	{% endif %}
+        {% if ( taxonomy.page + 1 <= taxonomy.total -1 ) %}
+            <li>
+                <a href="{{ taxonomy.url }}page/{{ taxonomy.page + 1 }}">{{ taxonomy.page + 1 }}</a>
+            </li>
+        {% endif %}
 
 
-	{% if taxonomy.page != taxonomy.total %}
-			<li>
-				<a href="{{ taxonomy.url }}page/{{ taxonomy.total }}">{{ taxonomy.total }}</a>
-			</li>
-	{% endif %}
+    {% if taxonomy.page  + 3 < taxonomy.total %}
+            <li>
+                <span class="page-numbers dots">…</span>
+            </li>
+    {% endif %}
 
-	{% if taxonomy.page < taxonomy.total %}
-	{% set next = taxonomy.page + 1 %}
-			<li>
-				<a rel="next" href="{{ taxonomy.url }}page/{{ next }}">»</a>
-			</li>
-	{% endif %}
-		</ul>
-	</nav>
+
+    {% if taxonomy.page != taxonomy.total %}
+            <li>
+                <a href="{{ taxonomy.url }}page/{{ taxonomy.total }}">{{ taxonomy.total }}</a>
+            </li>
+    {% endif %}
+
+    {% if taxonomy.page < taxonomy.total %}
+    {% set next = taxonomy.page + 1 %}
+            <li>
+                <a rel="next" href="{{ taxonomy.url }}page/{{ next }}">»</a>
+            </li>
+    {% endif %}
+        </ul>
+    </nav>
 
 {% endif %}
 
