@@ -71,12 +71,12 @@ class LastFM(object):
         time = int(data.get('date').get('uts'))
         r = {
             'date': arrow.get(time).format(shared.ARROWFORMAT['iso']),
-            'title': data.get('name'),
-            'title_mbid': data.get('mbid'),
             'artist': data.get('artist').get('#text'),
-            'artist_mbid': data.get('artist').get('mbid'),
             'album': data.get('album').get('#text'),
-            'album_mbid': data.get('album').get('mbid'),
+            'title': data.get('name')
+            #'title_mbid': data.get('mbid'),
+            #'artist_mbid': data.get('artist').get('mbid'),
+            #'album_mbid': data.get('album').get('mbid'),
         }
         return (time, r)
 
