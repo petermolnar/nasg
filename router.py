@@ -49,7 +49,10 @@ if __name__ == '__main__':
     async def oauth1(request):
         token = request.args.get('oauth_token')
         verifier = request.args.get('oauth_verifier')
-        logging.info("incoming oauth request: token was %s ; verifier was %s", token, verifier)
+        logging.info(
+            "incoming oauth request: token was %s ; verifier was %s",
+            token,
+            verifier)
         tokendb = shared.TokenDB()
         tokendb.update_token(
             token,

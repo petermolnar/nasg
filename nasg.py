@@ -327,7 +327,6 @@ class Category(NoDupeContainer):
         r = shared.j2.get_template(tmplfile).render(tmplvars)
         self.write_html(o, r)
 
-
     def render_feed(self):
         start = 0
         end = int(shared.config.getint('display', 'pagination'))
@@ -367,7 +366,7 @@ class Category(NoDupeContainer):
 
         for p in reversed(posttmpls):
             link = '%s/%s/' % (shared.site.get('url'), p.get('slug'))
-            dt =  arrow.get(p.get('pubtime')).to('utc')
+            dt = arrow.get(p.get('pubtime')).to('utc')
 
             content = p.get('html')
             if p.get('photo'):
@@ -399,8 +398,8 @@ class Category(NoDupeContainer):
         with open(o, 'wb') as f:
             f.write(fg.atom_str(pretty=True))
 
-        #with open(o.replace('.xml', '.rss'), 'wb') as f:
-            #f.write(fg.rss_str(pretty=True))
+        # with open(o.replace('.xml', '.rss'), 'wb') as f:
+            # f.write(fg.rss_str(pretty=True))
 
         # ping pubsub
         r = requests.post(
@@ -416,7 +415,6 @@ class Category(NoDupeContainer):
         pagination = shared.config.getint('display', 'pagination')
         pages = ceil(len(self.data) / pagination)
         page = 1
-
 
         while page <= pages:
             add_welcome = False
@@ -521,12 +519,16 @@ class Singular(object):
             if not wdb.exists(self.url, target, self.published):
                 wdb.queue(self.url, target)
             else:
-                logging.debug("not queueing - webmention already queued from %s to %s", self.url, target)
+                logging.debug(
+                    "not queueing - webmention already queued from %s to %s",
+                    self.url,
+                    target)
         wdb.finish()
 
     @property
     def urls_to_ping(self):
-        urls = [x.strip() for x in shared.REGEX.get('urls').findall(self.content)]
+        urls = [x.strip()
+                for x in shared.REGEX.get('urls').findall(self.content)]
         if self.is_reply:
             urls.append(self.is_reply)
         for url in self.syndicate:
@@ -808,7 +810,6 @@ class Singular(object):
                 })
         return self._oembedvars
 
-
     @property
     def tmplvars(self):
         # very simple caching because we might use this 4 times:
@@ -874,14 +875,14 @@ class Singular(object):
             out.write(r)
         # use the comment time, not the source file time for this
         os.utime(o, (self.stime, self.stime))
-        #oembed = os.path.join(
-            #shared.config.get('common', 'build'),
-            #self.fname,
-            #'oembed.json'
-        #)
-        #with open(oembed, 'wt') as out:
-            #logging.debug('writing oembed file %s', oembed)
-            #out.write(json.dumps(self.oembedvars))
+        # oembed = os.path.join(
+        #shared.config.get('common', 'build'),
+        # self.fname,
+        # 'oembed.json'
+        # )
+        # with open(oembed, 'wt') as out:
+        #logging.debug('writing oembed file %s', oembed)
+        # out.write(json.dumps(self.oembedvars))
 
     def __repr__(self):
         return "%s/%s" % (self.category, self.fname)
@@ -1013,7 +1014,7 @@ class WebImage(object):
             'camera': ['Model'],
             'aperture': ['FNumber', 'Aperture'],
             'shutter_speed': ['ExposureTime'],
-            #'focallength':      ['FocalLengthIn35mmFormat', 'FocalLength'],
+            # 'focallength':      ['FocalLengthIn35mmFormat', 'FocalLength'],
             'focallength': ['FocalLength'],
             'iso': ['ISO'],
             'lens': ['LensID', 'LensSpec', 'Lens'],
@@ -1335,9 +1336,10 @@ class Comment(object):
             return r
 
         if 'name' in author:
-            r.update({ 'name': self.meta.get('author').get('name')})
+            r.update({'name': self.meta.get('author').get('name')})
         elif 'url' in author:
-            r.update({ 'name': urlparse(self.meta.get('author').get('url')).hostname})
+            r.update(
+                {'name': urlparse(self.meta.get('author').get('url')).hostname})
 
         return r
 
@@ -1424,10 +1426,16 @@ class Webmention(object):
                 logging.info("webmention sent")
                 return True
             elif p.status_code == 400 and 'brid.gy' in self.target:
-                logging.warning("potential bridgy duplicate: %s %s", p.status_code, p.text)
+                logging.warning(
+                    "potential bridgy duplicate: %s %s",
+                    p.status_code,
+                    p.text)
                 return True
             else:
-                logging.error("webmention failure: %s %s", p.status_code, p.text)
+                logging.error(
+                    "webmention failure: %s %s",
+                    p.status_code,
+                    p.text)
                 return False
         except Exception as e:
             logging.error("sending webmention failed: %s", e)
@@ -1448,7 +1456,9 @@ class Webmention(object):
 
         self._source = shared.XRay(self.source).parse()
         if 'data' not in self._source:
-            logging.error("no data found in webmention source: %s", self.source)
+            logging.error(
+                "no data found in webmention source: %s",
+                self.source)
             return
         self._save()
 
@@ -1466,7 +1476,6 @@ class Webmention(object):
             logging.info("Saving webmention to %s", self.fpath)
             f.write(frontmatter.dumps(fm))
         return
-
 
     @property
     def relation(self):
@@ -1600,14 +1609,13 @@ def build():
     collector_categories = NoDupeContainer()
     sitemap = {}
 
-
     for f, post in content:
         logging.info("PARSING %s", f)
         post.init_extras()
         post.queue_webmentions()
 
         # add to sitemap
-        sitemap.update({ post.url: post.mtime })
+        sitemap.update({post.url: post.mtime})
 
         # extend redirects
         for r in post.redirects:
@@ -1695,7 +1703,8 @@ def build():
         if os.path.exists(d):
             dtime = os.path.getmtime(d)
 
-        if not os.path.exists(d) or shared.config.getboolean('params', 'force') or dtime < stime:
+        if not os.path.exists(d) or shared.config.getboolean(
+                'params', 'force') or dtime < stime:
             logging.debug("copying static file %s to %s", s, d)
             shutil.copy2(s, d)
         if '.html' in item:
@@ -1705,7 +1714,11 @@ def build():
             })
 
     # dump sitemap, if needed
-    sitemapf = os.path.join(shared.config.get('common', 'build'), 'sitemap.txt')
+    sitemapf = os.path.join(
+        shared.config.get(
+            'common',
+            'build'),
+        'sitemap.txt')
     sitemap_update = True
     if os.path.exists(sitemapf):
         if int(max(sitemap.values())) <= int(os.path.getmtime(sitemapf)):

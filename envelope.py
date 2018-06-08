@@ -55,6 +55,7 @@ import smtplib
 import logging
 from shared import Pandoc
 
+
 class Letter(object):
     def __init__(self, sender=None, recipient=None, subject='', text=''):
         self.sender = sender or (getpass.getuser(), socket.gethostname())
@@ -68,7 +69,7 @@ class Letter(object):
             shutil.rmtree,
             os.path.abspath(self.tmp)
         )
-        self.text = text;
+        self.text = text
         self.subject = subject
         self.images = []
         self.ready = None
@@ -102,14 +103,12 @@ class Letter(object):
                     self.images = []
                 self.images.append(i)
 
-
     def __pull_images(self):
         mdmatch = re.compile(
             r'!\[.*\]\((.*?\.(?:jpe?g|png|gif)(?:\s+[\'\"]?.*?[\'\"]?)?)\)'
             r'(?:\{.*?\})?'
         )
         [self.__pull_image(img) for img in mdmatch.findall(self.text)]
-
 
     def __attach_images(self):
         self.__pull_images()
@@ -118,18 +117,20 @@ class Letter(object):
             logging.debug("replacing %s with %s", i['url'], cid)
             self.text = self.text.replace(i['url'], cid)
 
-
     def make(self, inline_images=True):
         if inline_images:
             self.__attach_images()
-
 
         # Python, by default, encodes utf-8 in base64, which makes plain text
         # mail painful; this overrides and forces Quoted Printable.
         # Quoted Printable is still awful, but better, and we're going to
         # force the mail to be 8bit encoded.
         # Note: enforcing 8bit breaks compatibility with ancient mail clients.
-        email.charset.add_charset('utf-8', email.charset.QP, email.charset.QP, 'utf-8')
+        email.charset.add_charset(
+            'utf-8',
+            email.charset.QP,
+            email.charset.QP,
+            'utf-8')
 
         mail = MIMEMultipart('alternative')
 
@@ -163,7 +164,6 @@ class Letter(object):
         # this is where it gets tricky: the HTML part should be a 'related'
         # wrapper, in which the text and all the related images are sitting
         _envelope = MIMEMultipart('related')
-
 
         html = self._tmpl
         _html = MIMEText(html, 'html', _charset='utf-8')
@@ -218,7 +218,8 @@ class Letter(object):
             # unless you do the encode, you'll get:
             #   File "/usr/local/lib/python3.5/smtplib.py", line 850, in sendmail
             #   msg = _fix_eols(msg).encode('ascii')
-            #   UnicodeEncodeError: 'ascii' codec can't encode character '\xa0' in position 1073: ordinal not in range(128)
+            # UnicodeEncodeError: 'ascii' codec can't encode character '\xa0'
+            # in position 1073: ordinal not in range(128)
             s.sendmail(self.headers['From'], self.headers['To'], self.ready)
             s.quit()
         except Exception as e:

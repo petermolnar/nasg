@@ -74,9 +74,9 @@ class LastFM(object):
             'artist': data.get('artist').get('#text'),
             'album': data.get('album').get('#text'),
             'title': data.get('name')
-            #'title_mbid': data.get('mbid'),
-            #'artist_mbid': data.get('artist').get('mbid'),
-            #'album_mbid': data.get('album').get('mbid'),
+            # 'title_mbid': data.get('mbid'),
+            # 'artist_mbid': data.get('artist').get('mbid'),
+            # 'album_mbid': data.get('album').get('mbid'),
         }
         return (time, r)
 
@@ -855,6 +855,7 @@ class TwitterFav(object):
             img.pull_image()
             img.fix_extension()
             img.write_exif()
+
 
 class TwitterFavs(Favs):
     url = 'https://api.twitter.com/1.1/favorites/list.json'

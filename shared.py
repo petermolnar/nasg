@@ -44,6 +44,7 @@ from inspect import getsourcefile
 import sys
 import arrow
 
+
 class CMDLine(object):
     def __init__(self, executable):
         self.executable = self._which(executable)
@@ -462,7 +463,7 @@ class SearchDB(BaseDB):
             #fpath = glob.glob(maybe_fpath).pop()
             ret.get(category).update({
                 r.get('id'): {
-                    #'fpath': fpath,
+                    # 'fpath': fpath,
                     'url': r.get('url'),
                     'title': r.get('title'),
                     'txt': r.get('txt')
@@ -521,7 +522,7 @@ class WebmentionQueue(BaseDB):
         cursor = self.db.cursor()
         cursor.execute(
             '''SELECT id,timestamp FROM queue WHERE source=? AND target=? ORDER BY timestamp DESC LIMIT 1''',
-            (source,target)
+            (source, target)
         )
 
         rows = cursor.fetchall()
@@ -617,7 +618,7 @@ def __expandconfig():
         allow_no_value=True
     )
     conffile = os.path.join(
-        os.path.dirname(os.path.abspath(getsourcefile(lambda:0))),
+        os.path.dirname(os.path.abspath(getsourcefile(lambda: 0))),
         'config.ini'
     )
     c.read(conffile)
@@ -682,6 +683,7 @@ def __setup_sitevars():
 
     SiteVars.update({'tips': tips})
     return SiteVars
+
 
 ARROWFORMAT = {
     'iso': 'YYYY-MM-DDTHH:mm:ssZ',
