@@ -787,6 +787,29 @@ class Singular(object):
         return html.escape(self.meta.get('summary', ''))
 
     @property
+    def oembedvars(self):
+        if not hasattr(self, '_oembedvars'):
+            self._oembedvars = {
+                "version": "1.0",
+                "type": "link",
+                "title": self.title,
+                "url": "%s/%s/" % (shared.site.get('url'), self.fname),
+                "author_name": shared.site.get('author').get('name'),
+                "author_url": shared.site.get('author').get('url'),
+                "provider_name": shared.site.get('title'),
+                "provider_url": shared.site.get('url'),
+            }
+            if self.photo:
+                self._oembedvars.update({
+                    "type": "photo",
+                    "width": self.photo.tmplvars.get('width'),
+                    "height": self.photo.tmplvars.get('height'),
+                    "url": self.photo.tmplvars.get('src'),
+                })
+        return self._oembedvars
+
+
+    @property
     def tmplvars(self):
         # very simple caching because we might use this 4 times:
         # post HTML, category, front posts and atom feed
@@ -851,6 +874,14 @@ class Singular(object):
             out.write(r)
         # use the comment time, not the source file time for this
         os.utime(o, (self.stime, self.stime))
+        #oembed = os.path.join(
+            #shared.config.get('common', 'build'),
+            #self.fname,
+            #'oembed.json'
+        #)
+        #with open(oembed, 'wt') as out:
+            #logging.debug('writing oembed file %s', oembed)
+            #out.write(json.dumps(self.oembedvars))
 
     def __repr__(self):
         return "%s/%s" % (self.category, self.fname)
