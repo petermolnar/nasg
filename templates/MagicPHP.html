@@ -58,13 +58,13 @@ function maybe_redirect($uri) {
 $redirects = array(
 {% for (from, to) in redirects %}
     "{{ from }}" => "{{ to }}",
-{% endfor %}
+{%- endfor %}
 );
 
 $gone = array(
 {% for gone in gones %}
     "{{ gone }}" => true,
-{% endfor %}
+{%- endfor %}
 );
 
 $uri = filter_var($_SERVER['REQUEST_URI'], FILTER_SANITIZE_URL);

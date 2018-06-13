@@ -1167,7 +1167,15 @@ class WebImage(object):
     def _intermediate_dimension(self, size, width, height, crop=False):
         """ Calculate intermediate resize dimension and return a tuple of width, height """
         size = int(size)
-        if (width > height and not crop) \
+        if (width > height*3):
+            size = int(size * 0.6)
+            # panorama
+            if (height <= size):
+                h = height
+            else:
+                h = size
+            w = int(float(h / height) * width)
+        elif (width > height and not crop) \
                 or (width < height and crop):
             w = size
             h = int(float(size / width) * height)
