@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
     <link rel="icon" href="{{ site.url }}/favicon.ico" />
+    <!-- https://indieweb.org/Webmention -->
     <link rel="http://webmention.org/" href="{{ site.url }}/webmention" />
     <link rel="webmention" href="{{ site.url }}/webmention" />
-    <link rel="hub" href="{{ site.websub.hub }}">
+    <!-- https://indieweb.org/Microsub -->
+    <link rel="hub" href="{{ site.websub.hub }}" />
+    <!-- https://indieweb.org/Micropub -->
+    <link rel="authorization_endpoint" href="{{ site.url }}micropub-auth" />
+    <link rel="token_endpoint" href="{{ site.url }}micropub-token" />
+    <link rel="micropub" href="{{ site.url }}micropub" />

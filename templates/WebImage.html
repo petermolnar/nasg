@@ -3,7 +3,7 @@
 <img src="{{ photo.src }}" title="{{ photo.title }}" alt="{{ photo.alt }}" class="adaptimg" width="{{ photo.width }}" height="{{ photo.height }}" />
 {% if photo.target %}</a>{% endif %}
 <figcaption>
-<span class="alt">{{ photo.alt }}</span>{% if photo.is_photo %}<span class="author"> - photo by {{ photo.author }}</span>
+<span class="alt">{{ photo.alt }}</span>{% if photo.is_photo %}
 <dl class="exif">
 {% if photo.exif.camera %}
 <dt>Camera</dt>
@@ -29,7 +29,6 @@
 <dt>Lens</dt>
 <dd><svg class="icon" width="16" height="16"><use xlink:href="#icon-lens" /></svg>{{ photo.exif.lens }}</dd>
 {% endif %}
-</dl>
-{% endif %}
+</dl>{% endif %}
 </figcaption>
 </figure>

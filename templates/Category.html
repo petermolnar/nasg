@@ -14,14 +14,15 @@
 {% endif %}
 
 <section class="content-body h-feed">
-    <aside class="follow">
-        <p>
-            <svg class="icon" width="16" height="16">
-                <use xlink:href="#icon-rss" />
-            </svg>
-            <a title="follow {{ taxonomy.title }}" rel="feed" href="{{ site.url }}{{ taxonomy.feed }}">Atom feed</a>
+    <nav>
+        <p class="follow">
+            <a title="follow {{ taxonomy.title }}" rel="feed" href="{{ site.url }}{{ taxonomy.feed }}">
+                <svg class="icon" width="16" height="16">
+                    <use xlink:href="#icon-rss" />
+                </svg>
+            </a>
         </p>
-    </aside>
+    </nav>
 
     <h1 class="p-name hide">{{ taxonomy.name }}</h1>
     {% for post in posts %}
