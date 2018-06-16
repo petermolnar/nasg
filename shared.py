@@ -433,6 +433,7 @@ class SearchDB(BaseDB):
         return False
 
     def search_by_query(self, query):
+        query = query.replace('-', ' + ')
         logging.info("query is: %s", query)
         ret = {}
         cursor = self.db.cursor()

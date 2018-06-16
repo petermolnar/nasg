@@ -71,6 +71,14 @@ if __name__ == '__main__':
     async def micropub(request):
         return sanic.response.text("Not Implemented", status=501)
 
+    @app.route("/micropub-auth", methods=["POST", "GET"])
+    async def micropub_auth(request):
+        return sanic.response.text("Not Implemented", status=501)
+
+    @app.route("/micropub-token", methods=["POST", "GET"])
+    async def micropub_token(request):
+        return sanic.response.text("Not Implemented", status=501)
+
     @app.route("/webmention", methods=["POST"])
     async def webmention(request):
         source = request.form.get('source')

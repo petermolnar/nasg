@@ -1,7 +1,7 @@
 [common]
 base = ~/
 domain = domain.com
-build = ~/public
+build = ~/web
 files = files
 
 [dirs]
@@ -11,12 +11,13 @@ files = ${common:base}/${common:files}
 static = ${common:base}/static
 var = ${common:base}/var
 archive = ${common:base}/archive
+comment = ${common:base}/comment
 
 [archive]
 favorite = ${dirs:archive}/favorite
 
 [photo]
-regex = your_regex_artist
+regex = (author name)
 watermark = ${dirs:tmpl}/watermark.png
 default = 720
 
@@ -24,7 +25,7 @@ default = 720
 ;90 = s
 ;360 = m
 720 = z
-1920 = b
+1280 = b
 
 [crop]
 ;90 = true
@@ -32,51 +33,92 @@ default = 720
 [var]
 searchdb = ${dirs:var}/s.sqlite
 webmentiondb = ${dirs:var}/webmention.sqlite
-redirects = ${dirs:var}/redirects.tsv
-gone = ${dirs:var}/gone.tsv
+redirects = ${dirs:content}/redirects.tsv
+gone = ${dirs:content}/gone.tsv
 tokendb = ${dirs:var}/tokens.json
 cache = ${dirs:var}/cache
 
 [site]
-title = Yet another static site
+title =
 url = https://${common:domain}
 lang = en
 domains = ${common:domain}
-websuburl = https://example.superfeedr.com/
+feed = feed
+appendwith = author websub
+
+[tip_label]
+paypal = PayPal
+monzo = Monzo (UK)
+
+[tip_value]
+paypal = £3
+monzo = £3
+
+[tip_url]
+paypal = https://paypal.me/username/3GBP
+monzo = https://monzo.me/username/3
+
+[websub]
+hub = https://hubname.superfeedr.com/
 
 [display]
 pagination = 12
+norender = page
 
 [licence]
 default = by-nc-nd
 
 [author]
-name = Your Name
-email = your_email
+name = Author Name
+email = author@domain.com
 url = ${site:url}
 avatar = ${site:url}/avatar.jpg
-gpg = GPG long key
-donateurl = https://paypal.me/yourname/3GBP
-appendwith = socials
-
-[socials]
-flickr = https://www.flickr.com/people/your_flickr_handle
-github = https://github.com/your_github_handle
+gpg = pgp.asc
+sip = sip.account@domain.com
+xmpp = xmpp.account@domain.com
+flickr = flickr username
+github = github username
+icq = ICQ username
+telegram = Telegram username
 
 [api_flickr]
-api_key = api_key
-api_secret = api_secret
-username = username
+api_key =
+api_secret =
+username =
 
 [api_500px]
-api_key = api_key
-api_secret = api_secret
+api_key =
+api_secret =
 
 [api_tumblr]
-api_key = api_key
-api_secret = api_secret
+api_key =
+api_secret =
 
 [api_deviantart]
-api_key = api_key
-api_secret = api_secret
-username = username
+api_key =
+api_secret =
+username =
+
+[listener]
+host = 127.0.0.1
+port = 8008
+
+[api_telegram]
+api_token =
+chat_id =
+
+[api_spotify]
+api_key =
+api_secret =
+
+[api_lastfm]
+api_key =
+api_secret =
+username =
+logfile = ${dirs:archive}/lastfm.csv
+
+[api_twitter]
+api_key =
+api_secret =
+username =
+userid =
