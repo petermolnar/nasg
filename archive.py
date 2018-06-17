@@ -5,7 +5,7 @@
 __author__ = "Peter Molnar"
 __copyright__ = "Copyright 2018, Peter Molnar"
 __license__ = "GPLv3"
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 __maintainer__ = "Peter Molnar"
 __email__ = "mail@petermolnar.net"
 __status__ = "Production"
@@ -231,86 +231,6 @@ class FlickrFavs(Favs):
             if not fav.exists:
                 fav.run()
             # fav.fix_extension()
-
-
-class FivehpxFavs(Favs):
-    def __init__(self):
-        super().__init__('500px')
-        self.params = {
-            'consumer_key': shared.config.get('api_500px', 'api_key'),
-            'rpp': 100,  # maximum
-            'image_size': 4,
-            'include_tags': 1,
-            'include_geo': 1,
-            'sort': 'created_at',
-            'sort_direction': 'desc'
-        }
-        self.oauth = FivehpxOauth()
-        self.uid = None
-        self.galid = None
-
-    def get_uid(self):
-        r = self.oauth.request(
-            'https://api.500px.com/v1/users',
-            params={}
-        )
-        js = json.loads(r.text)
-        self.uid = js.get('user', {}).get('id')
-
-    def get_favgalid(self):
-        r = self.oauth.request(
-            'https://api.500px.com/v1/users/%s/galleries' % (self.uid),
-            params={
-                'kinds': 5  # see https://github.com/500px/api-documentation/blob/master/basics/formats_and_terms.md#gallery-kinds
-            }
-        )
-        js = json.loads(r.text)
-        g = js.get('galleries', []).pop()
-        self.galid = g.get('id')
-
-    @property
-    def url(self):
-        return 'https://api.500px.com/v1/users/%s/galleries/%s/items' % (
-            self.uid,
-            self.galid
-        )
-
-    def getpaged(self, offset):
-        logging.info('requesting page #%d of paginated results', offset)
-        self.params.update({
-            'page': offset
-        })
-        r = requests.get(
-            self.url,
-            params=self.params
-        )
-        parsed = json.loads(r.text)
-        return parsed.get('photos')
-
-    def run(self):
-        self.get_uid()
-        self.get_favgalid()
-
-        r = requests.get(self.url, params=self.params)
-        js = json.loads(r.text)
-        photos = js.get('photos')
-
-        total = int(js.get('total_pages', 1))
-        current = int(js.get('current_page', 1))
-        cntr = total - current
-
-        while cntr > 0:
-            current = current + 1
-            paged = self.getpaged(current)
-            photos = photos + paged
-            cntr = total - current
-
-        for photo in photos:
-            fav = FivehpxFav(photo)
-            if not fav.exists:
-                fav.run()
-            # fav.fix_extension()
-
 
 class TumblrFavs(Favs):
     url = 'https://api.tumblr.com/v2/user/likes'
@@ -640,53 +560,6 @@ class FlickrFav(ImgFav):
             self.photo.get('description', {}).get('_content', '')
         )
 
-        self.fix_extension()
-        self.write_exif()
-
-
-class FivehpxFav(ImgFav):
-    def __init__(self, photo):
-        self.photo = photo
-        self.ownerid = photo.get('user_id')
-        self.photoid = photo.get('id')
-        self.target = os.path.join(
-            shared.config.get('archive', 'favorite'),
-            "500px-%s-%s.jpg" % (self.ownerid, self.photoid)
-        )
-        self.url = "https://www.500px.com%s" % (photo.get('url'))
-
-    def run(self):
-        img = self.photo.get('images')[0].get('url')
-        if not img:
-            logging.error("image url was empty for %s, skipping fav", self.url)
-            return
-        self.imgurl = img
-        self.pull_image()
-
-        self.meta = {
-            'dt': arrow.get(
-                self.photo.get('created_at',
-                               arrow.utcnow().timestamp
-                               )
-            ),
-            'title': '%s' % shared.Pandoc('plain').convert(
-                self.photo.get('name', '')
-            ).rstrip(),
-            'favorite-of': self.url,
-            'tags': self.photo.get('tags', []),
-            'geo': {
-                'latitude': self.photo.get('latitude', ''),
-                'longitude': self.photo.get('longitude', ''),
-            },
-            'author': {
-                'name': self.photo.get('user').get('fullname', self.ownerid),
-                'url': 'https://www.500px.com/%s' % (
-                    self.photo.get('user').get('username', self.ownerid)
-                ),
-            },
-        }
-        c = "%s" % self.photo.get('description', '')
-        self.content = shared.Pandoc('plain').convert(c)
         self.fix_extension()
         self.write_exif()
 
@@ -1035,15 +908,6 @@ class Oauth1Flow(object):
         return client.get(url, params=params)
 
 
-class FivehpxOauth(Oauth1Flow):
-    request_token_url = 'https://api.500px.com/v1/oauth/request_token'
-    access_token_url = 'https://api.500px.com/v1/oauth/access_token'
-    authorize_url = 'https://api.500px.com/v1/oauth/authorize'
-
-    def __init__(self):
-        super().__init__('500px')
-
-
 class FlickrOauth(Oauth1Flow):
     request_token_url = 'https://www.flickr.com/services/oauth/request_token'
     access_token_url = 'https://www.flickr.com/services/oauth/access_token'
@@ -1077,10 +941,6 @@ if __name__ == '__main__':
     if shared.config.has_section('api_flickr'):
         flickr = FlickrFavs()
         flickr.run()
-
-    if shared.config.has_section('api_500px'):
-        fivehpx = FivehpxFavs()
-        fivehpx.run()
 
     if shared.config.has_section('api_tumblr'):
         tumblr = TumblrFavs()
