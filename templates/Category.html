@@ -71,7 +71,7 @@
 
     {% if taxonomy.page - 4 > 0 %}
             <li>
-                <span class="page-numbers dots">…</span>
+                <span class="dots">…</span>
             </li>
     {% endif %}
 
@@ -84,7 +84,7 @@
 
 
             <li>
-                <span class="page-numbers taxonomy.page">{{ taxonomy.page }}</span>
+                <span class="current">{{ taxonomy.page }}</span>
             </li>
 
 
@@ -97,7 +97,7 @@
 
     {% if taxonomy.page  + 3 < taxonomy.total %}
             <li>
-                <span class="page-numbers dots">…</span>
+                <span class="dots">…</span>
             </li>
     {% endif %}
 

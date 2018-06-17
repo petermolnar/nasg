@@ -1,6 +1,19 @@
-    <style media="all">
-{% include 'style.css' %}
+    <style id="dark" media="all">
+        {% include 'style-dark.css' %}
     </style>
+    <style id="light" media="none">
+        {% include 'style-light.css' %}
+    </style>
+    <script>
+        function toggleStylesheet(trigger){
+            var curr = document.querySelector('#light').getAttribute("media");
+            var setto = 'all';
+            if (curr == 'all') {
+                setto = 'none';
+            }
+            document.querySelector('#light').setAttribute("media", setto);
+        }
+    </script>
 </head>
 <body>
 
@@ -66,5 +79,11 @@
         <input type="submit" class="search-submit" value="Go ➡" />
     </form>
 
-    <br class="clear" />
+    <p class="contrast">
+        <a title="toggle site colour scheme" href="#" onclick="toggleStylesheet(this)">
+            <svg class="icon" width="16" height="16"><use xlink:href="#icon-contrast" /></svg>
+        </a>
+    </p>
+
+
 </header>

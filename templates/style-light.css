@@ -1,0 +1,41 @@
+html, body {
+    color: #222;
+    background-color: #eee;
+}
+
+a {
+    color: #3173b4;
+}
+
+
+a:hover {
+    color: #115394;
+    border-bottom: 1px solid #115394;
+}
+
+code,
+pre {
+    color: darkgreen;
+    background-color: #eee;
+}
+
+.sourceCode .co { color: gray; }
+.sourceCode .ex { color: darkorange; }
+.sourceCode .fu { color: darkorange; }
+.sourceCode .kw { color: darkcyan; }
+.sourceCode .st { color: darkmagenta; }
+.sourceCode .va { color: darkturquoise; }
+
+.donation li a {
+    color: #333;
+    border-bottom: 3px solid #933 !important;
+}
+
+.donation li a:hover {
+    color: #600;
+    border-bottom: 3px solid #600 !important;
+}
+
+.h-entry.singular h1 a {
+    color: #111;
+}

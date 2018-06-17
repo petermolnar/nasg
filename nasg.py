@@ -560,6 +560,11 @@ class Singular(object):
         return True
 
     @property
+    def is_old(self):
+        tdiff = arrow.utcnow() - arrow.get(self.mtime)
+        return (tdiff.days > 2*365)
+
+    @property
     def htmlfile(self):
         return os.path.join(
             shared.config.get('common', 'build'),
@@ -842,7 +847,8 @@ class Singular(object):
                 'tags': self.tags,
                 'photo': False,
                 'enclosure': False,
-                'review': self.review
+                'review': self.review,
+                'is_old': self.is_old
             }
             if self.photo:
                 self._tmplvars.update({
