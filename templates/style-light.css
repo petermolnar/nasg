@@ -39,3 +39,7 @@ pre {
 .h-entry.singular h1 a {
     color: #111;
 }
+
+.contrast svg {
+    transform: rotate(180deg);
+}

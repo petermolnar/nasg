@@ -6,9 +6,8 @@
     </style>
     <script>
         function toggleStylesheet(trigger){
-            var curr = document.querySelector('#light').getAttribute("media");
             var setto = 'all';
-            if (curr == 'all') {
+            if (document.querySelector('#light').getAttribute("media") == 'all') {
                 setto = 'none';
             }
             document.querySelector('#light').setAttribute("media", setto);

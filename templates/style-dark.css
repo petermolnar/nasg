@@ -271,6 +271,10 @@ code {
     padding: 0;
 }
 
+.contrast.active {
+    transform: rotate(180deg);
+}
+
 .contrast a {
     color: #ccc;    
 }
@@ -409,7 +413,6 @@ figure figcaption {
     margin-right: 1em;
 }
 
-
 .content-footer img {
     width: 1em;
 }
@@ -433,23 +436,15 @@ body script {
     margin: 0;
 }
 
-/*
-.h-feed .h-entry {
-    margin-left: 1em;
-}
-*/
-
 .h-feed h2,
 .h-entry.singular .e-content h2 {
     border-bottom: 2px solid #999;
 }
 
-
 .h-feed h3,
 .h-entry.singular .e-content h3 {
     border-bottom: 1px dotted #777;
 }
-
 
 .h-feed > h1 {
     display: none;
@@ -485,7 +480,6 @@ body script {
 .follow {
     display: block;
     text-align: right;
-
 }
 
 .donation ul {
