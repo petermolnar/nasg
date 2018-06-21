@@ -6,17 +6,18 @@
 {% include 'block_header_close.html' %}
 
 <section class="content-body h-feed">
-    <nav>
-        <p class="follow">
-            <a title="follow {{ taxonomy.title }}" rel="feed" href="{{ site.url }}{{ taxonomy.feed }}">
-                <svg class="icon" width="16" height="16">
-                    <use xlink:href="#icon-rss" />
-                </svg>
-            </a>
-        </p>
-    </nav>
-
-    <h1 class="p-name hide">{{ taxonomy.name }}</h1>
+    <header>
+        <nav>
+            <p class="follow">
+                <a title="follow {{ taxonomy.title }}" rel="feed" href="{{ site.url }}{{ taxonomy.feed }}">
+                    <svg class="icon" width="16" height="16">
+                        <use xlink:href="#icon-rss" />
+                    </svg>
+                </a>
+            </p>
+        </nav>
+        <h1 class="p-name">{{ taxonomy.name }}</h1>
+    </header>
 
 {% for year in by_year.keys()|sort(reverse=True) %}
     <h2>{{ year }}</h2>

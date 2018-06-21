@@ -232,10 +232,18 @@ code {
     padding-right: 0.6em;
 }
 
-.content-navigation ul li a {
+.content-header a {
     font-weight: bold;
-    border-bottom: 3px solid transparent;
-    color: #ccc;
+    border-bottom: 3px solid transparent !important;;
+    color: #ccc !important;;
+}
+
+.content-header a:hover {
+    border-bottom: 3px solid #fefefe !important;;
+}
+
+.content-navigation ul li a.active {
+    border-bottom: 3px solid #ccc !important;
 }
 
 .content-navigation ul li a svg {
@@ -243,20 +251,12 @@ code {
     margin: 0.1em auto;
 }
 
-.content-navigation ul li a.active {
-    border-bottom: 3px solid #ccc;
-}
-
-.content-navigation ul li a:hover {
-    border-bottom: 3px solid #fefefe;
-}
-
 .search-form label {
     display: none;
 }
 
 .search-form {
-    margin: 0.6em; 
+    margin: 0.6em;
 }
 
 .search-form .search-field {
@@ -273,10 +273,6 @@ code {
 
 .contrast.active {
     transform: rotate(180deg);
-}
-
-.contrast a {
-    color: #ccc;    
 }
 
 @media all and (min-width: 56em) {
@@ -297,7 +293,7 @@ code {
     .search-form {
         margin: 0.3em 2em 0 auto;
     }
-        
+
     .contrast {
         top:1em;
     }
@@ -499,110 +495,4 @@ body script {
 .donation li a:hover {
     color: #fff;
     border-bottom: 3px solid #c66 !important;
-}
-
-@media print {
-    * {
-        background-color: #fff !important;
-        color: #222;
-    }
-
-    html, body {
-        font-size: 11pt !important;
-        text-shadow: unset !important;
-        font-family: Helvetica, sans-serif !important;
-    }
-
-    @page {
-        margin: 0.6in 0.5in;
-    }
-
-    .limit,
-    .content-body {
-        max-width: 100% !important;
-        margin: 0 !important;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-        page-break-after: avoid;
-    }
-
-    h3,
-    a,
-    .footnotes ol li a,
-    .h-feed .h-entry,
-    code,
-    pre {
-        border: none;
-    }
-
-    p, li, blockquote, figure, .footnotes {
-        page-break-inside: avoid !important;
-    }
-
-    a {
-        color: #000;
-    }
-
-    td, th {
-        border: 1pt solid #666;
-    }
-
-    .content-note,
-    .content-header,
-    .content-footer,
-    video,
-    audio,
-    .footnotes ol li a[href^="#"],
-    .footnotes ol li a[href^="#"]:after,
-    .exif svg,
-    .donation,
-    .noprint {
-        display:none;
-    }
-
-    .footnotes ol li a {
-        display: block;
-        overflow: visible;
-        white-space: normal;
-    }
-
-    code, pre {
-       max-width: 96%;
-       color: #222;
-       word-break: break-all;
-       word-wrap: break-word;
-       white-space: pre-wrap;
-       overflow:initial;
-       page-break-inside: enabled;
-       font-family: "Courier", "Courier New", monospace !important;
-    }
-
-    pre {
-        border: 1pt dotted #666;
-        padding: 0.6em;
-    }
-
-    .sourceCode span { color: black; }
-    .sourceCode .co { color: darkgray; }
-    .sourceCode .ex { color: darkorange; }
-    .sourceCode .fu { color: darkorange; }
-    .sourceCode .kw { color: darkcyan; }
-    .sourceCode .st { color: magenta; }
-    .sourceCode .va { color: darkturquoise; }
-
-    figcaption {
-        font-size: 0.9em;
-    }
-
-    .adaptimg {
-        max-height: 35vh;
-        max-width: 90vw;
-        outline: none;
-        border: 1px solid #000;
-    }
-
-    .h-feed .h-entry {
-        page-break-after:always;
-    }
 }

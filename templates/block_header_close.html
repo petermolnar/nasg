@@ -1,16 +1,26 @@
-    <style id="dark" media="all">
+    <style media="all">
         {% include 'style-dark.css' %}
     </style>
-    <style id="light" media="none">
+    <style id="css_alternative" media="none">
         {% include 'style-light.css' %}
     </style>
+    <style media="print">
+        {% include 'style-print.css' %}
+    </style>
     <script>
+        var current = localStorage.getItem("stylesheet");
+        if (current) {
+            document.querySelector('#css_alternative').setAttribute("media", current);
+        }
+
         function toggleStylesheet(trigger){
             var setto = 'all';
-            if (document.querySelector('#light').getAttribute("media") == 'all') {
+            var e = document.querySelector('#css_alternative');
+            if (e.getAttribute("media") == 'all') {
                 setto = 'none';
             }
-            document.querySelector('#light').setAttribute("media", setto);
+            localStorage.setItem("stylesheet", setto);
+            e.setAttribute("media", setto);
         }
     </script>
 </head>
@@ -73,14 +83,17 @@
     </nav>
 
     <form role="search" method="get" class="search-form" action="/search">
-        <label for="search" class="hide">Search</label>
+        <label for="s">Search</label>
         <input type="search" class="search-field" placeholder="search..." value="" name="s" id="s" title="Search for:" />
         <input type="submit" class="search-submit" value="Go ➡" />
     </form>
 
     <p class="contrast">
-        <a title="toggle site colour scheme" href="#" onclick="toggleStylesheet(this)">
-            <svg class="icon" width="16" height="16"><use xlink:href="#icon-contrast" /></svg>
+        <a title="toggle site colour scheme" href="#"
+            onclick="toggleStylesheet(this)">
+            <svg class="icon" width="16" height="16">
+                <use xlink:href="#icon-contrast" />
+            </svg>
         </a>
     </p>
 
