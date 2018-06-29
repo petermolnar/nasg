@@ -29,7 +29,7 @@ import os
 import re
 import smtplib
 import logging
-from shared import Pandoc
+from shared import PandocNG
 
 
 class Letter(object):
@@ -54,7 +54,7 @@ class Letter(object):
 
     @property
     def _html(self):
-        return Pandoc().convert(self.text)
+        return PandocNG(self.text).html
 
     @property
     def _tmpl(self):

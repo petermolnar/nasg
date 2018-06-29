@@ -209,6 +209,7 @@ class FlickrFavs(Favs):
                 fav.run()
             # fav.fix_extension()
 
+
 class TumblrFavs(Favs):
     url = 'https://api.tumblr.com/v2/user/likes'
 
@@ -516,9 +517,9 @@ class FlickrFav(ImgFav):
                                arrow.utcnow().timestamp
                                )
             ),
-            'title': '%s' % shared.Pandoc('plain').convert(
+            'title': '%s' % shared.PandocNG(
                 self.photo.get('title', '')
-            ).rstrip(),
+            ).txt.rstrip(),
             'favorite-of': self.url,
             'tags': self.photo.get('tags', '').split(' '),
             'geo': {
@@ -533,9 +534,9 @@ class FlickrFav(ImgFav):
             },
         }
 
-        self.content = shared.Pandoc('plain').convert(
+        self.content = shared.PandocNG(
             self.photo.get('description', {}).get('_content', '')
-        )
+        ).txt
 
         self.fix_extension()
         self.write_exif()
@@ -581,7 +582,9 @@ class DAFav(ImgFav):
                              arrow.utcnow().timestamp
                              )
             ),
-            'title': '%s' % shared.Pandoc('plain').convert(self.title).rstrip(),
+            'title': '%s' % shared.PandocNG(
+                self.title
+            ).txt.rstrip(),
             'favorite-of': self.url,
             'tags': [t.get('tag_name') for t in self.fav.get('meta', {}).get('tags', [])],
             'author': {
@@ -590,7 +593,7 @@ class DAFav(ImgFav):
             },
         }
         c = "%s" % self.fav.get('meta', {}).get('description', '')
-        self.content = shared.Pandoc('plain').convert(c)
+        self.content = shared.PandocNG(c).txt
         self.fix_extension()
         self.write_exif()
 

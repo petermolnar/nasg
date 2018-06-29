@@ -93,65 +93,42 @@ class XRay(CMDLine):
         return json.loads(stdout.decode('utf-8').strip())
 
 
-class Pandoc(CMDLine):
+class PandocNG(CMDLine):
     """ Pandoc command line call with piped in- and output """
+    i_md = "markdown+" + "+".join([
+        'backtick_code_blocks',
+        'auto_identifiers',
+        'fenced_code_attributes',
+        'definition_lists',
+        'grid_tables',
+        'pipe_tables',
+        'strikeout',
+        'superscript',
+        'subscript',
+        'markdown_in_html_blocks',
+        'shortcut_reference_links',
+        'autolink_bare_uris',
+        'raw_html',
+        'link_attributes',
+        'header_attributes',
+        'footnotes',
+    ])
+    o_md = "markdown-" + "-".join([
+        'raw_html',
+        'native_divs',
+        'native_spans',
+    ])
 
-    def __init__(self, md2html=True):
+    def __init__(self, raw):
         super().__init__('pandoc')
-        if True == md2html:
-            self.i = "markdown+" + "+".join([
-                'backtick_code_blocks',
-                'auto_identifiers',
-                'fenced_code_attributes',
-                'definition_lists',
-                'grid_tables',
-                'pipe_tables',
-                'strikeout',
-                'superscript',
-                'subscript',
-                'markdown_in_html_blocks',
-                'shortcut_reference_links',
-                'autolink_bare_uris',
-                'raw_html',
-                'link_attributes',
-                'header_attributes',
-                'footnotes',
-            ])
-            self.o = 'html5'
-        elif 'plain' == md2html:
-            self.i = "markdown+" + "+".join([
-                'backtick_code_blocks',
-                'auto_identifiers',
-                'fenced_code_attributes',
-                'definition_lists',
-                'grid_tables',
-                'pipe_tables',
-                'strikeout',
-                'superscript',
-                'subscript',
-                'markdown_in_html_blocks',
-                'shortcut_reference_links',
-                'autolink_bare_uris',
-                'raw_html',
-                'link_attributes',
-                'header_attributes',
-                'footnotes',
-            ])
-            self.o = "plain"
-        else:
-            self.o = "markdown-" + "-".join([
-                'raw_html',
-                'native_divs',
-                'native_spans',
-            ])
-            self.i = 'html'
+        self.raw = raw
 
-    def convert(self, text):
+    def _convert(self, i, o):
         cmd = (
             self.executable,
             '-o-',
-            '--from=%s' % self.i,
-            '--to=%s' % self.o
+            '--from=%s' % i,
+            '--to=%s' % o
         )
         logging.debug('converting string with Pandoc')
         p = subprocess.Popen(
@@ -161,7 +138,7 @@ class Pandoc(CMDLine):
             stderr=subprocess.PIPE,
         )
 
-        stdout, stderr = p.communicate(input=text.encode())
+        stdout, stderr = p.communicate(input=self.raw.encode())
         if stderr:
             logging.error(
                 "Error during pandoc covert:\n\t%s\n\t%s",
@@ -169,6 +146,27 @@ class Pandoc(CMDLine):
                 stderr
             )
         return stdout.decode('utf-8').strip()
+
+    @property
+    def html(self):
+        return self._convert(
+            i=self.i_md,
+            o="html5"
+        )
+
+    @property
+    def md(self):
+        return self._convert(
+            i="html5",
+            o=self.o_md
+        )
+
+    @property
+    def txt(self):
+        return self._convert(
+            i=self.i_md,
+            o="plain"
+        )
 
 
 class ExifTool(CMDLine):

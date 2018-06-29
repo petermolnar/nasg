@@ -543,7 +543,7 @@ class Singular(object):
     @property
     def is_old(self):
         tdiff = arrow.utcnow() - arrow.get(self.mtime)
-        return (tdiff.days > 2*365)
+        return (tdiff.days > 2 * 365)
 
     @property
     def htmlfile(self):
@@ -729,9 +729,8 @@ class Singular(object):
 
     @property
     def html(self):
-        html = "%s" % (self.body)
-
-        return shared.Pandoc().convert(html)
+        # return shared.Pandoc().convert(html)
+        return shared.PandocNG("%s" % (self.body)).html
 
     @property
     def title(self):
@@ -752,7 +751,9 @@ class Singular(object):
         if not s:
             return s
         if not hasattr(self, '_summary'):
-            self._summary = shared.Pandoc().convert(s)
+            #self._summary = shared.Pandoc().convert(s)
+            self._summary = shared.PandocNG(s).html
+
         return self._summary
 
     @property
@@ -1162,11 +1163,11 @@ class WebImage(object):
         # 2.39 is the wide angle cinematic view: anything wider, than that
         # is panorama land
         if ratio > 2.4 and not crop:
-            size = int(size*0.6)
+            size = int(size * 0.6)
             horizontal = not horizontal
 
         if (horizontal and not crop) \
-            or (not horizontal and crop):
+                or (not horizontal and crop):
             w = size
             h = int(float(size / width) * height)
         else:
@@ -1310,8 +1311,9 @@ class Comment(object):
 
     @property
     def html(self):
-        html = "%s" % (self.content)
-        return shared.Pandoc().convert(html)
+        #html = "%s" % (self.content)
+        # return shared.Pandoc().convert(html)
+        return shared.PandocNG("%s" % (self.content)).html
 
     @property
     def target(self):
@@ -1351,7 +1353,8 @@ class Comment(object):
                 self._type = '★'
 
             if len(self.content):
-                maybe = shared.Pandoc('plain').convert(self.content)
+                #maybe = shared.Pandoc('plain').convert(self.content)
+                maybe = shared.PandocNG(self.content).txt
                 if maybe in UNICODE_EMOJI:
                     self._type = maybe
         return self._type
@@ -1507,7 +1510,8 @@ class Webmention(object):
             what = self._source.get('data').get('content').get('text')
         else:
             return ''
-        return shared.Pandoc('html').convert(what)
+        # return shared.Pandoc('html').convert(what)
+        return shared.PandocNG(what).html
 
     @property
     def fname(self):
