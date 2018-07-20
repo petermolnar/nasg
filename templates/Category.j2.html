@@ -1,0 +1,145 @@
+{% extends "base.j2.html" %}
+{% block lang %}{% endblock %}
+{% block title %}{{ category.title }}{% endblock %}
+{% block meta %}
+    <link rel="alternate" type="application/atom+xml" title="{{ category.title }} feed" href="{{ site.url }}{{ category.feed }}" />
+{% endblock %}
+{% block content %}
+<section class="content-body h-feed">
+    <header>
+        <nav>
+            <p class="follow">
+                <a title="follow {{ category.title }}" rel="feed" href="{{ site.url }}{{ category.feed }}">
+                    <svg class="icon" width="16" height="16">
+                        <use xlink:href="#icon-rss" />
+                    </svg>
+                </a>
+            </p>
+        </nav>
+        <h1 class="p-name">{{ category.name }}</h1>
+    </header>
+
+
+{% set year = [0] %}
+{% for post in posts %}
+    {% set _year = year.pop() %}
+    {% if category.display == 'flat' and _year != post.year %}
+        <h2>{{ post.year }}</h2>
+    {% endif %}
+    {% set _ = year.append(post.year)%}
+
+    <article class="h-entry hentry singular" lang="{{ post.lang }}">
+        <header>
+            {% if category.display == 'flat' %}
+            <h3>
+            {% else %}
+            <h2>
+            {% endif %}
+                {% if post.is_reply %}
+                <span class="p-name">
+                    <svg class="icon" width="16" height="16">
+                        <use xlink:href="#icon-reply" />
+                    </svg>
+                    <a href="/{{ post.slug }}/" class="u-url">
+                        RE:
+                    </a>
+                    <a href="{{ post.is_reply }}" class="u-in-reply-to">
+                        {{ post.is_reply }}
+                    </a>
+                </span>
+                {% else %}
+                <a href="/{{ post.slug }}/" title="{{ post.title }}">
+                    <span class="entry-title p-name">{{ post.title }}</span>
+                </a>
+                {% endif %}
+            {% if category.display == 'flat' %}
+            </h3>
+            {% else %}
+            </h2>
+            {% endif %}
+        </header>
+
+        {% if post.summary %}
+        <div class="e-summary entry-summary">
+            {{ post.summary }}
+            <p class="more">
+                <a href="/{{ post.slug }}" title="{{ post.title }}">
+                {% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
+                </a>
+            </p>
+        </div>
+        {% else %}
+        <div class="e-content entry-content">
+            {{ post.html_content }}
+        </div>
+        {% endif %}
+    </article>
+{% endfor %}
+</section>
+{% endblock %}
+{% block pagination %}
+{% if pages.total > 1 %}
+
+    {# based on: http://dev.dbl-a.com/symfony-2-0/symfony2-and-twig-pagination/ #}
+    <nav class="pagination">
+        <ul>
+    {% if pages.current > 1 %}
+    {% set prev = pages.current - 1 %}
+            <li>
+                <a rel="prev" href="{{ category.url }}page/{{ prev }}">«</a>
+            </li>
+            <li>
+                <a rel="prev" href="{{ category.url }}">1</a>
+            </li>
+    {% endif %}
+
+    {% if pages.current - 4 > 0 %}
+            <li>
+                <span class="dots">…</span>
+            </li>
+    {% endif %}
+
+
+        {% if ( pages.current - 1 > 1 ) %}
+            <li>
+                <a href="{{ category.url }}page/{{ pages.current - 1 }}">{{ pages.current - 1 }}</a>
+            </li>
+        {% endif %}
+
+
+            <li>
+                <span class="current">{{ pages.current }}</span>
+            </li>
+
+
+        {% if ( pages.current + 1 <= pages.total -1 ) %}
+            <li>
+                <a href="{{ category.url }}page/{{ pages.current + 1 }}">{{ pages.current + 1 }}</a>
+            </li>
+        {% endif %}
+
+
+    {% if pages.current  + 3 < pages.total %}
+            <li>
+                <span class="dots">…</span>
+            </li>
+    {% endif %}
+
+
+    {% if pages.current != pages.total %}
+            <li>
+                <a href="{{ category.url }}page/{{ pages.total }}">{{ pages.total }}</a>
+            </li>
+    {% endif %}
+
+    {% if pages.current < pages.total %}
+    {% set next = pages.current + 1 %}
+            <li>
+                <a rel="next" href="{{ category.url }}page/{{ next }}">»</a>
+            </li>
+    {% endif %}
+        </ul>
+    </nav>
+
+{% endif %}
+{% endblock %}

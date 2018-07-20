@@ -1,0 +1,7 @@
+{% extends "base.j2.html" %}
+{% block meta %}
+    <meta name="author" content="{{ author.name }} <{{ author.email }}>" />
+    <meta name="description" content="{{ post.summary|e }}" />
+    <link rel="canonical" href="{{ post.url }}" />
+    <link rel="license" href="https://creativecommons.org/licenses/4.0/{{ post.licence }}" />
+{% endblock %}

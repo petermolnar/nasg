@@ -1,0 +1,58 @@
+<figure class="photo">
+{% if href != src %}
+    <a href="{{ href }}">
+{% endif %}
+        <img src="{{ src }}" class="adaptimg" title="{{ title }}" alt="" width="{{ width }}" height="{{ height }}" />
+{% if href != src %}
+    </a>
+{% endif %}
+    <figcaption>
+        <span class="alt">{{ caption }}</span>
+{% if is_photo %}
+        <dl class="exif">
+            <dt>Camera</dt>
+            <dd>
+                <svg class="icon" width="16" height="16">
+                    <use xlink:href="#icon-camera" />
+                </svg>
+                {{ exif.camera }}
+            </dd>
+            <dt>Aperture</dt>
+            <dd>
+                <svg class="icon" width="16" height="16">
+                    <use xlink:href="#icon-aperture" />
+                </svg>
+                f/{{ exif.aperture }}
+            </dd>
+            <dt>Shutter speed</dt>
+            <dd>
+                <svg class="icon" width="16" height="16">
+                    <use xlink:href="#icon-clock" />
+                </svg>
+                {{ exif.shutter_speed }} sec
+            </dd>
+            <dt>Focal length (as set)</dt>
+            <dd>
+                <svg class="icon" width="16" height="16">
+                    <use xlink:href="#icon-focallength" />
+                </svg>
+                {{ exif.focallength }}
+            </dd>
+            <dt>Sensitivity</dt>
+            <dd>
+                <svg class="icon" width="16" height="16">
+                    <use xlink:href="#icon-sensitivity" />
+                </svg>
+                ISO {{ exif.iso }}
+            </dd>
+            <dt>Lens</dt>
+            <dd>
+                <svg class="icon" width="16" height="16">
+                    <use xlink:href="#icon-lens" />
+                </svg>
+                {{ exif.lens }}
+            </dd>
+        </dl>
+{% endif %}
+    </figcaption>
+</figure>
