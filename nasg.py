@@ -14,7 +14,7 @@ import re
 import imghdr
 import logging
 import asyncio
-import json
+import sqlite3
 from shutil import copy2 as cp
 from math import ceil
 from urllib.parse import urlparse
@@ -28,7 +28,6 @@ import markdown
 from feedgen.feed import FeedGenerator
 from bleach import clean
 from emoji import UNICODE_EMOJI
-from py_mini_racer import py_mini_racer
 import exiftool
 import settings
 
@@ -445,15 +444,12 @@ class Singular(MarkdownDoc):
 
     @property
     def corpus(self):
-        return {
-            'url': self.url,
-            'title': self.title,
-            'body': "\n".join([
+        return "\n".join([
+                self.title,
                 self.name,
                 self.summary,
                 self.content,
             ])
-        }
 
     async def render(self):
         if self.exists:
@@ -1036,39 +1032,72 @@ class Category(dict):
         self.render_feed()
         self.ping_websub()
 
-
 class Search(object):
     def __init__(self):
-        self.js = py_mini_racer.MiniRacer()
-        with open('elasticlunr.js') as f:
-            self.js.eval(f.read())
-
-        self.js.eval("""
-            var index = elasticlunr();
-            index.addField('title');
-            index.addField('body');
-            index.setRef('url');
-
-        """)
-        # index.saveDocument(false);
-
-    @property
-    def fpath(self):
-        return os.path.join(
+        self.fpath = os.path.join(
             settings.paths.get('build'),
-            'search.json'
+            'search.sqlite'
+        )
+        self.db = sqlite3.connect(self.fpath)
+        self.db.execute('PRAGMA auto_vacuum = INCREMENTAL;')
+        self.db.execute('PRAGMA journal_mode = MEMORY;')
+        self.db.execute('PRAGMA temp_store = MEMORY;')
+        self.db.execute('PRAGMA locking_mode = NORMAL;')
+        self.db.execute('PRAGMA synchronous = FULL;')
+        self.db.execute('PRAGMA encoding = "UTF-8";')
+        self.db.execute('''
+            CREATE VIRTUAL TABLE IF NOT EXISTS data USING fts4(
+                url,
+                mtime,
+                name,
+                title,
+                category,
+                content,
+                notindexed=category,
+                notindexed=url,
+                notindexed=mtime,
+                tokenize=porter
+            )'''
         )
 
-    def add(self, data):
-        self.js.eval("""
-            index.addDoc(%s);
-        """ % (
-            json.dumps(data)
+    def __exit__(self):
+        self.db.commit()
+        self.db.execute('PRAGMA auto_vacuum;')
+        self.db.close()
+
+    def append(self, url, mtime, name, title, category, content):
+        # TODO: delete if mtime differs
+        mtime = int(mtime)
+        self.db.execute('''
+            INSERT OR IGNORE INTO data
+            (url, mtime, name, title, category, content)
+            VALUES (?,?,?,?,?,?);
+        ''', (
+            url,
+            mtime,
+            name,
+            title,
+            category,
+            content
         ))
 
-    def save(self):
-        with open(self.fpath, 'wt') as f:
-            f.write(json.dumps(self.js.eval("index.toJSON()")))
+    async def render(self):
+        r = J2.get_template('Search.j2.php').render({
+            'post': {},
+            'site': settings.site,
+            'author': settings.author,
+            'meta': settings.meta,
+            'licence': settings.licence,
+            'tips': settings.tips,
+            'labels': settings.labels
+        })
+        target = os.path.join(
+            settings.paths.get('build'),
+            'search.php'
+        )
+        with open(target, 'wt') as f:
+            logging.info("rendering to %s", target)
+            f.write(r)
 
 
 def make():
@@ -1104,9 +1133,18 @@ def make():
         for i in post.images.values():
             worker.append(i.downsize())
         worker.append(post.render())
-        search.add(post.corpus)
         sitemap[post.url] = post.mtime
+        search.append(
+            url=post.url,
+            mtime=post.mtime,
+            name=post.name,
+            title=post.title,
+            category=post.category,
+            content=post.content
+        )
 
+    search.__exit__()
+    worker.append(search.render())
     for category in categories.values():
         worker.append(category.render())
 
@@ -1128,8 +1166,7 @@ def make():
     with open(t, 'wt') as f:
         f.write("\n".join(sorted(sitemap.keys())))
 
-    # dump search index
-    search.save()
+
 
     end = int(round(time.time() * 1000))
     logging.info('process took %d ms' % (end - start))
