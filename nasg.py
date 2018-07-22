@@ -28,8 +28,10 @@ import markdown
 from feedgen.feed import FeedGenerator
 from bleach import clean
 from emoji import UNICODE_EMOJI
+import requests
 import exiftool
 import settings
+import keys
 
 from pprint import pprint
 
@@ -204,6 +206,15 @@ class Singular(MarkdownDoc):
         self.mtime = os.path.getmtime(self.fpath)
 
     @property
+    def ctime(self):
+        ret = self.mtime
+        if len(self.comments):
+            ctime = int(sorted(self.comments.keys())[-1])
+            if ctime > self.mtime:
+                ret = ctime
+        return ret
+
+    @property
     @cached()
     def files(self):
         """
@@ -224,7 +235,7 @@ class Singular(MarkdownDoc):
         An dict of Comment objects keyed with their path, populated from the
         same directory level as the Singular objects
         """
-        comments = OrderedDict()
+        comments = {}
         files = [
             k
             for k in glob.glob(os.path.join(os.path.dirname(self.fpath), '*.md'))
@@ -272,10 +283,24 @@ class Singular(MarkdownDoc):
         directory - so, it's slug -, and that that image believes it's a a
         photo.
         """
+        if len(self.images) != 1:
+            return False
+        photo = next(iter(self.images.values()))
         maybe = self.fpath.replace("index.md", "%s.jpg" % (self.name))
-        if maybe in self.images and self.images[maybe].is_photo:
+        if photo.fpath == maybe:
             return True
         return False
+
+    @property
+    def enclosure(self):
+        if not self.is_photo:
+            return False
+        photo = next(iter(self.images.values()))
+        return {
+            'mime': photo.mime_type,
+            'size': photo.mime_size,
+            'url': photo.href
+        }
 
     @property
     def summary(self):
@@ -395,7 +420,7 @@ class Singular(MarkdownDoc):
     @property
     @cached()
     def tmplvars(self):
-        return {
+        v = {
             'title': self.title,
             'category': self.category,
             'lang': self.lang,
@@ -413,6 +438,9 @@ class Singular(MarkdownDoc):
             'syndicate': self.syndicate,
             'url': self.url,
         }
+        if (self.enclosure):
+            v.update({'enclosure': self.enclosure})
+        return v
 
     @property
     def template(self):
@@ -435,7 +463,7 @@ class Singular(MarkdownDoc):
             return False
         elif not os.path.exists(self.renderfile):
             return False
-        elif self.mtime > os.path.getmtime(self.renderfile):
+        elif self.ctime > os.path.getmtime(self.renderfile):
             return False
         else:
             return True
@@ -982,13 +1010,14 @@ class Category(dict):
                 settings.author.get('name'),
                 dt.format('YYYY')
             ))
-            # if p.get('enclosure'):
-            #enclosure = p.get('enclosure')
-            # fe.enclosure(
-            # enclosure.get('url'),
-            #"%d" % enclosure.get('size'),
-            # enclosure.get('mime')
-            # )
+            if 'enclosure' in post:
+                enc = post.get('enclosure')
+                logging.info("enclosure found:", enc)
+                fe.enclosure(
+                    enc.get('url'),
+                    "%d" % enc.get('size'),
+                    enc.get('mime')
+                )
         atom = os.path.join(dirname, 'index.xml')
         with open(atom, 'wb') as f:
             logging.info('writing file: %s', atom)
@@ -1139,8 +1168,68 @@ class Search(object):
             f.write(r)
 
 
+def find_newest_comment():
+    newest = 0
+    content = settings.paths.get('content')
+    for e in glob.glob(os.path.join(content, '*', '*', '*.md')):
+        if os.path.basename(e) == 'index.md':
+            continue
+        mtime = os.path.getmtime(e)
+        if mtime > newest:
+            newest = mtime
+    return newest
+
+def mkcomment(webmention):
+    dt = arrow.get(webmention.get('data').get('published'))
+    fdir = os.path.join(
+        settings.paths.get('content'),
+        webmention.get('target').strip('/').split('/')[-1]
+    )
+    fpath = os.path.join(
+        fdir,
+        "%d-%s.md" % (
+            dt.timestamp,
+            slugify(
+                re.sub(r"^https?://(?:www)?", "", url),
+                only_ascii=True,
+                lower=True
+            )[:200]
+        )
+    )
+
+    fm = frontmatter.loads('')
+    fm.metadata = {
+        'author': webmention.get('data').get('author'),
+        'date': dt.format(settings.dateformat.get('iso')),
+        'source': webmention.get('source'),
+        'target': webmention.get('target'),
+        'type': webmention.get('activity').get('type')
+    }
+    fm.content = webmention.get('data').get('content')
+    with open(fpath, 'wt') as f:
+        logging.info("saving webmention to %s", fpath)
+        f.write(frontmatter.dumps(fm))
+
+
 def make():
     start = int(round(time.time() * 1000))
+
+    newest = arrow.get(find_newest_comment())
+    wio_params = {
+        'jsonp': '',
+        'token': '%s' % (keys.webmentionio.get('token')),
+        'since': '%s' % newest.format(settings.dateformat.get('iso')),
+        'domain': '%s' % (keys.webmentionio.get('domain'))
+    }
+    wio_url = "https://webmention.io/api/mentions"
+    webmentions = requests.get(wio_url, params=wio_params)
+    try:
+        webmentions = webmentions.json()
+        for webmention in webmentions.get('links'):
+            mkcomment(webmention)
+    except ValueError as e:
+        pass
+
     content = settings.paths.get('content')
     worker = AsyncWorker()
 
