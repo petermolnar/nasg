@@ -65,6 +65,7 @@ MD = markdown.Markdown(
     ],
 )
 
+
 class MarkdownDoc(object):
     @property
     @cached()
@@ -160,13 +161,11 @@ class Gone(object):
 
     def __init__(self, fpath):
         self.fpath = fpath
-        self.address, self.fext = os.path.splitext(
-            os.path.basename(self.fpath)
-        )
 
     @property
-    def nginx(self):
-        return (self.address, 'return 410')
+    def source(self):
+        source, fext = os.path.splitext(os.path.basename(self.fpath))
+        return source
 
 
 class Redirect(object):
@@ -176,7 +175,11 @@ class Redirect(object):
 
     def __init__(self, fpath):
         self.fpath = fpath
-        self.source, self.fext = os.path.splitext(os.path.basename(self.fpath))
+
+    @property
+    def source(self):
+        source, fext = os.path.splitext(os.path.basename(self.fpath))
+        return source
 
     @property
     @cached()
@@ -184,13 +187,7 @@ class Redirect(object):
         target = ''
         with open(self.fpath, 'rt') as f:
             target = f.read().strip()
-        if not RE_HTTP.match(target):
-            target = "%s/%s" % (settings.site.get('url'), target)
         return target
-
-    @property
-    def nginx(self):
-        return (self.source, 'return 301 %s' % (self.target))
 
 
 class Singular(MarkdownDoc):
@@ -198,6 +195,7 @@ class Singular(MarkdownDoc):
     A Singular object: a complete representation of a post, including
     all it's comments, files, images, etc
     """
+
     def __init__(self, fpath):
         self.fpath = fpath
         n = os.path.dirname(fpath)
@@ -445,11 +443,11 @@ class Singular(MarkdownDoc):
     @property
     def corpus(self):
         return "\n".join([
-                self.title,
-                self.name,
-                self.summary,
-                self.content,
-            ])
+            self.title,
+            self.name,
+            self.summary,
+            self.content,
+        ])
 
     async def render(self):
         if self.exists:
@@ -810,20 +808,36 @@ class AsyncWorker(object):
         self._loop.run_until_complete(w)
 
 
-class NginxConf(dict):
-    def __str__(self):
-        r = ''
-        for key in self:
-            r = "%slocation /%s { %s; }\n" % (r, key, self[key])
-        return r
+class IndexPHP(object):
+    def __init__(self):
+        self.gone = {}
+        self.redirect = {}
 
-    def save(self):
-        fpath = os.path.join(
+    def add_gone(self, uri):
+        self.gone[uri] = True
+
+    def add_redirect(self, source, target):
+        if target in self.gone:
+            self.add_gone(source)
+        else:
+            if not RE_HTTP.match(target):
+                target = "%s/%s" % (settings.site.get('url'), target)
+            self.redirect[source] = target
+
+    async def render(self):
+        target = os.path.join(
             settings.paths.get('build'),
-            '.nginx.conf'
+            'index.php'
         )
-        with open(fpath, 'wt') as f:
-            f.write(str(self))
+        r = J2.get_template('Index.j2.php').render({
+            'post': {},
+            'site': settings.site,
+            'gones': self.gone,
+            'redirects': self.redirect
+        })
+        with open(target, 'wt') as f:
+            logging.info("rendering to %s", target)
+            f.write(r)
 
 
 class Category(dict):
@@ -915,22 +929,22 @@ class Category(dict):
     def ping_websub(self):
         return
         # TODO aiohttp?
-        ## ping pubsub
-        #r = requests.post(
-            #shared.site.get('websub').get('hub'),
-            #data={
-                #'hub.mode': 'publish',
-                #'hub.url': flink
-            #}
-        #)
-        #logging.info(r.text)
+        # ping pubsub
+        # r = requests.post(
+        # shared.site.get('websub').get('hub'),
+        # data={
+        # 'hub.mode': 'publish',
+        # 'hub.url': flink
+        # }
+        # )
+        # logging.info(r.text)
 
     def render_feed(self):
         logging.info('rendering category "%s" ATOM feed', self.name)
         start = 0
         end = int(settings.site.get('pagination'))
 
-        dirname = os.path.join(self.renderdir,'feed')
+        dirname = os.path.join(self.renderdir, 'feed')
         if not os.path.isdir(dirname):
             os.makedirs(dirname)
 
@@ -951,7 +965,7 @@ class Category(dict):
 
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
 
-        for post in self.get_posts(start,end):
+        for post in self.get_posts(start, end):
             dt = arrow.get(post.get('pubtime'))
             fe = fg.add_entry()
             fe.id(post.get('url'))
@@ -968,18 +982,17 @@ class Category(dict):
                 settings.author.get('name'),
                 dt.format('YYYY')
             ))
-            #if p.get('enclosure'):
-                #enclosure = p.get('enclosure')
-                #fe.enclosure(
-                    #enclosure.get('url'),
-                    #"%d" % enclosure.get('size'),
-                    #enclosure.get('mime')
-                #)
+            # if p.get('enclosure'):
+            #enclosure = p.get('enclosure')
+            # fe.enclosure(
+            # enclosure.get('url'),
+            #"%d" % enclosure.get('size'),
+            # enclosure.get('mime')
+            # )
         atom = os.path.join(dirname, 'index.xml')
         with open(atom, 'wb') as f:
             logging.info('writing file: %s', atom)
             f.write(fg.atom_str(pretty=True))
-
 
     def render_page(self, pagenum=1, pages=1):
         if self.display == 'flat':
@@ -1032,6 +1045,7 @@ class Category(dict):
         self.render_feed()
         self.ping_websub()
 
+
 class Search(object):
     def __init__(self):
         self.fpath = os.path.join(
@@ -1058,20 +1072,43 @@ class Search(object):
                 notindexed=mtime,
                 tokenize=porter
             )'''
-        )
+                        )
 
     def __exit__(self):
         self.db.commit()
         self.db.execute('PRAGMA auto_vacuum;')
         self.db.close()
 
+    def exists(self, name, mtime=0):
+        ret = False
+        maybe = self.db.execute('''
+            SELECT
+                mtime
+            FROM
+                data
+            WHERE
+                name = ?
+        ''', (name,)).fetchone()
+        if maybe:
+            ret = int(maybe[0])
+        return ret
+
     def append(self, url, mtime, name, title, category, content):
-        # TODO: delete if mtime differs
         mtime = int(mtime)
+        exists = self.exists(name, mtime)
+        if (exists and exists < mtime):
+            self.db.execute('''
+            DELETE
+            FROM
+                data
+            WHERE
+                name=?''', (name,))
         self.db.execute('''
-            INSERT OR IGNORE INTO data
-            (url, mtime, name, title, category, content)
-            VALUES (?,?,?,?,?,?);
+            INSERT OR IGNORE INTO
+                data
+                (url, mtime, name, title, category, content)
+            VALUES
+                (?,?,?,?,?,?);
         ''', (
             url,
             mtime,
@@ -1082,6 +1119,12 @@ class Search(object):
         ))
 
     async def render(self):
+        target = os.path.join(
+            settings.paths.get('build'),
+            'search.php'
+        )
+        if os.path.exists(target):
+            return
         r = J2.get_template('Search.j2.php').render({
             'post': {},
             'site': settings.site,
@@ -1091,10 +1134,6 @@ class Search(object):
             'tips': settings.tips,
             'labels': settings.labels
         })
-        target = os.path.join(
-            settings.paths.get('build'),
-            'search.php'
-        )
         with open(target, 'wt') as f:
             logging.info("rendering to %s", target)
             f.write(r)
@@ -1103,19 +1142,17 @@ class Search(object):
 def make():
     start = int(round(time.time() * 1000))
     content = settings.paths.get('content')
+    worker = AsyncWorker()
 
-    nginxrules = NginxConf()
-    for e in glob.glob(os.path.join(content, '*', '*.lnk')):
-        post = Redirect(e)
-        location, rule = post.nginx
-        nginxrules[location] = rule
+    rules = IndexPHP()
     for e in glob.glob(os.path.join(content, '*', '*.ptr')):
         post = Gone(e)
-        location, rule = post.nginx
-        nginxrules[location] = rule
-    nginxrules.save()
+        rules.add_gone(post.source)
+    for e in glob.glob(os.path.join(content, '*', '*.lnk')):
+        post = Redirect(e)
+        rules.add_redirect(post.source, post.target)
+    worker.append(rules.render())
 
-    worker = AsyncWorker()
     categories = {}
     categories['/'] = Category()
     sitemap = OrderedDict()
@@ -1166,10 +1203,9 @@ def make():
     with open(t, 'wt') as f:
         f.write("\n".join(sorted(sitemap.keys())))
 
-
-
     end = int(round(time.time() * 1000))
     logging.info('process took %d ms' % (end - start))
+
 
 if __name__ == '__main__':
     make()
