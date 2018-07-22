@@ -14,6 +14,7 @@ import re
 import imghdr
 import logging
 import asyncio
+import json
 from shutil import copy2 as cp
 from math import ceil
 from urllib.parse import urlparse
@@ -27,10 +28,10 @@ import markdown
 from feedgen.feed import FeedGenerator
 from bleach import clean
 from emoji import UNICODE_EMOJI
+from py_mini_racer import py_mini_racer
 import exiftool
 import settings
 
-import sys
 from pprint import pprint
 
 MarkdownImage = namedtuple(
@@ -64,7 +65,6 @@ MD = markdown.Markdown(
         'urlize'
     ],
 )
-
 
 class MarkdownDoc(object):
     @property
@@ -442,6 +442,18 @@ class Singular(MarkdownDoc):
             return False
         else:
             return True
+
+    @property
+    def corpus(self):
+        return {
+            'url': self.url,
+            'title': self.title,
+            'body': "\n".join([
+                self.name,
+                self.summary,
+                self.content,
+            ])
+        }
 
     async def render(self):
         if self.exists:
@@ -1025,6 +1037,40 @@ class Category(dict):
         self.ping_websub()
 
 
+class Search(object):
+    def __init__(self):
+        self.js = py_mini_racer.MiniRacer()
+        with open('elasticlunr.js') as f:
+            self.js.eval(f.read())
+
+        self.js.eval("""
+            var index = elasticlunr();
+            index.addField('title');
+            index.addField('body');
+            index.setRef('url');
+
+        """)
+        # index.saveDocument(false);
+
+    @property
+    def fpath(self):
+        return os.path.join(
+            settings.paths.get('build'),
+            'search.json'
+        )
+
+    def add(self, data):
+        self.js.eval("""
+            index.addDoc(%s);
+        """ % (
+            json.dumps(data)
+        ))
+
+    def save(self):
+        with open(self.fpath, 'wt') as f:
+            f.write(json.dumps(self.js.eval("index.toJSON()")))
+
+
 def make():
     start = int(round(time.time() * 1000))
     content = settings.paths.get('content')
@@ -1044,6 +1090,8 @@ def make():
     categories = {}
     categories['/'] = Category()
     sitemap = OrderedDict()
+    search = Search()
+
     for e in sorted(glob.glob(os.path.join(content, '*', '*', 'index.md'))):
         post = Singular(e)
         if post.category not in categories:
@@ -1056,6 +1104,7 @@ def make():
         for i in post.images.values():
             worker.append(i.downsize())
         worker.append(post.render())
+        search.add(post.corpus)
         sitemap[post.url] = post.mtime
 
     for category in categories.values():
@@ -1078,6 +1127,9 @@ def make():
     t = os.path.join(settings.paths.get('build'), 'sitemap.txt')
     with open(t, 'wt') as f:
         f.write("\n".join(sorted(sitemap.keys())))
+
+    # dump search index
+    search.save()
 
     end = int(round(time.time() * 1000))
     logging.info('process took %d ms' % (end - start))
