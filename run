@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+IFS=$'\n\t'
+
+source ./.venv/bin/activate
+python3 nasg.py
+rsync -avu ../www/ liveserver:/web/petermolnar.net/web/
