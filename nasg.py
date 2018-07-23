@@ -163,6 +163,7 @@ class Gone(object):
 
     def __init__(self, fpath):
         self.fpath = fpath
+        self.mtime = os.path.getmtime(fpath)
 
     @property
     def source(self):
@@ -177,6 +178,7 @@ class Redirect(object):
 
     def __init__(self, fpath):
         self.fpath = fpath
+        self.mtime = os.path.getmtime(fpath)
 
     @property
     def source(self):
@@ -841,6 +843,13 @@ class IndexPHP(object):
         self.gone = {}
         self.redirect = {}
 
+    @property
+    def mtime(self):
+        r = 0
+        if os.path.exists(self.renderfile):
+            r = os.path.getmtime(self.renderfile)
+        return r
+
     def add_gone(self, uri):
         self.gone[uri] = True
 
@@ -852,18 +861,21 @@ class IndexPHP(object):
                 target = "%s/%s" % (settings.site.get('url'), target)
             self.redirect[source] = target
 
-    async def render(self):
-        target = os.path.join(
+    @property
+    def renderfile(self):
+        return os.path.join(
             settings.paths.get('build'),
             'index.php'
         )
+
+    async def render(self):
         r = J2.get_template('Index.j2.php').render({
             'post': {},
             'site': settings.site,
             'gones': self.gone,
             'redirects': self.redirect
         })
-        with open(target, 'wt') as f:
+        with open(self.renderfile, 'wt') as f:
             logging.info("rendering to %s", target)
             f.write(r)
 
@@ -1077,6 +1089,7 @@ class Category(dict):
 
 class Search(object):
     def __init__(self):
+        self.changed = False
         self.fpath = os.path.join(
             settings.paths.get('build'),
             'search.sqlite'
@@ -1101,15 +1114,16 @@ class Search(object):
                 notindexed=mtime,
                 tokenize=porter
             )'''
-                        )
+        )
 
     def __exit__(self):
-        self.db.commit()
-        self.db.execute('PRAGMA auto_vacuum;')
-        self.db.close()
+        if (self.changed):
+            self.db.commit()
+            self.db.execute('PRAGMA auto_vacuum;')
+            self.db.close()
 
-    def exists(self, name, mtime=0):
-        ret = False
+    def exists(self, name):
+        ret = 0
         maybe = self.db.execute('''
             SELECT
                 mtime
@@ -1124,7 +1138,7 @@ class Search(object):
 
     def append(self, url, mtime, name, title, category, content):
         mtime = int(mtime)
-        exists = self.exists(name, mtime)
+        exists = self.exists(name)
         if (exists and exists < mtime):
             self.db.execute('''
             DELETE
@@ -1132,20 +1146,23 @@ class Search(object):
                 data
             WHERE
                 name=?''', (name,))
-        self.db.execute('''
-            INSERT OR IGNORE INTO
-                data
-                (url, mtime, name, title, category, content)
-            VALUES
-                (?,?,?,?,?,?);
-        ''', (
-            url,
-            mtime,
-            name,
-            title,
-            category,
-            content
-        ))
+            exists = False
+        if not exists:
+            self.db.execute('''
+                INSERT INTO
+                    data
+                    (url, mtime, name, title, category, content)
+                VALUES
+                    (?,?,?,?,?,?);
+            ''', (
+                url,
+                mtime,
+                name,
+                title,
+                category,
+                content
+            ))
+            self.changed = True
 
     async def render(self):
         target = os.path.join(
@@ -1167,17 +1184,24 @@ class Search(object):
             logging.info("rendering to %s", target)
             f.write(r)
 
+class Sitemap(dict):
+    @property
+    def mtime(self):
+        r = 0
+        if os.path.exists(self.renderfile):
+            r = os.path.getmtime(self.renderfile)
+        return r
 
-def find_newest_comment():
-    newest = 0
-    content = settings.paths.get('content')
-    for e in glob.glob(os.path.join(content, '*', '*', '*.md')):
-        if os.path.basename(e) == 'index.md':
-            continue
-        mtime = os.path.getmtime(e)
-        if mtime > newest:
-            newest = mtime
-    return newest
+    @property
+    def renderfile(self):
+        return os.path.join(settings.paths.get('build'), 'sitemap.txt')
+
+    async def save(self):
+        if self.mtime >= sorted(self.values())[-1]:
+            return
+        with open(self.renderfile, 'wt') as f:
+            f.write("\n".join(sorted(self.keys())))
+
 
 def mkcomment(webmention):
     dt = arrow.get(webmention.get('data').get('published'))
@@ -1211,10 +1235,16 @@ def mkcomment(webmention):
         f.write(frontmatter.dumps(fm))
 
 
-def make():
-    start = int(round(time.time() * 1000))
-
-    newest = arrow.get(find_newest_comment())
+def makecomments():
+    newest = 0
+    content = settings.paths.get('content')
+    for e in glob.glob(os.path.join(content, '*', '*', '*.md')):
+        if os.path.basename(e) == 'index.md':
+            continue
+        mtime = os.path.getmtime(e)
+        if mtime > newest:
+            newest = mtime
+    newest = arrow.get(newest)
     wio_params = {
         'jsonp': '',
         'token': '%s' % (keys.webmentionio.get('token')),
@@ -1230,22 +1260,35 @@ def make():
     except ValueError as e:
         pass
 
+
+def make():
+    start = int(round(time.time() * 1000))
+    last = 0
+
+    makecomments()
+
     content = settings.paths.get('content')
     worker = AsyncWorker()
 
     rules = IndexPHP()
     for e in glob.glob(os.path.join(content, '*', '*.ptr')):
         post = Gone(e)
+        if post.mtime > last:
+            last = post.mtime
         rules.add_gone(post.source)
     for e in glob.glob(os.path.join(content, '*', '*.lnk')):
         post = Redirect(e)
+        if post.mtime > last:
+            last = post.mtime
         rules.add_redirect(post.source, post.target)
-    worker.append(rules.render())
 
+    if rules.mtime < last:
+        worker.append(rules.render())
+
+    sitemap = Sitemap()
+    search = Search()
     categories = {}
     categories['/'] = Category()
-    sitemap = OrderedDict()
-    search = Search()
 
     for e in sorted(glob.glob(os.path.join(content, '*', '*', 'index.md'))):
         post = Singular(e)
@@ -1259,6 +1302,8 @@ def make():
         for i in post.images.values():
             worker.append(i.downsize())
         worker.append(post.render())
+        if post.ctime > last:
+            last = post.ctime
         sitemap[post.url] = post.mtime
         search.append(
             url=post.url,
@@ -1274,6 +1319,8 @@ def make():
     for category in categories.values():
         worker.append(category.render())
 
+    worker.append(sitemap.save())
+
     worker.run()
     logging.info('worker finished')
 
@@ -1286,11 +1333,6 @@ def make():
         if os.path.exists(t) and os.path.getmtime(e) <= os.path.getmtime(t):
             continue
         cp(e, t)
-
-    # dump sitemap
-    t = os.path.join(settings.paths.get('build'), 'sitemap.txt')
-    with open(t, 'wt') as f:
-        f.write("\n".join(sorted(sitemap.keys())))
 
     end = int(round(time.time() * 1000))
     logging.info('process took %d ms' % (end - start))
