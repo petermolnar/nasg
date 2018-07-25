@@ -5,4 +5,4 @@ IFS=$'\n\t'
 
 source ./.venv/bin/activate
 python3 nasg.py "$@"
-rsync -avu ../www/ liveserver:/web/petermolnar.net/web/
+rsync -avu --delete-after ../www/ liveserver:/web/petermolnar.net/web/

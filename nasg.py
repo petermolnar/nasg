@@ -867,7 +867,7 @@ class IndexPHP(object):
             'redirects': self.redirect
         })
         with open(self.renderfile, 'wt') as f:
-            logging.info("rendering to %s", target)
+            logging.info("rendering to %s", self.renderfile)
             f.write(r)
 
 
