@@ -338,90 +338,92 @@
 
 <footer class="content-footer" id="main-footer">
     <nav class="footer-contact p-author h-card vcard limit">
-        <h2>Site author</h2>
-        <dl>
-            <dt>
-                <img class="photo avatar u-photo u-avatar"
-                    src="https://petermolnar.net/molnar_peter_avatar.jpg"
-                    alt="Photo of Peter Molnar" />
-            </dt>
-            <dd>
-                <a class="fn p-name url u-url u-uid" href="/about.html">
-                    Peter Molnar
-                </a>
-            </dd>
-            <dt>email</dt>
-            <dd>
-                <a rel="me" class="u-email email" href="mailto:{{ author.email }}">
-                    {{ author.email }}
-                </a>
-            </dd>
-{% if author.sip %}
-            <dt>SIP</dt>
-            <dd>
-                <a rel="me" class="u-sip sip" href="sip:{{ author.sip }}">
-                    {{ author.sip }}
-                </a>
-            </dd>
-{% endif %}
-{% if author.xmpp %}
-            <dt>XMPP</dt>
-            <dd>
-                <a rel="me" class="u-xmpp xmpp" href="xmpp:{{ author.xmpp }}">{{ author.xmpp }}</a>
-            </dd>
-{% endif %}
-{% if author.gpg %}
-            <dt>GPG</dt>
-            <dd>
-                <a rel="me" class="u-gpg gpg" href="/{{ author.gpg }}">key</a>
-            </dd>
-{% endif %}
-{% if author.flickr %}
-            <dt>flickr</dt>
-            <dd>
-                <a rel="me" class="u-flickr" href="https://flickr.com/people/{{ author.flickr }}">{{ author.flickr }}</a>
-            </dd>
-{% endif %}
-{% if author.github %}
-            <dt>github</dt>
-            <dd>
-                <a rel="me" class="u-github" href="https://github.com/{{ author.github }}">{{ author.github }}</a>
-            </dd>
-{% endif %}
-        </dl>
+        <h2>Contact</h2>
+        <div class="twothird">
+            <dl>
+                <dt>
+                    <img class="photo avatar u-photo u-avatar"
+                        src="https://petermolnar.net/molnar_peter_avatar.jpg"
+                        alt="Photo of Peter Molnar" />
+                </dt>
+                <dd>
+                    <a class="fn p-name url u-url u-uid" href="/about.html">
+                        Peter Molnar
+                    </a>
+                </dd>
+                <dt>email</dt>
+                <dd>
+                    <a rel="me" class="u-email email" href="mailto:{{ author.email }}">
+                        {{ author.email }}
+                    </a>
+                </dd>
+    {% if author.gpg %}
+                <dt>GPG</dt>
+                <dd>
+                    <a rel="me" class="u-gpg gpg" href="/{{ author.gpg }}">key</a>
+                </dd>
+    {% endif %}
+                <dt>url</dt>
+                <dd>
+                    <a rel="me" class="u-url url" href="{{ author.url }}">
+                        {{ author.url }}
+                    </a>
+                </dd>
+            </dl>
+        </div>
+        <div class="onethird">
+            <dl>
+    {% if author.xmpp %}
+                <dt>XMPP</dt>
+                <dd>
+                    <a rel="me" class="u-xmpp xmpp" href="xmpp:{{ author.xmpp }}">{{ author.xmpp }}</a>
+                </dd>
+    {% endif %}
+    {% if author.sip %}
+                <dt>SIP</dt>
+                <dd>
+                    <a rel="me" class="u-sip sip" href="sip:{{ author.sip }}">
+                        {{ author.sip }}
+                    </a>
+                </dd>
+    {% endif %}
+    {% if author.icq %}
+                <dt>ICQ</dt>
+                <dd>
+                    <a rel="me" class="u-icq icq" href="icq:{{ author.icq }}">
+                        {{ author.icq }}
+                    </a>
+                </dd>
+    {% endif %}
+    {% if author.flickr %}
+                <dt>flickr</dt>
+                <dd>
+                    <a rel="me" class="u-flickr" href="https://flickr.com/people/{{ author.flickr }}">{{ author.flickr }}</a>
+                </dd>
+    {% endif %}
+    {% if author.github %}
+                <dt>github</dt>
+                <dd>
+                    <a rel="me" class="u-github" href="https://github.com/{{ author.github }}">{{ author.github }}</a>
+                </dd>
+    {% endif %}
+    {% if author.twitter %}
+                <dt>twitter</dt>
+                <dd>
+                    <a rel="me" class="u-twitter" href="https://twitter.com/{{ author.twitter }}">{{ author.twitter }}</a>
+                </dd>
+    {% endif %}
+            </dl>
+        </div>
     </nav>
+    <div class="webring">
+        <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
+            Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a> 🕸💍
+        <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
+    </div>
 </footer>
 
 {% include 'symbols.svg' %}
-
-    <!--
-        This is a self-hosted analytics code, called Matomo
-        I configured it to avoid placing cookies, respect Do Not Track,
-        remove the last segment of IP information, so it stores as little
-        information as possible.
-    -->
-    <script type="text/javascript">
-      var _paq = _paq || [];
-      _paq.push(["setDoNotTrack", true]);
-      _paq.push(["disableCookies"]);
-      _paq.push(['trackPageView']);
-      _paq.push(['enableLinkTracking']);
-      (function() {
-        var u="//stats.petermolnar.net/";
-        _paq.push(['setTrackerUrl', u+'piwik.php']);
-        _paq.push(['setSiteId', '{{ site.piwik.id }}']);
-        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-        g.type='text/javascript';
-        g.async=true;
-        g.defer=true;
-        g.src=u+'piwik.js';
-        s.parentNode.insertBefore(g,s);
-      })();
-    </script>
-    <noscript>
-        <img src="https://{{ site.piwik.domain }}/piwik.php?idsite=1&amp;rec=1" style="border:0" alt="" />
-    </noscript>
-
 
     </body>
 </html>

@@ -64,6 +64,7 @@ author = {
     'xmpp': 'mail@petermolnar.net',
     'flickr': 'petermolnareu',
     'github': 'petermolnar',
+    'twitter': 'petermolnar'
 }
 
 paths = {

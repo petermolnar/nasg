@@ -2,14 +2,14 @@
 {% block lang %}{% endblock %}
 {% block title %}{{ category.title }}{% endblock %}
 {% block meta %}
-    <link rel="alternate" type="application/atom+xml" title="{{ category.title }} feed" href="{{ site.url }}{{ category.feed }}" />
+    <link rel="alternate" type="application/atom+xml" title="{{ category.title }} feed" href="{{ category.feed }}" />
 {% endblock %}
 {% block content %}
 <section class="content-body h-feed">
     <header>
         <nav>
             <p class="follow">
-                <a title="follow {{ category.title }}" rel="feed" href="{{ site.url }}{{ category.feed }}">
+                <a title="follow {{ category.title }}" rel="feed" href="{{ category.feed }}">
                     <svg class="icon" width="16" height="16">
                         <use xlink:href="#icon-rss" />
                     </svg>
@@ -61,7 +61,7 @@
 
         {% if post.summary %}
         <div class="e-summary entry-summary">
-            {{ post.summary }}
+            {{ post.html_summary }}
             <p class="more">
                 <a href="/{{ post.slug }}" title="{{ post.title }}">
                 {% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}

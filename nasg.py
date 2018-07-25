@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import _json
 
 __author__ = "Peter Molnar"
 __copyright__ = "Copyright 2017-2018, Peter Molnar"
@@ -15,6 +16,7 @@ import imghdr
 import logging
 import asyncio
 import sqlite3
+import json
 from shutil import copy2 as cp
 from math import ceil
 from urllib.parse import urlparse
@@ -28,6 +30,7 @@ import markdown
 from feedgen.feed import FeedGenerator
 from bleach import clean
 from emoji import UNICODE_EMOJI
+from slugify import slugify
 import requests
 import exiftool
 import settings
@@ -171,19 +174,10 @@ class Gone(object):
         return source
 
 
-class Redirect(object):
+class Redirect(Gone):
     """
     Redirect object for entries that moved
     """
-
-    def __init__(self, fpath):
-        self.fpath = fpath
-        self.mtime = os.path.getmtime(fpath)
-
-    @property
-    def source(self):
-        source, fext = os.path.splitext(os.path.basename(self.fpath))
-        return source
 
     @property
     @cached()
@@ -311,14 +305,7 @@ class Singular(MarkdownDoc):
     @property
     @cached()
     def html_summary(self):
-        return markdown.Markdown(
-            output_format='html5',
-            extensions=[
-                'extra',
-                'codehilite',
-                'headerid',
-            ],
-        ).convert(self.summary)
+        return MD.reset().convert(self.summary)
 
     @property
     def title(self):
@@ -342,23 +329,23 @@ class Singular(MarkdownDoc):
             urls.append("https://brid.gy/publish/flickr")
         return urls
 
-    # def baseN(self, num, b=36,
-        # numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
-        # """
-        # Creates short, lowercase slug for a number (an epoch) passed
-        # """
-        #num = int(num)
-        # return ((num == 0) and numerals[0]) or (
-        # self.baseN(
-        #num // b,
-        # b,
-        # numerals
-        # ).lstrip(numerals[0]) + numerals[num % b]
-        # )
+    def baseN(self, num, b=36,
+        numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
+        """
+        Creates short, lowercase slug for a number (an epoch) passed
+        """
+        num = int(num)
+        return ((num == 0) and numerals[0]) or (
+            self.baseN(
+                num // b,
+                b,
+                numerals
+            ).lstrip(numerals[0]) + numerals[num % b]
+        )
 
-    # @property
-    # def shortslug(self):
-        # return self.baseN(self.published.timestamp)
+    @property
+    def shortslug(self):
+        return self.baseN(self.published.timestamp)
 
     @property
     def published(self):
@@ -478,6 +465,10 @@ class Singular(MarkdownDoc):
             self.summary,
             self.content,
         ])
+
+    async def copyfiles(self):
+        # TODO: plain copy non-image files from entry directory to build/entry directory
+        return
 
     async def render(self):
         if self.exists:
@@ -809,7 +800,7 @@ class WebImage(object):
                     thumb.liquid_rescale(self.size, self.size, 1, 1)
 
                 if self.parent.meta.get('FileType', 'jpeg').lower() == 'jpeg':
-                    thumb.compression_quality = 94
+                    thumb.compression_quality = 88
                     thumb.unsharp_mask(
                         radius=1,
                         sigma=0.5,
@@ -920,10 +911,14 @@ class Category(dict):
     @property
     def url(self):
         if len(self.name):
-            url = "/category/%s/" % (self.name)
+            url = "%s/category/%s/" % (settings.site.get('url'), self.name)
         else:
-            url = '/'
+            url = '%s/' % (settings.site.get('url'))
         return url
+
+    @property
+    def feed(self):
+        return "%sfeed/" % (self.url)
 
     @property
     def template(self):
@@ -952,32 +947,19 @@ class Category(dict):
 
     @property
     def mtime(self):
-        return self[self.sortedkeys[0]].mtime
+        return arrow.get(self[self.sortedkeys[0]].published).timestamp
 
     @property
     def exists(self):
         if settings.args.get('force'):
             return False
-        renderfile = os.path.join(self.renderdir, 'index.html')
+        renderfile = os.path.join(self.renderdir, 'feed', 'index.xml')
         if not os.path.exists(renderfile):
             return False
         elif self.mtime > os.path.getmtime(renderfile):
             return False
         else:
             return True
-
-    def ping_websub(self):
-        return
-        # TODO aiohttp?
-        # ping pubsub
-        # r = requests.post(
-        # shared.site.get('websub').get('hub'),
-        # data={
-        # 'hub.mode': 'publish',
-        # 'hub.url': flink
-        # }
-        # )
-        # logging.info(r.text)
 
     def render_feed(self):
         logging.info('rendering category "%s" ATOM feed', self.name)
@@ -989,29 +971,46 @@ class Category(dict):
             os.makedirs(dirname)
 
         fg = FeedGenerator()
-
-        flink = "%s%sfeed/" % (settings.site.get('url'), self.url)
-
-        fg.id(flink)
-        fg.link(href=flink, rel='self')
+        fg.id(self.feed)
+        fg.link(href=self.feed, rel='self')
         fg.title(self.title)
-
         fg.author({
             'name': settings.author.get('name'),
             'email': settings.author.get('email')
         })
-
         fg.logo('%s/favicon.png' % settings.site.get('url'))
-
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
+
+        jselements = []
+        jsfeed = {
+            'items': jselements,
+            'version': 'https://jsonfeed.org/version/1',
+            'title': self.title,
+            'home_page_url': settings.site.get('url'),
+            'feed_url': self.feed,
+            'author': {
+                'name': settings.author.get('name'),
+                'url': settings.author.get('url'),
+                'email': settings.author.get('email'),
+            }
+        }
 
         for post in self.get_posts(start, end):
             dt = arrow.get(post.get('pubtime'))
+            jselements.append({
+                "title": post.get('title'),
+                "date_published": post.get('pubtime'),
+                "id": post.get('url'),
+                "url": post.get('url'),
+                "content_html": post.get('html_content')
+            })
+
             fe = fg.add_entry()
             fe.id(post.get('url'))
             fe.link(href=post.get('url'))
             fe.title(post.get('title'))
             fe.published(dt.datetime)
+            fe.updated(dt.datetime)
             fe.content(
                 post.get('html_content'),
                 type='CDATA'
@@ -1024,7 +1023,6 @@ class Category(dict):
             ))
             if 'enclosure' in post:
                 enc = post.get('enclosure')
-                logging.info("enclosure found:", enc)
                 fe.enclosure(
                     enc.get('url'),
                     "%d" % enc.get('size'),
@@ -1034,6 +1032,10 @@ class Category(dict):
         with open(atom, 'wb') as f:
             logging.info('writing file: %s', atom)
             f.write(fg.atom_str(pretty=True))
+        jsfile = os.path.join(dirname, 'index.json')
+        with open(jsfile, 'wt') as f:
+            logging.info('writing file: %s', jsfile)
+            f.write(json.dumps(jsfeed, indent=4, sort_keys=True))
 
     def render_page(self, pagenum=1, pages=1):
         if self.display == 'flat':
@@ -1084,7 +1086,6 @@ class Category(dict):
             self.render_page(page, pages)
             page = page + 1
         self.render_feed()
-        self.ping_websub()
 
 
 class Search(object):
@@ -1292,27 +1293,29 @@ def make():
 
     for e in sorted(glob.glob(os.path.join(content, '*', '*', 'index.md'))):
         post = Singular(e)
-        if post.category not in categories:
-            categories[post.category] = Category(post.category)
-        c = categories[post.category]
-        c[post.published.timestamp] = post
-        if post.is_front:
-            c = categories['/']
-            c[post.published.timestamp] = post
+        worker.append(post.render())
+        worker.append(post.copyfiles())
         for i in post.images.values():
             worker.append(i.downsize())
-        worker.append(post.render())
-        if post.ctime > last:
-            last = post.ctime
-        sitemap[post.url] = post.mtime
-        search.append(
-            url=post.url,
-            mtime=post.mtime,
-            name=post.name,
-            title=post.title,
-            category=post.category,
-            content=post.content
-        )
+        if post.is_future:
+            continue
+        else:
+            if post.category not in categories:
+                categories[post.category] = Category(post.category)
+            categories[post.category][post.published.timestamp] = post
+            if post.is_front:
+                categories['/'][post.published.timestamp] = post
+            if post.ctime > last:
+                last = post.ctime
+            sitemap[post.url] = post.mtime
+            search.append(
+                url=post.url,
+                mtime=post.mtime,
+                name=post.name,
+                title=post.title,
+                category=post.category,
+                content=post.content
+            )
 
     search.__exit__()
     worker.append(search.render())
