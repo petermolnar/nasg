@@ -288,15 +288,21 @@ class Singular(MarkdownDoc):
         return False
 
     @property
+    def photo(self):
+        if not self.is_photo:
+            return None
+        return next(iter(self.images.values()))
+
+    @property
     def enclosure(self):
         if not self.is_photo:
-            return False
-        photo = next(iter(self.images.values()))
-        return {
-            'mime': photo.mime_type,
-            'size': photo.mime_size,
-            'url': photo.href
-        }
+            return None
+        else:
+            return {
+                'mime': self.photo.mime_type,
+                'size': self.photo.mime_size,
+                'url': self.photo.href
+            }
 
     @property
     def summary(self):
@@ -942,6 +948,7 @@ class Category(dict):
             'display': self.display,
             'url': self.url,
             'feed': "%s%s/" % (self.url, 'feed'),
+            'jsonfeed': "%s%s/index.json" % (self.url, 'feed'),
             'title': self.title
         }
 
@@ -953,10 +960,15 @@ class Category(dict):
     def exists(self):
         if settings.args.get('force'):
             return False
-        renderfile = os.path.join(self.renderdir, 'feed', 'index.xml')
-        if not os.path.exists(renderfile):
-            return False
-        elif self.mtime > os.path.getmtime(renderfile):
+        ismissing = False
+        for f in [
+            os.path.join(self.renderdir, 'feed', 'index.xml'),
+        ]:
+            if not os.path.exists(f):
+                ismissing = True
+            elif self.mtime > os.path.getmtime(f):
+                ismissing = True
+        if ismissing:
             return False
         else:
             return True
@@ -981,30 +993,8 @@ class Category(dict):
         fg.logo('%s/favicon.png' % settings.site.get('url'))
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
 
-        jselements = []
-        jsfeed = {
-            'items': jselements,
-            'version': 'https://jsonfeed.org/version/1',
-            'title': self.title,
-            'home_page_url': settings.site.get('url'),
-            'feed_url': self.feed,
-            'author': {
-                'name': settings.author.get('name'),
-                'url': settings.author.get('url'),
-                'email': settings.author.get('email'),
-            }
-        }
-
         for post in self.get_posts(start, end):
             dt = arrow.get(post.get('pubtime'))
-            jselements.append({
-                "title": post.get('title'),
-                "date_published": post.get('pubtime'),
-                "id": post.get('url'),
-                "url": post.get('url'),
-                "content_html": post.get('html_content')
-            })
-
             fe = fg.add_entry()
             fe.id(post.get('url'))
             fe.link(href=post.get('url'))
@@ -1015,7 +1005,6 @@ class Category(dict):
                 post.get('html_content'),
                 type='CDATA'
             )
-
             fe.rights('%s %s %s' % (
                 post.get('licence').upper(),
                 settings.author.get('name'),
@@ -1033,9 +1022,6 @@ class Category(dict):
             logging.info('writing file: %s', atom)
             f.write(fg.atom_str(pretty=True))
         jsfile = os.path.join(dirname, 'index.json')
-        with open(jsfile, 'wt') as f:
-            logging.info('writing file: %s', jsfile)
-            f.write(json.dumps(jsfeed, indent=4, sort_keys=True))
 
     def render_page(self, pagenum=1, pages=1):
         if self.display == 'flat':

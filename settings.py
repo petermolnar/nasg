@@ -101,10 +101,8 @@ tips = [
 ]
 
 dateformat = {
-    'iso': 'YYYY-MM-DDTHH:mm:ssZ',
+    'iso': 'YYYY-MM-DDTHH:mm:ssZZ',
     'display': 'YYYY-MM-DD HH:mm',
-    'rcf': 'ddd, DD MMM YYYY HH:mm:ss Z',
-    'twitter': 'ddd MMM DD HH:mm:ss Z YYYY'
 }
 
 loglevels = {
