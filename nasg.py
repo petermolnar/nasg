@@ -432,6 +432,7 @@ class Singular(MarkdownDoc):
             'reactions': self.reactions,
             'syndicate': self.syndicate,
             'url': self.url,
+            'review': self.meta.get('review', False),
         }
         if (self.enclosure):
             v.update({'enclosure': self.enclosure})
