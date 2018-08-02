@@ -1,0 +1,337 @@
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+html {
+  background-color: #111;
+  color: #bbb;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Liberation Sans", sans-serif;
+  color: #ccc;
+  background-color: #222;
+  font-size: 110%;
+  line-height: 1.3em;
+}
+
+svg {
+  transform: rotate(0deg);
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  vertical-align: text-top;
+}
+
+a {
+  color: #5193D4;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #fff;
+}
+
+h1 {
+  font-size: 1.6em;
+}
+
+h2, h3 {
+  margin-top: 2em;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #777;
+  margin: 1em 0;
+  clear:both;
+}
+
+blockquote {
+  border-left: 3px solid #999;
+  margin: 2em 0 2em 1em;
+  padding: 0 0 0 1em;
+  color: #aaa;
+}
+
+dt {
+  font-weight: bold;
+  margin: 1em 0 0.6em 0;
+}
+
+dd img {
+  width: 1em;
+  height: auto;
+}
+
+figure {
+  margin: 2em 0;
+}
+
+figure > a {
+  border: none;
+}
+
+figcaption {
+  padding: 0.3em 0;
+  text-align: center;
+}
+
+figure img {
+  display: block;
+  max-height: 98vh;
+  max-width: 100%;
+  width:auto;
+  height:auto;
+  margin: 0 auto;
+  border: 1px solid #000;
+}
+
+figcaption dt {
+  display: none;
+}
+
+figcaption dd {
+  font-size: 0.8em;
+  display: inline-block;
+  margin:0.3em 0.3em;
+}
+
+ul {
+  padding-left: 1.3em;
+}
+
+li {
+  padding: 0.1em 0;
+}
+
+li p {
+  margin: 0;
+}
+
+input {
+  border: none;
+  border-bottom: 3px solid #ccc;
+  color: #ccc;
+  background-color: transparent;
+}
+
+label {
+  display: none;
+}
+
+nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+nav li {
+  display: inline-block;
+  padding: 0 0.6em 0 0;
+}
+
+code, pre, q, figcaption {
+  font-family: "Courier New", "Courier", monospace;
+  font-size: 0.8em;
+}
+
+code, pre {
+  color: limegreen;
+  border: 1px solid #666;
+  direction: ltr;
+  word-break: break-all;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  overflow:initial;
+}
+
+pre {
+  padding: 0.6em;
+}
+
+code {
+  padding: 0.1em 0.2em;
+}
+
+pre > code {
+  border: none;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: 100%;
+}
+
+td,
+th {
+  padding: 0.3em;
+  border: 1px solid #777;
+  text-align:left;
+}
+
+th {
+  font-weight: bold;
+  background-color: rgba(0, 0, 0, .1);
+}
+
+tr:nth-child(odd) {
+
+}
+
+tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, .1);
+}
+
+body > header,
+body > footer {
+  text-align: center;
+  padding: 0.6em 0.3em;
+  background-color: #111;
+}
+
+body > header form {
+  padding: 0.2em 0 0 0;
+}
+
+body > header {
+  padding-right: 3em;
+}
+
+body > svg,
+body > script {
+  display: none;
+}
+
+body > header nav {
+  margin: 0.3em 0;
+}
+
+body > header nav li a {
+  font-weight: bold;
+  color: #ccc;
+  border-bottom: 3px solid transparent;
+  text-decoration: none;
+  padding-bottom: 0.3em;
+}
+
+body > header a:hover,
+body > header a.active,
+input:active,
+input:hover {
+  border-bottom: 3px solid #fefefe;
+  color: #fefefe;
+}
+
+body > header a svg {
+  display: block;
+  margin: 0.1em auto;
+}
+
+.limit,
+body > section {
+  max-width: 86ch;
+  margin: 0 auto;
+  padding: 0.6em;
+}
+
+body > nav {
+  margin: 2em 0 1em 0;
+  font-size: 1.4em;
+}
+
+body > nav ul {
+  text-align: center;
+}
+
+body > nav li {
+  margin: 0.3em 0.6em;
+}
+
+body > nav .current {
+  color: #999;
+}
+
+body > footer {
+  text-align: left;
+  color: #ccc;
+}
+
+body > footer img {
+  width: 1em;
+}
+
+body > footer h2 {
+  display: none;
+}
+
+body > footer dt {
+  font-weight: bold;
+  margin: 1em 0 0 0;
+}
+
+body > footer dd {
+  margin: -1.3em 0 0 4em;
+}
+
+body > footer nav {
+  display: flex;
+  justify-content: space-between;
+}
+
+.webring {
+  text-align: center;
+}
+
+.footnote a {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: top;
+  max-width: 80%;
+}
+
+.footnote-ref {
+  margin: 0 0 0 0.1em;
+}
+
+.contrast,
+.follow {
+  position: fixed;
+  right: 1em;
+}
+
+.contrast {
+  top: 0.1em;
+}
+
+.follow {
+  top: 3em;
+}
+
+.h-feed h1 {
+  display: none;
+}
+
+@media all and (min-width: 56em) {
+  body > header {
+    text-align: unset;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  body > header li svg {
+    display: inline-block;
+  }
+
+  body > header form {
+    margin: 0;
+  }
+}

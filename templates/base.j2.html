@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html {% block lang %}lang="{{ post.lang }}"{% endblock %}>
 <head>
-    <title>{% block title %}{{ post.title }} - petermolnar.net{% endblock %}</title>
+    <title>{% block title %}{{ post.title }} - {{ site.domain }}{% endblock %}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
-    <link rel="icon" href="https://petermolnar.net/favicon.ico" />
+    <link rel="icon" href="{{ site.url }}/favicon.ico" />
     {% for key, value in meta.items() %}
     <link rel="{{ key }}" href="{{ value }}" />
     {% endfor %}
     {% block meta %}{% endblock %}
     <style media="all">
-        {% include 'style-dark.css' %}
+        {% include 'style.css' %}
     </style>
-    <style id="css_alternative" media="none">
-        {% include 'style-light.css' %}
+    <style id="css_alt" media="none">
+        {% include 'style-alt.css' %}
     </style>
     <style media="print">
         {% include 'style-print.css' %}
@@ -22,12 +22,12 @@
         /* color scheme switcher */
         var current = localStorage.getItem("stylesheet");
         if (current) {
-            document.querySelector('#css_alternative').setAttribute("media", current);
+            document.querySelector('#css_alt').setAttribute("media", current);
         }
 
         function toggleStylesheet(trigger){
             var setto = 'all';
-            var e = document.querySelector('#css_alternative');
+            var e = document.querySelector('#css_alt');
             if (e.getAttribute("media") == 'all') {
                 setto = 'none';
             }
@@ -35,13 +35,19 @@
             e.setAttribute("media", setto);
         }
     </script>
+    {% if post.has_code %}
+    <style media="all">
+        {% include 'prism.css' %}
+    </style>
+    <script src="{{ site.url }}/prism.js"></script>
+    {% endif %}
 </head>
 <body>
 
 {% macro activemenu(name) %}{% if (post is defined and post.category ==  name ) or ( category is defined and category.name == name ) %}active{% endif %}{% endmacro %}
 
-<header class="content-header">
-    <nav class="content-navigation">
+<header>
+    <nav>
         <ul>
             <li>
                 <a title="home" href="/" class="{{ activemenu('') }}">
@@ -76,11 +82,10 @@
         </ul>
     </nav>
 
-    <form role="search" method="get" class="search-form" action="/search.php">
+    <form role="search" method="get" action="/search.php">
         <label for="s">Search</label>
-        <input type="search" class="search-field" placeholder="search..."
-            value="" name="q" id="q" title="Search for:" />
-        <input type="submit" class="search-submit" value="Go ➡" />
+        <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
+        <input type="submit" value="Go ➡" />
     </form>
 
     <p class="contrast">
@@ -94,7 +99,7 @@
 </header>
 
 {% block content %}
-<section class="content-body">
+<section>
     <article class="h-entry hentry singular" lang="{{ post.lang }}">
         <header>
             <h1>
@@ -144,9 +149,7 @@
         {% endif %}
 
         <div class="e-content entry-content">
-            <div class="content-inner">
-                {{ post.html_content }}
-            </div>
+            {{ post.html_content }}
         </div>
 
         <footer>
@@ -336,90 +339,92 @@
 {% endblock %}
 
 
-<footer class="content-footer" id="main-footer">
-    <nav class="footer-contact p-author h-card vcard limit">
-        <h2>Contact</h2>
-        <div class="twothird">
-            <dl>
-                <dt>
-                    <img class="photo avatar u-photo u-avatar"
-                        src="https://petermolnar.net/molnar_peter_avatar.jpg"
-                        alt="Photo of Peter Molnar" />
-                </dt>
-                <dd>
-                    <a class="fn p-name url u-url u-uid" href="/about.html">
-                        Peter Molnar
-                    </a>
-                </dd>
-                <dt>email</dt>
-                <dd>
-                    <a rel="me" class="u-email email" href="mailto:{{ author.email }}">
-                        {{ author.email }}
-                    </a>
-                </dd>
-    {% if author.gpg %}
-                <dt>GPG</dt>
-                <dd>
-                    <a rel="me" class="u-gpg gpg" href="/{{ author.gpg }}">key</a>
-                </dd>
-    {% endif %}
-                <dt>url</dt>
-                <dd>
-                    <a rel="me" class="u-url url" href="{{ author.url }}">
-                        {{ author.url }}
-                    </a>
-                </dd>
-            </dl>
+<footer>
+    <div class="limit">
+        <nav class="p-author h-card vcard">
+            <h2>Contact</h2>
+            <div>
+                <dl>
+                    <dt>
+                        <img class="photo avatar u-photo u-avatar"
+                            src="https://petermolnar.net/molnar_peter_avatar.jpg"
+                            alt="Photo of Peter Molnar" />
+                    </dt>
+                    <dd>
+                        <a class="fn p-name url u-url u-uid" href="/about.html">
+                            Peter Molnar
+                        </a>
+                    </dd>
+                    <dt>email</dt>
+                    <dd>
+                        <a rel="me" class="u-email email" href="mailto:{{ author.email }}">
+                            {{ author.email }}
+                        </a>
+                    </dd>
+        {% if author.gpg %}
+                    <dt>GPG</dt>
+                    <dd>
+                        <a rel="me" class="u-gpg gpg" href="/{{ author.gpg }}">key</a>
+                    </dd>
+        {% endif %}
+                    <dt>url</dt>
+                    <dd>
+                        <a rel="me" class="u-url url" href="{{ author.url }}">
+                            {{ author.url }}
+                        </a>
+                    </dd>
+                </dl>
+            </div>
+            <div>
+                <dl>
+        {% if author.xmpp %}
+                    <dt>XMPP</dt>
+                    <dd>
+                        <a rel="me" class="u-xmpp xmpp" href="xmpp:{{ author.xmpp }}">{{ author.xmpp }}</a>
+                    </dd>
+        {% endif %}
+        {% if author.sip %}
+                    <dt>SIP</dt>
+                    <dd>
+                        <a rel="me" class="u-sip sip" href="sip:{{ author.sip }}">
+                            {{ author.sip }}
+                        </a>
+                    </dd>
+        {% endif %}
+        {% if author.icq %}
+                    <dt>ICQ</dt>
+                    <dd>
+                        <a rel="me" class="u-icq icq" href="icq:{{ author.icq }}">
+                            {{ author.icq }}
+                        </a>
+                    </dd>
+        {% endif %}
+        {% if author.flickr %}
+                    <dt>flickr</dt>
+                    <dd>
+                        <a rel="me" class="u-flickr" href="https://flickr.com/people/{{ author.flickr }}">{{ author.flickr }}</a>
+                    </dd>
+        {% endif %}
+        {% if author.github %}
+                    <dt>github</dt>
+                    <dd>
+                        <a rel="me" class="u-github" href="https://github.com/{{ author.github }}">{{ author.github }}</a>
+                    </dd>
+        {% endif %}
+        {% if author.twitter %}
+                    <dt>twitter</dt>
+                    <dd>
+                        <a rel="me" class="u-twitter" href="https://twitter.com/{{ author.twitter }}">{{ author.twitter }}</a>
+                    </dd>
+        {% endif %}
+                </dl>
+            </div>
+        </nav>
+        <div class="webring">
+            <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
+                Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a> 🕸💍
+            <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
         </div>
-        <div class="onethird">
-            <dl>
-    {% if author.xmpp %}
-                <dt>XMPP</dt>
-                <dd>
-                    <a rel="me" class="u-xmpp xmpp" href="xmpp:{{ author.xmpp }}">{{ author.xmpp }}</a>
-                </dd>
-    {% endif %}
-    {% if author.sip %}
-                <dt>SIP</dt>
-                <dd>
-                    <a rel="me" class="u-sip sip" href="sip:{{ author.sip }}">
-                        {{ author.sip }}
-                    </a>
-                </dd>
-    {% endif %}
-    {% if author.icq %}
-                <dt>ICQ</dt>
-                <dd>
-                    <a rel="me" class="u-icq icq" href="icq:{{ author.icq }}">
-                        {{ author.icq }}
-                    </a>
-                </dd>
-    {% endif %}
-    {% if author.flickr %}
-                <dt>flickr</dt>
-                <dd>
-                    <a rel="me" class="u-flickr" href="https://flickr.com/people/{{ author.flickr }}">{{ author.flickr }}</a>
-                </dd>
-    {% endif %}
-    {% if author.github %}
-                <dt>github</dt>
-                <dd>
-                    <a rel="me" class="u-github" href="https://github.com/{{ author.github }}">{{ author.github }}</a>
-                </dd>
-    {% endif %}
-    {% if author.twitter %}
-                <dt>twitter</dt>
-                <dd>
-                    <a rel="me" class="u-twitter" href="https://twitter.com/{{ author.twitter }}">{{ author.twitter }}</a>
-                </dd>
-    {% endif %}
-            </dl>
-        </div>
-    </nav>
-    <div class="webring">
-        <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
-            Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a> 🕸💍
-        <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
     </div>
 </footer>
 

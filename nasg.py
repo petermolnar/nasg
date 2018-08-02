@@ -35,6 +35,7 @@ import requests
 import exiftool
 import settings
 import keys
+import html5_fenced_code
 
 from pprint import pprint
 
@@ -63,13 +64,21 @@ RE_HTTP = re.compile(
 MD = markdown.Markdown(
     output_format='xhtml5',
     extensions=[
-        'extra',
-        'codehilite',
+        'html5_fenced_code',
+        'abbr',
+        'attr_list',
+        'def_list',
+        'footnotes',
+        'tables',
+        'smart_strong',
         'headerid',
-        'urlize'
-    ],
+        'urlize',
+    ]
 )
 
+RE_CODE = re.compile(
+    r'(?:[~`]{3})(?:[^`]+)?'
+)
 
 class MarkdownDoc(object):
     @property
@@ -413,6 +422,13 @@ class Singular(MarkdownDoc):
         return r
 
     @property
+    def has_code(self):
+        if RE_CODE.search(self.content):
+            return True
+        else:
+            return False
+
+    @property
     @cached()
     def tmplvars(self):
         v = {
@@ -433,6 +449,7 @@ class Singular(MarkdownDoc):
             'syndicate': self.syndicate,
             'url': self.url,
             'review': self.meta.get('review', False),
+            'has_code': self.has_code,
         }
         if (self.enclosure):
             v.update({'enclosure': self.enclosure})
@@ -521,8 +538,8 @@ class WebImage(object):
             return self.mdimg.match
         tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
         return tmpl.render({
-            'src': self.displayed.relpath,
-            'href': self.linked.relpath,
+            'src': self.src,
+            'href': self.href,
             'width': self.displayed.width,
             'height': self.displayed.height,
             'title': self.title,
@@ -1315,7 +1332,14 @@ def make():
     logging.info('worker finished')
 
     # copy static
-    for e in glob.glob(os.path.join(content, '*.*')):
+    staticfiles = []
+    staticpaths = [
+        os.path.join(content, '*.*'),
+        os.path.join(settings.paths.get('tmpl'), '*.js')
+    ]
+    for p in staticpaths:
+        staticfiles = staticfiles + glob.glob(p)
+    for e in staticfiles:
         t = os.path.join(
             settings.paths.get('build'),
             os.path.basename(e)

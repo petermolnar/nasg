@@ -1,0 +1,29 @@
+body {
+  color: #222;
+  background-color: #eee;
+}
+
+a {
+  color: #3173b4;
+}
+
+a:hover {
+  color: #014384;
+}
+
+code,
+pre {
+  color: darkgreen;
+}
+
+.contrast svg {
+  transform: rotate(180deg);
+}
+
+blockquote {
+  color: #555;
+}
+
+td, th {
+  border: 1px solid #111;
+}

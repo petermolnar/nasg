@@ -1,26 +1,25 @@
 * {
-    background-color: #fff !important;
-    color: #222;
+  background-color: #fff !important;
+  color: #222;
 }
 
 html, body {
-    font-size: 11pt !important;
-    text-shadow: unset !important;
-    font-family: Helvetica, sans-serif !important;
+  font-size: 11pt !important;
+  font-family: Helvetica, sans-serif !important;
 }
 
 @page {
-    margin: 0.6in 0.5in;
+  margin: 0.6in 0.5in;
 }
 
 .limit,
-.content-body {
-    max-width: 100% !important;
-    margin: 0 !important;
+body > section {
+  max-width: 100% !important;
+  margin: 0 !important;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    page-break-after: avoid;
+  page-break-after: avoid;
 }
 
 h3,
@@ -29,145 +28,55 @@ a,
 .h-feed .h-entry,
 code,
 pre {
-    border: none;
+  border: none;
 }
 
 p, li, blockquote, figure, .footnotes {
-    page-break-inside: avoid !important;
+  page-break-inside: avoid !important;
 }
 
 a {
-    color: #000;
+  color: #000;
 }
 
 td, th {
-    border: 1pt solid #666;
+  border: 1pt solid #666;
 }
 
-.content-note,
-.content-header,
-.content-footer,
+.footnote ol li a {
+  display: block;
+  overflow: visible;
+  white-space: normal;
+}
+
+body > header,
+body > footer,
 video,
 audio,
-.footnotes ol li a[href^="#"],
-.footnotes ol li a[href^="#"]:after,
-.exif svg,
+.footnote-backref,
 .donation,
 .noprint {
-    display:none;
-}
-
-.footnotes ol li a {
-    display: block;
-    overflow: visible;
-    white-space: normal;
+  display:none !important;
 }
 
 code, pre {
    max-width: 96%;
-   color: #222;
-   word-break: break-all;
-   word-wrap: break-word;
-   white-space: pre-wrap;
-   overflow:initial;
    page-break-inside: enabled;
    font-family: "Courier", "Courier New", monospace !important;
 }
 
 pre {
-    border: 1pt dotted #666;
-    padding: 0.6em;
-}
-
-.codehilite .hll { background-color: #ffffcc }
-.codehilite  { background: #f8f8f8; }
-.codehilite .c { color: #8f5902; font-style: italic }
-.codehilite .err { color: #a40000; border: 1px solid #ef2929 }
-.codehilite .g { color: #000000 }
-.codehilite .k { color: #204a87; font-weight: bold }
-.codehilite .l { color: #000000 }
-.codehilite .n { color: #000000 }
-.codehilite .o { color: #ce5c00; font-weight: bold }
-.codehilite .x { color: #000000 }
-.codehilite .p { color: #000000; font-weight: bold }
-.codehilite .ch { color: #8f5902; font-style: italic }
-.codehilite .cm { color: #8f5902; font-style: italic }
-.codehilite .cp { color: #8f5902; font-style: italic }
-.codehilite .cpf { color: #8f5902; font-style: italic }
-.codehilite .c1 { color: #8f5902; font-style: italic }
-.codehilite .cs { color: #8f5902; font-style: italic }
-.codehilite .gd { color: #a40000 }
-.codehilite .ge { color: #000000; font-style: italic }
-.codehilite .gr { color: #ef2929 }
-.codehilite .gh { color: #000080; font-weight: bold }
-.codehilite .gi { color: #00A000 }
-.codehilite .go { color: #000000; font-style: italic }
-.codehilite .gp { color: #8f5902 }
-.codehilite .gs { color: #000000; font-weight: bold }
-.codehilite .gu { color: #800080; font-weight: bold }
-.codehilite .gt { color: #a40000; font-weight: bold }
-.codehilite .kc { color: #204a87; font-weight: bold }
-.codehilite .kd { color: #204a87; font-weight: bold }
-.codehilite .kn { color: #204a87; font-weight: bold }
-.codehilite .kp { color: #204a87; font-weight: bold }
-.codehilite .kr { color: #204a87; font-weight: bold }
-.codehilite .kt { color: #204a87; font-weight: bold }
-.codehilite .ld { color: #000000 }
-.codehilite .m { color: #0000cf; font-weight: bold }
-.codehilite .s { color: #4e9a06 }
-.codehilite .na { color: #c4a000 }
-.codehilite .nb { color: #204a87 }
-.codehilite .nc { color: #000000 }
-.codehilite .no { color: #000000 }
-.codehilite .nd { color: #5c35cc; font-weight: bold }
-.codehilite .ni { color: #ce5c00 }
-.codehilite .ne { color: #cc0000; font-weight: bold }
-.codehilite .nf { color: #000000 }
-.codehilite .nl { color: #f57900 }
-.codehilite .nn { color: #000000 }
-.codehilite .nx { color: #000000 }
-.codehilite .py { color: #000000 }
-.codehilite .nt { color: #204a87; font-weight: bold }
-.codehilite .nv { color: #000000 }
-.codehilite .ow { color: #204a87; font-weight: bold }
-.codehilite .w { color: #f8f8f8; text-decoration: underline }
-.codehilite .mb { color: #0000cf; font-weight: bold }
-.codehilite .mf { color: #0000cf; font-weight: bold }
-.codehilite .mh { color: #0000cf; font-weight: bold }
-.codehilite .mi { color: #0000cf; font-weight: bold }
-.codehilite .mo { color: #0000cf; font-weight: bold }
-.codehilite .sa { color: #4e9a06 }
-.codehilite .sb { color: #4e9a06 }
-.codehilite .sc { color: #4e9a06 }
-.codehilite .dl { color: #4e9a06 }
-.codehilite .sd { color: #8f5902; font-style: italic }
-.codehilite .s2 { color: #4e9a06 }
-.codehilite .se { color: #4e9a06 }
-.codehilite .sh { color: #4e9a06 }
-.codehilite .si { color: #4e9a06 }
-.codehilite .sx { color: #4e9a06 }
-.codehilite .sr { color: #4e9a06 }
-.codehilite .s1 { color: #4e9a06 }
-.codehilite .ss { color: #4e9a06 }
-.codehilite .bp { color: #3465a4 }
-.codehilite .fm { color: #000000 }
-.codehilite .vc { color: #000000 }
-.codehilite .vg { color: #000000 }
-.codehilite .vi { color: #000000 }
-.codehilite .vm { color: #000000 }
-.codehilite .il { color: #0000cf; font-weight: bold }
-
-figcaption {
-    font-size: 0.9em;
+  border: 1pt dotted #666;
+  padding: 0.6em;
 }
 
 .adaptimg {
-    max-height: 35vh;
-    max-width: 90vw;
-    outline: none;
-    border: 1px solid #000;
+  max-height: 35vh;
+  max-width: 90vw;
+  outline: none;
+  border: 1px solid #000;
 }
 
 .h-feed .h-entry {
-    page-break-after:always;
+  page-break-after:always;
 }
