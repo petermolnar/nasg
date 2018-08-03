@@ -5,3 +5,11 @@
     <link rel="canonical" href="{{ post.url }}" />
     <link rel="license" href="https://creativecommons.org/licenses/4.0/{{ post.licence }}" />
 {% endblock %}
+{% block prism %}
+    {% if post.has_code %}
+    <style media="all">
+        {% include 'prism.css' %}
+    </style>
+    <script src="{{ site.url }}/prism.js"></script>
+    {% endif %}
+{% endblock %}

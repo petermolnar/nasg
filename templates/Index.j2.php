@@ -6,10 +6,26 @@ $redirects = array(
 {% endfor %}
 );
 
+$redirects_re = array(
+    '^(?:sysadmin|it|linux-tech-coding|sysadmin-blog)\/?(page.*)?$' => 'category/article/',
+    '^(?:fotography|photoblog)\/?(page.*)?$' => '/category/photo/$1',
+    '^blog\/?(page.*)?$' => '/category/journal/',
+    '^blips\/?(page.*)?$' => '/category/note/$1',
+    '^r\/?(page.*)?$' => '/category/note/$1',
+    '^(?:linux-tech-coding|it|sysadmin-blog|sysadmin|fotography|blips|blog|photoblog|article|journal|photo|note|r)\/((?!page).*)' => '/$1',
+);
+
 $gone = array(
 {% for gone in gones %}
     "{{ gone }}" => true,
 {% endfor %}
+);
+
+$gone_re = array(
+    '^cache/.*$',
+    '^files/.*$',
+    '^wp-content/.*$',
+    '^broadcast\/wp-ffpc.message$',
 );
 
 
@@ -78,11 +94,33 @@ $uri = str_replace('/feed/', '', $uri);
 $uri = str_replace('/atom/', '', $uri);
 $uri = trim($uri, '/');
 
-if (isset($gone[$uri]))
+foreach ($gone_re as $pattern) {
+    if (preg_match(sprintf('/%s/', $pattern), $uri)) {
+        gone($uri);
+    }
+}
+
+foreach ($redirects_re as $pattern => $target) {
+    $maybe = preg_match(sprintf('/%s/i', $pattern), $uri, $matches);
+    if ($maybe) {
+        $target = str_replace('$1', $matches[1], $target);
+        redirect_to($target);
+    }
+}
+
+/* "logic" */
+if (isset($gone[$uri])) {
     gone($uri);
-elseif (isset($redirects[$uri]))
+}
+elseif (isset($redirects[$uri])) {
     redirect_to($redirects[$uri]);
-elseif (strstr($uri, '_'))
+}
+elseif (preg_match('/^\.well-known\/(host-meta|webfinger).*$/', $uri)) {
+    redirect_to("https://fed.brid.gy/{$uri}");
+}
+elseif (strstr($uri, '_')) {
     maybe_redirect(str_replace('_', '-', $uri));
-else
+}
+else {
     notfound();
+}

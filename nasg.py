@@ -10,7 +10,7 @@ __email__ = "mail@petermolnar.net"
 import glob
 import os
 import time
-from functools import lru_cache as cached
+from functools import partial
 import re
 import imghdr
 import logging
@@ -26,18 +26,15 @@ import langdetect
 import wand.image
 import jinja2
 import frontmatter
-import markdown
 from feedgen.feed import FeedGenerator
 from bleach import clean
 from emoji import UNICODE_EMOJI
 from slugify import slugify
 import requests
+from pandoc import pandoc
 import exiftool
 import settings
 import keys
-import html5_fenced_code
-
-from pprint import pprint
 
 MarkdownImage = namedtuple(
     'MarkdownImage',
@@ -56,33 +53,37 @@ RE_MDIMG = re.compile(
     re.IGNORECASE
 )
 
-RE_HTTP = re.compile(
-    r'^https?://',
-    re.IGNORECASE
-)
-
-MD = markdown.Markdown(
-    output_format='xhtml5',
-    extensions=[
-        'html5_fenced_code',
-        'abbr',
-        'attr_list',
-        'def_list',
-        'footnotes',
-        'tables',
-        'smart_strong',
-        'headerid',
-        'urlize',
-    ]
-)
-
 RE_CODE = re.compile(
     r'(?:[~`]{3})(?:[^`]+)?'
 )
 
+RE_PRECODE = re.compile(
+    r'<pre class="([^"]+)"><code>'
+)
+
+class cached_property(object):
+    def __init__(self, method, name=None):
+        # record the unbound-method and the name
+        self.method = method
+        self.name = name or method.__name__
+        self.__doc__ = method.__doc__
+    def __get__(self, inst, cls):
+        # self: <__main__.cache object at 0xb781340c>
+        # inst: <__main__.Foo object at 0xb781348c>
+        # cls: <class '__main__.Foo'>
+        if inst is None:
+            # instance attribute accessed on class, return self
+            # You get here if you write `Foo.bar`
+            return self
+        # compute, cache and return the instance's attribute value
+        result = self.method(inst)
+        # setattr redefines the instance's attribute so this doesn't get called again
+        setattr(inst, self.name, result)
+        return result
+
+
 class MarkdownDoc(object):
-    @property
-    @cached()
+    @cached_property
     def _parsed(self):
         with open(self.fpath, mode='rt') as f:
             logging.debug('parsing YAML+MD file %s', self.fpath)
@@ -97,14 +98,16 @@ class MarkdownDoc(object):
     def content(self):
         return self._parsed[1]
 
-    @property
-    @cached()
+    @cached_property
     def html_content(self):
         c = "%s" % (self.content)
         if hasattr(self, 'images') and len(self.images):
             for match, img in self.images.items():
                 c = c.replace(match, str(img))
-        return MD.reset().convert(c)
+        # return MD.reset().convert(c)
+        c = pandoc(c)
+        c = RE_PRECODE.sub('<pre><code lang="\g<1>" class="language-\g<1>">', c)
+        return c
 
 
 class Comment(MarkdownDoc):
@@ -188,8 +191,7 @@ class Redirect(Gone):
     Redirect object for entries that moved
     """
 
-    @property
-    @cached()
+    @cached_property
     def target(self):
         target = ''
         with open(self.fpath, 'rt') as f:
@@ -219,8 +221,7 @@ class Singular(MarkdownDoc):
                 ret = ctime
         return ret
 
-    @property
-    @cached()
+    @cached_property
     def files(self):
         """
         An array of files present at the same directory level as
@@ -233,8 +234,7 @@ class Singular(MarkdownDoc):
             if not k.endswith('.md') and not k.startswith('.')
         ]
 
-    @property
-    @cached()
+    @cached_property
     def comments(self):
         """
         An dict of Comment objects keyed with their path, populated from the
@@ -251,8 +251,7 @@ class Singular(MarkdownDoc):
             comments[c.dt.timestamp] = c
         return comments
 
-    @property
-    @cached()
+    @cached_property
     def images(self):
         """
         A dict of WebImage objects, populated by:
@@ -317,10 +316,10 @@ class Singular(MarkdownDoc):
     def summary(self):
         return self.meta.get('summary', '')
 
-    @property
-    @cached()
+    @cached_property
     def html_summary(self):
-        return MD.reset().convert(self.summary)
+        # return MD.reset().convert(self.summary)
+        return pandoc(self.summary)
 
     @property
     def title(self):
@@ -428,8 +427,7 @@ class Singular(MarkdownDoc):
         else:
             return False
 
-    @property
-    @cached()
+    @cached_property
     def tmplvars(self):
         v = {
             'title': self.title,
@@ -548,8 +546,7 @@ class WebImage(object):
             'is_photo': self.is_photo,
         })
 
-    @property
-    @cached()
+    @cached_property
     def meta(self):
         return exiftool.Exif(self.fpath)
 
@@ -844,7 +841,7 @@ class AsyncWorker(object):
         self._tasks = []
         self._loop = asyncio.get_event_loop()
 
-    def append(self, job):
+    def add(self, job):
         task = self._loop.create_task(job)
         self._tasks.append(task)
 
@@ -872,7 +869,7 @@ class IndexPHP(object):
         if target in self.gone:
             self.add_gone(source)
         else:
-            if not RE_HTTP.match(target):
+            if '://' not in target:
                 target = "%s/%s" % (settings.site.get('url'), target)
             self.redirect[source] = target
 
@@ -1003,6 +1000,7 @@ class Category(dict):
         fg = FeedGenerator()
         fg.id(self.feed)
         fg.link(href=self.feed, rel='self')
+        fg.link(href=settings.meta.get('hub'), rel='hub')
         fg.title(self.title)
         fg.author({
             'name': settings.author.get('name'),
@@ -1014,6 +1012,10 @@ class Category(dict):
         for post in self.get_posts(start, end):
             dt = arrow.get(post.get('pubtime'))
             fe = fg.add_entry()
+            fe.author({
+                'name': settings.author.get('name'),
+                'email':settings.author.get('email')
+            })
             fe.id(post.get('url'))
             fe.link(href=post.get('url'))
             fe.title(post.get('title'))
@@ -1021,7 +1023,7 @@ class Category(dict):
             fe.updated(dt.datetime)
             fe.content(
                 post.get('html_content'),
-                type='CDATA'
+                #src=post.get('url')
             )
             fe.rights('%s %s %s' % (
                 post.get('licence').upper(),
@@ -1035,15 +1037,15 @@ class Category(dict):
                     "%d" % enc.get('size'),
                     enc.get('mime')
                 )
+
         atom = os.path.join(dirname, 'index.xml')
         with open(atom, 'wb') as f:
             logging.info('writing file: %s', atom)
             f.write(fg.atom_str(pretty=True))
-        jsfile = os.path.join(dirname, 'index.json')
 
     def render_page(self, pagenum=1, pages=1):
         if self.display == 'flat':
-            start = 1
+            start = 0
             end = -1
         else:
             pagination = int(settings.site.get('pagination'))
@@ -1201,7 +1203,7 @@ class Sitemap(dict):
     def renderfile(self):
         return os.path.join(settings.paths.get('build'), 'sitemap.txt')
 
-    async def save(self):
+    async def render(self):
         if self.mtime >= sorted(self.values())[-1]:
             return
         with open(self.renderfile, 'wt') as f:
@@ -1274,8 +1276,8 @@ def make():
 
     content = settings.paths.get('content')
     worker = AsyncWorker()
-
     rules = IndexPHP()
+
     for e in glob.glob(os.path.join(content, '*', '*.ptr')):
         post = Gone(e)
         if post.mtime > last:
@@ -1287,8 +1289,8 @@ def make():
             last = post.mtime
         rules.add_redirect(post.source, post.target)
 
-    if rules.mtime < last:
-        worker.append(rules.render())
+    if rules.mtime < last or settings.args.get('force'):
+        worker.add(rules.render())
 
     sitemap = Sitemap()
     search = Search()
@@ -1297,10 +1299,10 @@ def make():
 
     for e in sorted(glob.glob(os.path.join(content, '*', '*', 'index.md'))):
         post = Singular(e)
-        worker.append(post.render())
-        worker.append(post.copyfiles())
+        worker.add(post.copyfiles())
         for i in post.images.values():
-            worker.append(i.downsize())
+            worker.add(i.downsize())
+        worker.add(post.render())
         if post.is_future:
             continue
         else:
@@ -1322,11 +1324,11 @@ def make():
             )
 
     search.__exit__()
-    worker.append(search.render())
+    search.render()
     for category in categories.values():
-        worker.append(category.render())
+        worker.add(category.render())
 
-    worker.append(sitemap.save())
+    worker.add(sitemap.render())
 
     worker.run()
     logging.info('worker finished')

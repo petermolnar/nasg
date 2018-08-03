@@ -33,14 +33,11 @@
             }
             localStorage.setItem("stylesheet", setto);
             e.setAttribute("media", setto);
+            return false;
         }
     </script>
-    {% if post.has_code %}
-    <style media="all">
-        {% include 'prism.css' %}
-    </style>
-    <script src="{{ site.url }}/prism.js"></script>
-    {% endif %}
+{% block prism %}
+{% endblock %}
 </head>
 <body>
 
@@ -90,7 +87,7 @@
 
     <p class="contrast">
         <a title="toggle site colour scheme" href="#"
-            onclick="toggleStylesheet(this)">
+            onclick="return toggleStylesheet(this)">
             <svg class="icon" width="16" height="16">
                 <use xlink:href="#icon-contrast" />
             </svg>
@@ -169,9 +166,7 @@
                         <a class="fn p-name url u-url u-uid" href="{{ author.url }}">
                             {{ author.name }}
                         </a>
-                        &lt;<a rel="me" class="u-email email" href="mailto:{{ author.email }}">
-                            {{ author.email }}
-                        </a>&gt;
+                        &lt;<a rel="me" class="u-email email" href="mailto:{{ author.email }}">{{ author.email }}</a>&gt;
                     </p>
                 </dd>
 
@@ -422,7 +417,7 @@
         </nav>
         <div class="webring">
             <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
-                Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a> 🕸💍
+                Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
             <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
         </div>
     </div>

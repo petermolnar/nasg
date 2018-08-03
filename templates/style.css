@@ -25,7 +25,7 @@ svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
-  vertical-align: text-top;
+  vertical-align: middle;
 }
 
 a {
@@ -39,6 +39,10 @@ a:hover {
 
 h1 {
   font-size: 1.6em;
+}
+
+h1, h2 {
+  line-height: 1.2em;
 }
 
 h2, h3 {
@@ -153,6 +157,7 @@ code, pre {
 
 pre {
   padding: 0.6em;
+  position: relative;
 }
 
 code {
@@ -161,6 +166,11 @@ code {
 
 pre > code {
   border: none;
+}
+
+pre> code::before {
+  content: attr(lang);
+  float: right;
 }
 
 table {
@@ -280,16 +290,11 @@ body > footer dd {
   margin: -1.3em 0 0 4em;
 }
 
-body > footer nav {
-  display: flex;
-  justify-content: space-between;
-}
-
 .webring {
   text-align: center;
 }
 
-.footnote a {
+.footnotes a {
   display: inline-block;
   overflow: hidden;
   white-space: nowrap;
@@ -298,7 +303,7 @@ body > footer nav {
   max-width: 80%;
 }
 
-.footnote-ref {
+.footnote-back {
   margin: 0 0 0 0.1em;
 }
 
@@ -306,6 +311,7 @@ body > footer nav {
 .follow {
   position: fixed;
   right: 1em;
+  z-index: 100;
 }
 
 .contrast {
@@ -333,5 +339,10 @@ body > footer nav {
 
   body > header form {
     margin: 0;
+  }
+
+  body > footer nav {
+    display: flex;
+    justify-content: space-between;
   }
 }
