@@ -1,3 +1,5 @@
+
+
 body {
   color: #222;
   background-color: #eee;
@@ -27,3 +29,13 @@ blockquote {
 td, th {
   border: 1px solid #111;
 }
+
+th, tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, .1);
+}
+
+pre> code::before {
+  color: #444;
+}
+
+    

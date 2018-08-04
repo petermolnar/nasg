@@ -142,7 +142,7 @@ nav li {
 
 code, pre, q, figcaption {
   font-family: "Courier New", "Courier", monospace;
-  font-size: 0.8em;
+  font-size: 0.94em;
 }
 
 code, pre {
@@ -171,6 +171,7 @@ pre > code {
 pre> code::before {
   content: attr(lang);
   float: right;
+  color: #999;
 }
 
 table {
@@ -188,15 +189,10 @@ th {
 
 th {
   font-weight: bold;
-  background-color: rgba(0, 0, 0, .1);
 }
 
-tr:nth-child(odd) {
-
-}
-
-tr:nth-child(even) {
-  background-color: rgba(0, 0, 0, .1);
+th, tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, .1);
 }
 
 body > header,
@@ -345,4 +341,4 @@ body > footer dd {
     display: flex;
     justify-content: space-between;
   }
-}
+}        

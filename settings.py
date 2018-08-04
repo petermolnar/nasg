@@ -135,11 +135,24 @@ _parser.add_argument(
 
 args = vars(_parser.parse_args())
 
-# remove the rest of the potential loggers
-while len(logging.root.handlers) > 0:
-    logging.root.removeHandler(logging.root.handlers[-1])
+loglevel = loglevels.get(args.get('loglevel'))
 
-logging.basicConfig(
-    level=loglevels[args.get('loglevel')],
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logger = logging.getLogger("nasg")
+logger.setLevel(loglevel)
+console_handler = logging.StreamHandler()
+logger.addHandler(console_handler)
+
+logging.getLogger('asyncio').setLevel(loglevel)
+
+# remove the rest of the potential loggers
+#while len(logging.root.handlers) > 0:
+#    logging.root.removeHandler(logging.root.handlers[-1])
+# #fh = logging.FileHandler("live1.log")
+# #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# #fh.setFormatter(formatter)
+# #logger.addHandler(fh)
+
+# logging.basicConfig(
+    # level=loglevels[],
+    # format='%(asctime)s - %(levelname)s - %(message)s'
+# )

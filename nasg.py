@@ -13,7 +13,6 @@ import time
 from functools import partial
 import re
 import imghdr
-import logging
 import asyncio
 import sqlite3
 import json
@@ -86,7 +85,7 @@ class MarkdownDoc(object):
     @cached_property
     def _parsed(self):
         with open(self.fpath, mode='rt') as f:
-            logging.debug('parsing YAML+MD file %s', self.fpath)
+            settings.logger.debug('parsing YAML+MD file %s', self.fpath)
             meta, txt = frontmatter.parse(f.read())
         return(meta, txt)
 
@@ -505,16 +504,16 @@ class Singular(MarkdownDoc):
             'labels': settings.labels
         })
         if not os.path.isdir(self.renderdir):
-            logging.info("creating directory: %s", self.renderdir)
+            settings.logger.info("creating directory: %s", self.renderdir)
             os.makedirs(self.renderdir)
         with open(self.renderfile, 'wt') as f:
-            logging.info("rendering to %s", self.renderfile)
+            settings.logger.info("rendering to %s", self.renderfile)
             f.write(r)
 
 
 class WebImage(object):
     def __init__(self, fpath, mdimg, parent):
-        logging.debug("loading image: %s", fpath)
+        settings.logger.debug("loading image: %s", fpath)
         self.mdimg = mdimg
         self.fpath = fpath
         self.parent = parent
@@ -715,7 +714,7 @@ class WebImage(object):
             img = self._maybe_watermark(img)
             for size, resized in self.resized_images:
                 if not resized.exists or settings.args.get('regenerate'):
-                    logging.info(
+                    settings.logger.info(
                         "resizing image: %s to size %d",
                         os.path.basename(self.fpath),
                         size
@@ -832,7 +831,7 @@ class WebImage(object):
 
                 # this is to make sure pjpeg happens
                 with open(self.fpath, 'wb') as f:
-                    logging.info("writing %s", self.fpath)
+                    settings.logger.info("writing %s", self.fpath)
                     thumb.save(file=f)
 
 
@@ -846,8 +845,7 @@ class AsyncWorker(object):
         self._tasks.append(task)
 
     def run(self):
-        w = asyncio.wait(self._tasks, return_when=asyncio.FIRST_EXCEPTION)
-        self._loop.run_until_complete(w)
+        self._loop.run_until_complete(asyncio.wait(self._tasks))
 
 
 class IndexPHP(object):
@@ -888,7 +886,7 @@ class IndexPHP(object):
             'redirects': self.redirect
         })
         with open(self.renderfile, 'wt') as f:
-            logging.info("rendering to %s", self.renderfile)
+            settings.logger.info("rendering to %s", self.renderfile)
             f.write(r)
 
 
@@ -989,7 +987,7 @@ class Category(dict):
             return True
 
     def render_feed(self):
-        logging.info('rendering category "%s" ATOM feed', self.name)
+        settings.logger.info('rendering category "%s" ATOM feed', self.name)
         start = 0
         end = int(settings.site.get('pagination'))
 
@@ -1040,7 +1038,7 @@ class Category(dict):
 
         atom = os.path.join(dirname, 'index.xml')
         with open(atom, 'wb') as f:
-            logging.info('writing file: %s', atom)
+            settings.logger.info('writing file: %s', atom)
             f.write(fg.atom_str(pretty=True))
 
     def render_page(self, pagenum=1, pages=1):
@@ -1188,7 +1186,7 @@ class Search(object):
             'labels': settings.labels
         })
         with open(target, 'wt') as f:
-            logging.info("rendering to %s", target)
+            settings.logger.info("rendering to %s", target)
             f.write(r)
 
 class Sitemap(dict):
@@ -1238,7 +1236,7 @@ def mkcomment(webmention):
     }
     fm.content = webmention.get('data').get('content')
     with open(fpath, 'wt') as f:
-        logging.info("saving webmention to %s", fpath)
+        settings.logger.info("saving webmention to %s", fpath)
         f.write(frontmatter.dumps(fm))
 
 
@@ -1324,14 +1322,14 @@ def make():
             )
 
     search.__exit__()
-    search.render()
+    worker.add(search.render())
     for category in categories.values():
         worker.add(category.render())
 
     worker.add(sitemap.render())
 
     worker.run()
-    logging.info('worker finished')
+    settings.logger.info('worker finished')
 
     # copy static
     staticfiles = []
@@ -1351,7 +1349,7 @@ def make():
         cp(e, t)
 
     end = int(round(time.time() * 1000))
-    logging.info('process took %d ms' % (end - start))
+    settings.logger.info('process took %d ms' % (end - start))
 
 
 if __name__ == '__main__':
