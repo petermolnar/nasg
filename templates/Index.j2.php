@@ -22,12 +22,11 @@ $gone = array(
 );
 
 $gone_re = array(
-    '^cache/.*$',
-    '^files/.*$',
-    '^wp-content/.*$',
-    '^broadcast\/wp-ffpc.message$',
+    '^cache\/.*$',
+    '^files\/.*$',
+    '^wp-content\/.*$',
+    '^broadcast\/wp-ffpc\.message$',
 );
-
 
 function redirect_to($uri) {
     header('HTTP/1.1 301 Moved Permanently');
@@ -108,7 +107,6 @@ foreach ($redirects_re as $pattern => $target) {
     }
 }
 
-/* "logic" */
 if (isset($gone[$uri])) {
     gone($uri);
 }

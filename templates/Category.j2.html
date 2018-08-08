@@ -7,15 +7,6 @@
 {% block content %}
 <section class="content-body h-feed">
     <header>
-        <nav>
-            <p class="follow">
-                <a title="follow {{ category.title }}" rel="feed" href="{{ category.feed }}">
-                    <svg class="icon" width="16" height="16">
-                        <use xlink:href="#icon-rss" />
-                    </svg>
-                </a>
-            </p>
-        </nav>
         <h1 class="p-name">{{ category.name }}</h1>
     </header>
 
@@ -40,7 +31,7 @@
                     <svg class="icon" width="16" height="16">
                         <use xlink:href="#icon-reply" />
                     </svg>
-                    <a href="/{{ post.slug }}/" class="u-url">
+                    <a href="{{ post.url }}/" class="u-url">
                         RE:
                     </a>
                     <a href="{{ post.is_reply }}" class="u-in-reply-to">
@@ -48,7 +39,7 @@
                     </a>
                 </span>
                 {% else %}
-                <a href="/{{ post.slug }}/" title="{{ post.title }}">
+                <a href="{{ post.url }}" title="{{ post.title }}">
                     <span class="entry-title p-name">{{ post.title }}</span>
                 </a>
                 {% endif %}
@@ -63,7 +54,7 @@
         <div class="e-summary entry-summary">
             {{ post.html_summary }}
             <p class="more">
-                <a href="/{{ post.slug }}" title="{{ post.title }}">
+                <a href="{{ post.url }}" title="{{ post.title }}">
                 {% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
                 </a>
             </p>
@@ -86,7 +77,7 @@
     {% if pages.current > 1 %}
     {% set prev = pages.current - 1 %}
             <li>
-                <a rel="prev" href="{{ category.url }}page/{{ prev }}">«</a>
+                <a rel="prev" href="{{ category.url }}page/{{ prev }}/">«</a>
             </li>
             <li>
                 <a rel="prev" href="{{ category.url }}">1</a>
@@ -102,7 +93,7 @@
 
         {% if ( pages.current - 1 > 1 ) %}
             <li>
-                <a href="{{ category.url }}page/{{ pages.current - 1 }}">{{ pages.current - 1 }}</a>
+                <a href="{{ category.url }}page/{{ pages.current - 1 }}/">{{ pages.current - 1 }}</a>
             </li>
         {% endif %}
 
@@ -114,7 +105,7 @@
 
         {% if ( pages.current + 1 <= pages.total -1 ) %}
             <li>
-                <a href="{{ category.url }}page/{{ pages.current + 1 }}">{{ pages.current + 1 }}</a>
+                <a href="{{ category.url }}page/{{ pages.current + 1 }}/">{{ pages.current + 1 }}</a>
             </li>
         {% endif %}
 
@@ -128,14 +119,14 @@
 
     {% if pages.current != pages.total %}
             <li>
-                <a href="{{ category.url }}page/{{ pages.total }}">{{ pages.total }}</a>
+                <a href="{{ category.url }}page/{{ pages.total }}/">{{ pages.total }}</a>
             </li>
     {% endif %}
 
     {% if pages.current < pages.total %}
     {% set next = pages.current + 1 %}
             <li>
-                <a rel="next" href="{{ category.url }}page/{{ next }}">»</a>
+                <a rel="next" href="{{ category.url }}page/{{ next }}/">»</a>
             </li>
     {% endif %}
         </ul>

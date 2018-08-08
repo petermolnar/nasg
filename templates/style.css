@@ -1,3 +1,4 @@
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -31,10 +32,12 @@ svg {
 a {
   color: #5193D4;
   text-decoration: none;
+  border: 1px solid transparent;
 }
 
 a:hover {
   color: #fff;
+  border-bottom: 1px solid #fff;
 }
 
 h1 {
@@ -118,11 +121,14 @@ li p {
   margin: 0;
 }
 
-input {
+input, button {
   border: none;
-  border-bottom: 3px solid #ccc;
   color: #ccc;
   background-color: transparent;
+}
+
+input {
+  border-bottom: 3px solid #ccc;
 }
 
 label {
@@ -146,7 +152,7 @@ code, pre, q, figcaption {
 }
 
 code, pre {
-  color: limegreen;
+  color: #32CD32;
   border: 1px solid #666;
   direction: ltr;
   word-break: break-all;
@@ -198,28 +204,35 @@ th, tr:nth-child(even) {
 body > header,
 body > footer {
   text-align: center;
-  padding: 0.6em 0.3em;
+  padding: 0.6em 0.6em;
   background-color: #111;
 }
 
 body > header form {
   padding: 0.2em 0 0 0;
+  display: inline-block;
 }
 
-body > header {
-  padding-right: 3em;
+body > header p {
+  margin: 1em 0 0 0;
+  font-size: 0.8em;
 }
+
 
 body > svg,
 body > script {
   display: none;
 }
 
+body > header {
+  position: relative;
+}
+
 body > header nav {
   margin: 0.3em 0;
 }
 
-body > header nav li a {
+body > header a {
   font-weight: bold;
   color: #ccc;
   border-bottom: 3px solid transparent;
@@ -247,17 +260,13 @@ body > section {
   padding: 0.6em;
 }
 
-body > nav {
-  margin: 2em 0 1em 0;
-  font-size: 1.4em;
-}
-
 body > nav ul {
   text-align: center;
 }
 
 body > nav li {
-  margin: 0.3em 0.6em;
+  margin: 1em 0.6em;
+  font-size: 1.8em;
 }
 
 body > nav .current {
@@ -303,42 +312,24 @@ body > footer dd {
   margin: 0 0 0 0.1em;
 }
 
-.contrast,
-.follow {
-  position: fixed;
-  right: 1em;
-  z-index: 100;
-}
-
-.contrast {
-  top: 0.1em;
-}
-
-.follow {
-  top: 3em;
-}
-
 .h-feed h1 {
   display: none;
 }
 
 @media all and (min-width: 56em) {
-  body > header {
+  body > header,
+  body > footer nav {
     text-align: unset;
     display: flex;
-    justify-content: space-between;
+    justify-content:space-between;
   }
 
-  body > header li svg {
+  body > header p {
     display: inline-block;
-  }
-
-  body > header form {
     margin: 0;
   }
 
-  body > footer nav {
-    display: flex;
-    justify-content: space-between;
+  body > header a svg {
+    display: inline-block;
   }
-}        
+}

@@ -1,5 +1,5 @@
 /* PrismJS 1.15.0
-https://prismjs.com/download.html#themes=prism-tomorrow&languages=markup+css+clike+javascript+c+csharp+bash+cpp+css-extras+markup-templating+git+ini+java+json+markdown+makefile+nginx+perl+php+php-extras+sql+python+yaml */
+https://prismjs.com/download.html#themes=prism-tomorrow&languages=markup+css+clike+javascript+c+csharp+bash+markup-templating+git+ini+java+json+markdown+makefile+nginx+perl+php+sql+python+yaml */
 var _self = (typeof window !== 'undefined')
 	? window   // if in browser
 	: (
@@ -953,43 +953,6 @@ Prism.languages.dotnet = Prism.languages.csharp;
 	Prism.languages.shell = Prism.languages.bash;
 })(Prism);
 
-Prism.languages.cpp = Prism.languages.extend('c', {
-	'keyword': /\b(?:alignas|alignof|asm|auto|bool|break|case|catch|char|char16_t|char32_t|class|compl|const|constexpr|const_cast|continue|decltype|default|delete|do|double|dynamic_cast|else|enum|explicit|export|extern|float|for|friend|goto|if|inline|int|int8_t|int16_t|int32_t|int64_t|uint8_t|uint16_t|uint32_t|uint64_t|long|mutable|namespace|new|noexcept|nullptr|operator|private|protected|public|register|reinterpret_cast|return|short|signed|sizeof|static|static_assert|static_cast|struct|switch|template|this|thread_local|throw|try|typedef|typeid|typename|union|unsigned|using|virtual|void|volatile|wchar_t|while)\b/,
-	'boolean': /\b(?:true|false)\b/,
-	'operator': /--?|\+\+?|!=?|<{1,2}=?|>{1,2}=?|->|:{1,2}|={1,2}|\^|~|%|&{1,2}|\|\|?|\?|\*|\/|\b(?:and|and_eq|bitand|bitor|not|not_eq|or|or_eq|xor|xor_eq)\b/
-});
-
-Prism.languages.insertBefore('cpp', 'keyword', {
-	'class-name': {
-		pattern: /(class\s+)\w+/i,
-		lookbehind: true
-	}
-});
-
-Prism.languages.insertBefore('cpp', 'string', {
-	'raw-string': {
-		pattern: /R"([^()\\ ]{0,16})\([\s\S]*?\)\1"/,
-		alias: 'string',
-		greedy: true
-	}
-});
-
-Prism.languages.css.selector = {
-	pattern: /[^{}\s][^{}]*(?=\s*\{)/,
-	inside: {
-		'pseudo-element': /:(?:after|before|first-letter|first-line|selection)|::[-\w]+/,
-		'pseudo-class': /:[-\w]+(?:\(.*\))?/,
-		'class': /\.[-:.\w]+/,
-		'id': /#[-:.\w]+/,
-		'attribute': /\[[^\]]+\]/
-	}
-};
-
-Prism.languages.insertBefore('css', 'function', {
-	'hexcode': /#[\da-f]{3,8}/i,
-	'entity': /\\[\da-f]{1,8}/i,
-	'number': /[\d%.]+/
-});
 Prism.languages['markup-templating'] = {};
 
 Object.defineProperties(Prism.languages['markup-templating'], {
@@ -1683,17 +1646,6 @@ Prism.languages.perl = {
 	});
 
 }(Prism));
-Prism.languages.insertBefore('php', 'variable', {
-	'this': /\$this\b/,
-	'global': /\$(?:_(?:SERVER|GET|POST|FILES|REQUEST|SESSION|ENV|COOKIE)|GLOBALS|HTTP_RAW_POST_DATA|argc|argv|php_errormsg|http_response_header)\b/,
-	'scope': {
-		pattern: /\b[\w\\]+::/,
-		inside: {
-			keyword: /static|self|parent/,
-			punctuation: /::|\\/
-		}
-	}
-});
 Prism.languages.sql= {
 	'comment': {
 		pattern: /(^|[^\\])(?:\/\*[\s\S]*?\*\/|(?:--|\/\/|#).*)/,

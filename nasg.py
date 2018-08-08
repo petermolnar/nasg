@@ -10,7 +10,6 @@ __email__ = "mail@petermolnar.net"
 import glob
 import os
 import time
-from functools import partial
 import re
 import imghdr
 import asyncio
@@ -30,10 +29,12 @@ from bleach import clean
 from emoji import UNICODE_EMOJI
 from slugify import slugify
 import requests
-from pandoc import pandoc
-import exiftool
+from pandoc import Pandoc
+from exiftool import Exif
 import settings
 import keys
+
+from pprint import pprint
 
 MarkdownImage = namedtuple(
     'MarkdownImage',
@@ -53,7 +54,8 @@ RE_MDIMG = re.compile(
 )
 
 RE_CODE = re.compile(
-    r'(?:[~`]{3})(?:[^`]+)?'
+    r'^(?:[~`]{3}).+$',
+    re.MULTILINE
 )
 
 RE_PRECODE = re.compile(
@@ -61,22 +63,18 @@ RE_PRECODE = re.compile(
 )
 
 class cached_property(object):
+    """ extermely simple cached_property decorator:
+    whenever something is called as @cached_property, on first run, the
+    result is calculated, then the class method is overwritten to be
+    a property, contaning the result from the method
+    """
     def __init__(self, method, name=None):
-        # record the unbound-method and the name
         self.method = method
         self.name = name or method.__name__
-        self.__doc__ = method.__doc__
     def __get__(self, inst, cls):
-        # self: <__main__.cache object at 0xb781340c>
-        # inst: <__main__.Foo object at 0xb781348c>
-        # cls: <class '__main__.Foo'>
         if inst is None:
-            # instance attribute accessed on class, return self
-            # You get here if you write `Foo.bar`
             return self
-        # compute, cache and return the instance's attribute value
         result = self.method(inst)
-        # setattr redefines the instance's attribute so this doesn't get called again
         setattr(inst, self.name, result)
         return result
 
@@ -104,7 +102,7 @@ class MarkdownDoc(object):
             for match, img in self.images.items():
                 c = c.replace(match, str(img))
         # return MD.reset().convert(c)
-        c = pandoc(c)
+        c = Pandoc(c)
         c = RE_PRECODE.sub('<pre><code lang="\g<1>" class="language-\g<1>">', c)
         return c
 
@@ -112,6 +110,7 @@ class MarkdownDoc(object):
 class Comment(MarkdownDoc):
     def __init__(self, fpath):
         self.fpath = fpath
+        self.mtime = os.path.getmtime(fpath)
 
     @property
     def dt(self):
@@ -215,9 +214,9 @@ class Singular(MarkdownDoc):
     def ctime(self):
         ret = self.mtime
         if len(self.comments):
-            ctime = int(sorted(self.comments.keys())[-1])
-            if ctime > self.mtime:
-                ret = ctime
+            for mtime, c in self.comments.items():
+                if c.mtime > ret:
+                    ret = c.mtime
         return ret
 
     @cached_property
@@ -318,7 +317,7 @@ class Singular(MarkdownDoc):
     @cached_property
     def html_summary(self):
         # return MD.reset().convert(self.summary)
-        return pandoc(self.summary)
+        return Pandoc(self.summary)
 
     @property
     def title(self):
@@ -338,6 +337,8 @@ class Singular(MarkdownDoc):
     @property
     def syndicate(self):
         urls = self.meta.get('syndicate', [])
+        if "https://brid.gy/publish/twitter" not in urls:
+            urls.append("https://brid.gy/publish/twitter")
         if self.is_photo:
             urls.append("https://brid.gy/publish/flickr")
         return urls
@@ -488,8 +489,7 @@ class Singular(MarkdownDoc):
         ])
 
     async def copyfiles(self):
-        # TODO: plain copy non-image files from entry directory to build/entry directory
-        return
+        copystatics( os.path.dirname(self.fpath))
 
     async def render(self):
         if self.exists:
@@ -547,7 +547,7 @@ class WebImage(object):
 
     @cached_property
     def meta(self):
-        return exiftool.Exif(self.fpath)
+        return Exif(self.fpath)
 
     @property
     def caption(self):
@@ -890,6 +890,24 @@ class IndexPHP(object):
             f.write(r)
 
 
+class WebhookPHP(object):
+    @property
+    def renderfile(self):
+        return os.path.join(
+            settings.paths.get('build'),
+            'webhook.php'
+        )
+
+    async def render(self):
+        r = J2.get_template('Webhook.j2.php').render({
+            'author': settings.author,
+            'callback_secret': keys.webmentionio.get('callback_secret'),
+        })
+        with open(self.renderfile, 'wt') as f:
+            settings.logger.info("rendering to %s", self.renderfile)
+            f.write(r)
+
+
 class Category(dict):
     def __init__(self, name=''):
         self.name = name
@@ -986,7 +1004,7 @@ class Category(dict):
         else:
             return True
 
-    def render_feed(self):
+    async def render_feed(self):
         settings.logger.info('rendering category "%s" ATOM feed', self.name)
         start = 0
         end = int(settings.site.get('pagination'))
@@ -1015,7 +1033,16 @@ class Category(dict):
                 'email':settings.author.get('email')
             })
             fe.id(post.get('url'))
+            fe.category({
+                'term': post.get('category'),
+                'label': post.get('category'),
+                'scheme': "%s/category/%s/" % (
+                    settings.site.get('url'),
+                    post.get('category')
+                )
+            })
             fe.link(href=post.get('url'))
+            fe.link(href=post.get('url'), rel='alternate', type='text/html')
             fe.title(post.get('title'))
             fe.published(dt.datetime)
             fe.updated(dt.datetime)
@@ -1041,7 +1068,7 @@ class Category(dict):
             settings.logger.info('writing file: %s', atom)
             f.write(fg.atom_str(pretty=True))
 
-    def render_page(self, pagenum=1, pages=1):
+    async def render_page(self, pagenum=1, pages=1):
         if self.display == 'flat':
             start = 0
             end = -1
@@ -1087,9 +1114,9 @@ class Category(dict):
         pages = ceil(len(self) / pagination)
         page = 1
         while page <= pages:
-            self.render_page(page, pages)
+            await self.render_page(page, pages)
             page = page + 1
-        self.render_feed()
+        await self.render_feed()
 
 
 class Search(object):
@@ -1207,19 +1234,54 @@ class Sitemap(dict):
         with open(self.renderfile, 'wt') as f:
             f.write("\n".join(sorted(self.keys())))
 
+def copystatics(source, exclude=['.md', '.jpg', '.png', '.gif']):
+    files = glob.glob(os.path.join(
+        source, '*.*'
+    ))
+    for f in files:
+        fname, fext = os.path.splitext(f)
+        if fext.lower() in exclude:
+            continue
+        t = os.path.join(
+            settings.paths.get('build'),
+            os.path.basename(f)
+        )
+        if os.path.exists(t) and os.path.getmtime(f) <= os.path.getmtime(t):
+            continue
+        settings.logger.info("copying '%s' to '%s'", f, t)
+        cp(f, t)
 
 def mkcomment(webmention):
-    dt = arrow.get(webmention.get('data').get('published'))
-    fdir = os.path.join(
-        settings.paths.get('content'),
-        webmention.get('target').strip('/').split('/')[-1]
-    )
+    if 'published_ts' in webmention.get('data'):
+        maybe = webmention.get('data').get('published')
+        if not maybe or maybe == 'None':
+            dt = arrow.get(webmention.get('verified_date'))
+        else:
+            dt = arrow.get(webmention.get('data').get('published'))
+
+    slug = webmention.get('target').strip('/').split('/')[-1]
+
+    fdir = glob.glob(os.path.join(settings.paths.get('content'), '*', slug))
+    if not len(fdir):
+        settings.logger.error(
+            "couldn't find post for incoming webmention: %s",
+            webmention
+            )
+        return
+    elif len(fdir) > 1:
+        settings.logger.error(
+            "multiple posts found for incoming webmention: %s",
+            webmention
+            )
+        return
+
+    fdir = fdir.pop()
     fpath = os.path.join(
         fdir,
         "%d-%s.md" % (
             dt.timestamp,
             slugify(
-                re.sub(r"^https?://(?:www)?", "", url),
+                re.sub(r"^https?://(?:www)?", "", webmention.get('source')),
                 only_ascii=True,
                 lower=True
             )[:200]
@@ -1232,9 +1294,13 @@ def mkcomment(webmention):
         'date': dt.format(settings.dateformat.get('iso')),
         'source': webmention.get('source'),
         'target': webmention.get('target'),
-        'type': webmention.get('activity').get('type')
+        'type': webmention.get('activity').get('type', 'webmention')
     }
-    fm.content = webmention.get('data').get('content')
+    c = webmention.get('data').get('content')
+    if not c:
+        fm.content = ''
+    else:
+        fm.content = c
     with open(fpath, 'wt') as f:
         settings.logger.info("saving webmention to %s", fpath)
         f.write(frontmatter.dumps(fm))
@@ -1246,23 +1312,27 @@ def makecomments():
     for e in glob.glob(os.path.join(content, '*', '*', '*.md')):
         if os.path.basename(e) == 'index.md':
             continue
-        mtime = os.path.getmtime(e)
+        # filenames are like [received epoch]-[slugified source url].md
+        mtime = int(os.path.basename(e).split('-')[0])
         if mtime > newest:
             newest = mtime
     newest = arrow.get(newest)
     wio_params = {
-        'jsonp': '',
         'token': '%s' % (keys.webmentionio.get('token')),
         'since': '%s' % newest.format(settings.dateformat.get('iso')),
         'domain': '%s' % (keys.webmentionio.get('domain'))
     }
     wio_url = "https://webmention.io/api/mentions"
     webmentions = requests.get(wio_url, params=wio_params)
+    settings.logger.info("queried webmention.io with: %s", webmentions.url)
+    if webmentions.status_code != requests.codes.ok:
+        return
     try:
-        webmentions = webmentions.json()
-        for webmention in webmentions.get('links'):
+        mentions = webmentions.json()
+        for webmention in mentions.get('links'):
             mkcomment(webmention)
     except ValueError as e:
+        settings.logger.error('failed to query webmention.io: %s', e)
         pass
 
 
@@ -1290,6 +1360,12 @@ def make():
     if rules.mtime < last or settings.args.get('force'):
         worker.add(rules.render())
 
+    webhook = WebhookPHP()
+    worker.add(webhook.render())
+
+    if rules.mtime < last or settings.args.get('force'):
+        worker.add(rules.render())
+
     sitemap = Sitemap()
     search = Search()
     categories = {}
@@ -1297,29 +1373,30 @@ def make():
 
     for e in sorted(glob.glob(os.path.join(content, '*', '*', 'index.md'))):
         post = Singular(e)
-        worker.add(post.copyfiles())
         for i in post.images.values():
             worker.add(i.downsize())
         worker.add(post.render())
+        worker.add(post.copyfiles())
         if post.is_future:
             continue
-        else:
-            if post.category not in categories:
-                categories[post.category] = Category(post.category)
-            categories[post.category][post.published.timestamp] = post
-            if post.is_front:
-                categories['/'][post.published.timestamp] = post
-            if post.ctime > last:
-                last = post.ctime
-            sitemap[post.url] = post.mtime
-            search.append(
-                url=post.url,
-                mtime=post.mtime,
-                name=post.name,
-                title=post.title,
-                category=post.category,
-                content=post.content
-            )
+        search.append(
+            url=post.url,
+            mtime=post.mtime,
+            name=post.name,
+            title=post.title,
+            category=post.category,
+            content=post.content
+        )
+        sitemap[post.url] = post.mtime
+        if post.category.startswith('_'):
+            continue
+        if post.category not in categories:
+            categories[post.category] = Category(post.category)
+        categories[post.category][post.published.timestamp] = post
+        if post.is_front:
+            categories['/'][post.published.timestamp] = post
+        if post.ctime > last:
+            last = post.ctime
 
     search.__exit__()
     worker.add(search.render())
@@ -1335,7 +1412,7 @@ def make():
     staticfiles = []
     staticpaths = [
         os.path.join(content, '*.*'),
-        os.path.join(settings.paths.get('tmpl'), '*.js')
+        #os.path.join(settings.paths.get('tmpl'), '*.js')
     ]
     for p in staticpaths:
         staticfiles = staticfiles + glob.glob(p)

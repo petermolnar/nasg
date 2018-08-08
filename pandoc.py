@@ -1,7 +1,7 @@
 import subprocess
 import logging
 
-class pandoc(str):
+class Pandoc(str):
    def __new__(cls, text):
         # TODO: cache?
         # import hashlib
@@ -15,6 +15,9 @@ class pandoc(str):
                 '+'.join([
                     'footnotes',
                     'pipe_tables',
+                    'strikeout',
+                    #'superscript',
+                    #'subscript',
                     'raw_html',
                     'definition_lists',
                     'backtick_code_blocks',
