@@ -5,7 +5,7 @@
     <link rel="alternate" type="application/atom+xml" title="{{ category.title }} feed" href="{{ category.feed }}" />
 {% endblock %}
 {% block content %}
-<section class="content-body h-feed">
+<main class="content-body h-feed hfeed">
     <header>
         <h1 class="p-name">{{ category.name }}</h1>
     </header>
@@ -27,11 +27,11 @@
             <h2>
             {% endif %}
                 {% if post.is_reply %}
-                <span class="p-name">
+                <span class="p-name entry-title">
                     <svg class="icon" width="16" height="16">
                         <use xlink:href="#icon-reply" />
                     </svg>
-                    <a href="{{ post.url }}/" class="u-url">
+                    <a href="{{ post.url }}/" class="u-url bookmark">
                         RE:
                     </a>
                     <a href="{{ post.is_reply }}" class="u-in-reply-to">
@@ -39,7 +39,7 @@
                     </a>
                 </span>
                 {% else %}
-                <a href="{{ post.url }}" title="{{ post.title }}">
+                <a href="{{ post.url }}" title="{{ post.title }}" class="u-url bookmark">
                     <span class="entry-title p-name">{{ post.title }}</span>
                 </a>
                 {% endif %}
@@ -66,13 +66,13 @@
         {% endif %}
     </article>
 {% endfor %}
-</section>
+</main>
 {% endblock %}
 {% block pagination %}
 {% if pages.total > 1 %}
 
     {# based on: http://dev.dbl-a.com/symfony-2-0/symfony2-and-twig-pagination/ #}
-    <nav class="pagination">
+    <nav>
         <ul>
     {% if pages.current > 1 %}
     {% set prev = pages.current - 1 %}

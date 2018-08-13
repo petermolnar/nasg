@@ -46,31 +46,31 @@
         <ul>
             <li>
                 <a title="home" href="{{ site.url }}/" class="{{ activemenu('') }}">
-                    <svg class="icon" width="16" height="16"><use xlink:href="#icon-home" /></svg>
+                    <svg width="16" height="16"><use xlink:href="#icon-home" /></svg>
                     home
                 </a>
             </li>
             <li>
                 <a title="photos" href="{{ site.url }}/category/photo/" class="{{ activemenu('photo') }}">
-                    <svg class="icon" width="18" height="16"><use xlink:href="#icon-photo" /></svg>
+                    <svg width="18" height="16"><use xlink:href="#icon-photo" /></svg>
                     photos
                 </a>
             </li>
             <li>
                 <a title="journal" href="{{ site.url }}/category/journal/" class="{{ activemenu('journal') }}">
-                    <svg class="icon" width="16" height="16"><use xlink:href="#icon-journal" /></svg>
+                    <svg width="16" height="16"><use xlink:href="#icon-journal" /></svg>
                     journal
                 </a>
             </li>
             <li>
                 <a title="IT" href="{{ site.url }}/category/article/" class="{{ activemenu('article') }}">
-                    <svg class="icon" width="16" height="16"><use xlink:href="#icon-article" /></svg>
+                    <svg width="16" height="16"><use xlink:href="#icon-article" /></svg>
                     IT
                 </a>
             </li>
             <li>
                 <a title="notes" href="{{ site.url }}/category/note/" class="{{ activemenu('note') }}">
-                    <svg class="icon" width="16" height="16"><use xlink:href="#icon-note" /></svg>
+                    <svg width="16" height="16"><use xlink:href="#icon-note" /></svg>
                     notes
                 </a>
             </li>
@@ -85,7 +85,7 @@
 
             <label for="contrast">Toggle website contrast</label>
             <button title="toggle website contrast" id="contrast" name="contrast" onclick="return toggleStylesheet(this)">
-               <svg class="icon" width="16" height="16">
+               <svg width="16" height="16">
                     <use xlink:href="#icon-contrast"></use>
                 </svg>
             </button>
@@ -93,7 +93,7 @@
 
         <p class="follow">
             <a title="follow petermolnar.net" rel="feed" href="{{ site.url }}/follow/">
-                <svg class="icon" width="16" height="16">
+                <svg width="16" height="16">
                     <use xlink:href="#icon-rss" />
                 </svg>
                 follow
@@ -103,13 +103,13 @@
 </header>
 
 {% block content %}
-<section>
+<main>
     <article class="h-entry hentry singular" lang="{{ post.lang }}">
         <header>
             <h1>
                 {% if post.is_reply %}
                 <span class="p-name">
-                    <svg class="icon" width="16" height="16">
+                    <svg width="16" height="16">
                         <use xlink:href="#icon-reply" />
                     </svg>
                     <a href="{{ post.url }}" class="u-url">
@@ -130,11 +130,12 @@
         {% if post.review %}
         <hr/>
         <div class="h-review hreview">
-            <h2>Review summary</h2>
-            <p>
-                <a href="{{ post.review.url }}" class="p-name url fn p-item h-product">
-                    {{ post.review.title }}
-                </a>
+            <h2>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product">{{ post.review.title }}</a></h2>
+            <p class="p-author h-card vcard reviewer">
+                By
+                 <a class="fn p-name url u-url u-uid" href="{{ author.url }}">
+                    {{ author.name }}
+                </a>, <time class="dt-published dtreviewed" datetime="{{ post.pubtime }}">{{ post.pubdate }}</time>
             </p>
             <p>
                 <span class="rating">
@@ -143,7 +144,7 @@
                     <span class="best">5</span>
                 </span>
             </p>
-            <p class="p-summary">{{ post.review.summary }}</p>
+            <p class="p-summary summary">{{ post.review.summary }}</p>
         </div>
         <hr/>
         {% endif %}
@@ -235,7 +236,7 @@
                             <a rel="payment" title="pay {{ author.name }} via {{ tip.label }} {{ tip.value }}" href="{{ tip.url }}">
                                 {{ tip.value }}
                                 <span class="method">
-                                    <svg class="icon" width="16" height="16">
+                                    <svg width="16" height="16">
                                         <use xlink:href="#icon-{{ tip.name }}"></use>
                                     </svg>
                                     with {{ tip.label }}
@@ -281,7 +282,7 @@
                         {% endif %}
                     </span><br />
                     <span class="source">
-                        <svg class="icon" width="16" height="16">
+                        <svg width="16" height="16">
                             <use xlink:href="#icon-link"></use>
                         </svg>
                         <a class="u-url" href="{{ comment.source }}">
@@ -335,7 +336,7 @@
         {% endif %}
 
     </article>
-</section>
+</main>
 
 {% endblock %}
 
@@ -344,7 +345,7 @@
 
 
 <footer>
-    <div class="limit">
+    <div>
         <nav class="p-author h-card vcard">
             <h2>Contact</h2>
             <div>
@@ -368,7 +369,7 @@
         {% if author.gpg %}
                     <dt>GPG</dt>
                     <dd>
-                        <a rel="me" class="u-gpg gpg" href="/{{ author.gpg }}">key</a>
+                        <a rel="me" class="u-gpg gpg" href="{{ author.gpg }}">key</a>
                     </dd>
         {% endif %}
                     <dt>url</dt>
@@ -387,22 +388,6 @@
                         <a rel="me" class="u-xmpp xmpp" href="xmpp:{{ author.xmpp }}">{{ author.xmpp }}</a>
                     </dd>
         {% endif %}
-        {% if author.sip %}
-                    <dt>SIP</dt>
-                    <dd>
-                        <a rel="me" class="u-sip sip" href="sip:{{ author.sip }}">
-                            {{ author.sip }}
-                        </a>
-                    </dd>
-        {% endif %}
-        {% if author.icq %}
-                    <dt>ICQ</dt>
-                    <dd>
-                        <a rel="me" class="u-icq icq" href="icq:{{ author.icq }}">
-                            {{ author.icq }}
-                        </a>
-                    </dd>
-        {% endif %}
         {% if author.flickr %}
                     <dt>flickr</dt>
                     <dd>
@@ -415,21 +400,15 @@
                         <a rel="me" class="u-github" href="https://github.com/{{ author.github }}">{{ author.github }}</a>
                     </dd>
         {% endif %}
-        {% if author.twitter %}
-                    <dt>twitter</dt>
-                    <dd>
-                        <a rel="me" class="u-twitter" href="https://twitter.com/{{ author.twitter }}">{{ author.twitter }}</a>
-                    </dd>
-        {% endif %}
                 </dl>
             </div>
         </nav>
-        <div class="webring">
-            <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
-                Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
-            <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
-        </div>
     </div>
+    <aside>
+        <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
+            Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
+        <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
+    </aside>
 </footer>
 
 {% include 'symbols.svg' %}

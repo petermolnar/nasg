@@ -19,6 +19,7 @@ pre {
 
 button svg {
   transform: rotate(180deg);
+  transition: all 0.2s;
 }
 
 blockquote {
@@ -35,4 +36,4 @@ th, tr:nth-child(even) {
 
 pre> code::before {
   color: #444;
-}    
+}
