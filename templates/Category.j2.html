@@ -19,30 +19,28 @@
     {% endif %}
     {% set _ = year.append(post.year)%}
 
-    <article class="h-entry hentry singular" lang="{{ post.lang }}">
+    <article class="h-entry hentry singular" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="site-publisher">
         <header>
             {% if category.display == 'flat' %}
-            <h3>
+            <h3 itemprop="name headline" class="p-name entry-title">
             {% else %}
-            <h2>
+            <h2 itemprop="name headline" class="p-name entry-title">
             {% endif %}
-                {% if post.is_reply %}
-                <span class="p-name entry-title">
-                    <svg class="icon" width="16" height="16">
-                        <use xlink:href="#icon-reply" />
-                    </svg>
-                    <a href="{{ post.url }}/" class="u-url bookmark">
-                        RE:
-                    </a>
-                    <a href="{{ post.is_reply }}" class="u-in-reply-to">
-                        {{ post.is_reply }}
-                    </a>
-                </span>
-                {% else %}
-                <a href="{{ post.url }}" title="{{ post.title }}" class="u-url bookmark">
+            {% if post.is_reply %}
+                <svg class="icon" width="16" height="16">
+                    <use xlink:href="#icon-reply" />
+                </svg>
+                <a href="{{ post.url }}/" class="u-url bookmark" itemprop="url mainEntityOfPage">
+                    RE:
+                </a>
+                <a href="{{ post.is_reply }}" class="u-in-reply-to">
+                    {{ post.is_reply }}
+                </a>
+            {% else %}
+                <a href="{{ post.url }}" title="{{ post.title }}" class="u-url bookmark" itemprop="url mainEntityOfPage">
                     <span class="entry-title p-name">{{ post.title }}</span>
                 </a>
-                {% endif %}
+            {% endif %}
             {% if category.display == 'flat' %}
             </h3>
             {% else %}
@@ -51,7 +49,7 @@
         </header>
 
         {% if post.summary %}
-        <div class="e-summary entry-summary">
+        <div class="e-summary entry-summary" itemprop="description">
             {{ post.html_summary }}
             <p class="more">
                 <a href="{{ post.url }}" title="{{ post.title }}">
@@ -60,7 +58,7 @@
             </p>
         </div>
         {% else %}
-        <div class="e-content entry-content">
+        <div class="e-content entry-content" itemprop="articleBody">
             {{ post.html_content }}
         </div>
         {% endif %}

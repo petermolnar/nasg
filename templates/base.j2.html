@@ -19,7 +19,6 @@
         {% include 'style-print.css' %}
     </style>
     <script>
-        /* color scheme switcher */
         var current = localStorage.getItem("stylesheet");
         if (current) {
             document.querySelector('#css_alt').setAttribute("media", current);
@@ -37,7 +36,7 @@
         }
     </script>
 </head>
-<body>
+<body itemscope="" itemtype="http://schema.org/Blog http://schema.org/WebPage">
 
 {% macro activemenu(name) %}{% if (post is defined and post.category ==  name ) or ( category is defined and category.name == name ) %}active{% endif %}{% endmacro %}
 
@@ -94,7 +93,7 @@
         <p class="follow">
             <a title="follow petermolnar.net" rel="feed" href="{{ site.url }}/follow/">
                 <svg width="16" height="16">
-                    <use xlink:href="#icon-rss" />
+                    <use xlink:href="#icon-feed" />
                 </svg>
                 follow
             </a>
@@ -104,11 +103,11 @@
 
 {% block content %}
 <main>
-    <article class="h-entry hentry singular" lang="{{ post.lang }}">
+    <article class="h-entry hentry singular" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="site-publisher">
         <header>
-            <h1>
+            <h1 class="entry-title p-name" itemprop="name headline">
                 {% if post.is_reply %}
-                <span class="p-name">
+                <span>
                     <svg width="16" height="16">
                         <use xlink:href="#icon-reply" />
                     </svg>
@@ -121,7 +120,7 @@
                 </span>
                 {% else %}
                 <a href="{{ post.url }}" title="{{ post.title }}">
-                    <span class="entry-title p-name">{{ post.title }}</span>
+                    <span>{{ post.title }}</span>
                 </a>
                 {% endif %}
             </h1>
@@ -129,33 +128,35 @@
 
         {% if post.review %}
         <hr/>
-        <div class="h-review hreview">
-            <h2>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product">{{ post.review.title }}</a></h2>
-            <p class="p-author h-card vcard reviewer">
+        <div class="h-review hreview" itemprop="review" itemscope="" itemtype="http://schema.org/Review">
+            <strong>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product">{{ post.review.title }}</a></strong>
+            <p>
                 By
-                 <a class="fn p-name url u-url u-uid" href="{{ author.url }}">
-                    {{ author.name }}
-                </a>, <time class="dt-published dtreviewed" datetime="{{ post.pubtime }}">{{ post.pubdate }}</time>
+                <span class="p-author h-card vcard reviewer" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+                 <a class="fn p-name url u-url u-uid" href="{{ author.url }}" itemprop="url">
+                    <span itemprop="name">{{ author.name }}</span>
+                </a></span> at <time class="dt-published dtreviewed" datetime="{{ post.pubtime }}" itemprop="datePublished">{{ post.pubdate }}</time>
             </p>
             <p>
-                <span class="rating">
-                    <span class="value">{{ post.review.rating }}</span>
+                <span class="rating" itemprop="reviewRating" itemscope itemtype="http://schema.org/Rating">
+                    <meta itemprop="worstRating" content = "1">
+                    <span class="value" itemprop="ratingValue">{{ post.review.rating }}</span>
                     out of
-                    <span class="best">5</span>
+                    <span class="best" itemprop="bestRating">5</span>
                 </span>
             </p>
-            <p class="p-summary summary">{{ post.review.summary }}</p>
+            <p class="p-summary summary" itemprop="reviewBody">{{ post.review.summary }}</p>
         </div>
         <hr/>
         {% endif %}
 
         {% if post.summary %}
-        <div class="e-summary entry-summary">
+        <div class="e-summary entry-summary" itemprop="description">
             {{ post.html_summary }}
         </div>
         {% endif %}
 
-        <div class="e-content entry-content">
+        <div class="e-content entry-content" itemprop="articleBody">
             {{ post.html_content }}
         </div>
 
@@ -164,25 +165,37 @@
             <dl>
                 <dt>Published</dt>
                 <dd class="published">
-                    <time class="dt-published" datetime="{{ post.pubtime }}">{{ post.pubdate }}</time>
+                    <time class="dt-published"
+                        datetime="{{ post.pubtime }}"
+                        itemprop="dateModified datePublished"
+                    >{{ post.pubdate }}</time>
                 </dd>
 
                 <dt>Author</dt>
                 <dd>
-                    <p class="p-author h-card vcard">
+                    <p class="p-author h-card vcard" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
                         <img class="photo avatar u-photo u-avatar"
                             src="{{ author.avatar }}"
-                            alt="Photo of {{ author.name }}" />
-                        <a class="fn p-name url u-url u-uid" href="{{ author.url }}">
-                            {{ author.name }}
+                            alt="Photo of {{ author.name }}"
+                            itemprop="image" />
+                        <a class="fn p-name url u-url u-uid"
+                            href="{{ author.url }}"
+                            rel="author"
+                            itemprop="url">
+                            <span itemprop="name">{{ author.name }}</span>
                         </a>
-                        &lt;<a rel="me" class="u-email email" href="mailto:{{ author.email }}">{{ author.email }}</a>&gt;
+                        <a class="u-email email" href="mailto:{{ author.email }}">
+                            <span itemprop="email">{{ author.email }}</span>
+                        </a>
                     </p>
                 </dd>
 
                 <dt>Entry URL</dt>
                 <dd>
-                    <a class="u-url u-uuid" rel="bookmark" href="{{ post.url }}">
+                    {% if not post.has_mainimg %}
+                    <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image" />
+                    {% endif %}
+                    <a class="u-url u-uuid" rel="bookmark" href="{{ post.url }}" itemprop="url mainEntityOfPage">
                         {{ post.url }}
                     </a>
                 </dd>
@@ -190,7 +203,7 @@
                 <dt>License</dt>
                 <dd class="license">
                 {% if post.licence == 'by' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license">CC BY 4.0</a>
+                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license" itemprop="license">CC BY 4.0</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can republish it</li>
@@ -199,7 +212,7 @@
                         <li>you always need to make a link back here</li>
                     </ul>
                 {% elif post.licence.text == 'by-nc' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license">CC BY-NC 4.0</a>
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license" itemprop="license">CC BY-NC 4.0</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can republish it</li>
@@ -209,7 +222,7 @@
                     </ul>
                     For commercial use, please contact me.
                 {% else %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license">CC BY-NC-ND 4.0</a>
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license" itemprop="license">CC BY-NC-ND 4.0</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can't modify it</li>
@@ -221,31 +234,6 @@
                 {% endif %}
                 </dd>
 
-                <dt class="noprint">Leave a tip</dt>
-                <dd class="donation">
-                    <p>
-                    {% if post.category in labels.tiptext.keys(): %}
-                        {{ labels.tiptext[post.category] }}
-                    {% else %}
-                        Did you like what you read?<br />Leave a tip!
-                    {% endif %}
-                    </p>
-                    <ul>
-                        {% for tip in tips %}
-                        <li>
-                            <a rel="payment" title="pay {{ author.name }} via {{ tip.label }} {{ tip.value }}" href="{{ tip.url }}">
-                                {{ tip.value }}
-                                <span class="method">
-                                    <svg width="16" height="16">
-                                        <use xlink:href="#icon-{{ tip.name }}"></use>
-                                    </svg>
-                                    with {{ tip.label }}
-                                </span>
-                            </a>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </dd>
             </dl>
         </footer>
 
@@ -344,71 +332,53 @@
 {% endblock %}
 
 
-<footer>
-    <div>
-        <nav class="p-author h-card vcard">
-            <h2>Contact</h2>
-            <div>
-                <dl>
-                    <dt>
-                        <img class="photo avatar u-photo u-avatar"
-                            src="https://petermolnar.net/molnar_peter_avatar.jpg"
-                            alt="Photo of Peter Molnar" />
-                    </dt>
-                    <dd>
-                        <a class="fn p-name url u-url u-uid" href="{{ site.url }}/about.html">
-                            Peter Molnar
-                        </a>
-                    </dd>
-                    <dt>email</dt>
-                    <dd>
-                        <a rel="me" class="u-email email" href="mailto:{{ author.email }}">
-                            {{ author.email }}
-                        </a>
-                    </dd>
-        {% if author.gpg %}
-                    <dt>GPG</dt>
-                    <dd>
-                        <a rel="me" class="u-gpg gpg" href="{{ author.gpg }}">key</a>
-                    </dd>
-        {% endif %}
-                    <dt>url</dt>
-                    <dd>
-                        <a rel="me" class="u-url url" href="{{ author.url }}">
-                            {{ author.url }}
-                        </a>
-                    </dd>
-                </dl>
-            </div>
-            <div>
-                <dl>
-        {% if author.xmpp %}
-                    <dt>XMPP</dt>
-                    <dd>
-                        <a rel="me" class="u-xmpp xmpp" href="xmpp:{{ author.xmpp }}">{{ author.xmpp }}</a>
-                    </dd>
-        {% endif %}
-        {% if author.flickr %}
-                    <dt>flickr</dt>
-                    <dd>
-                        <a rel="me" class="u-flickr" href="https://flickr.com/people/{{ author.flickr }}">{{ author.flickr }}</a>
-                    </dd>
-        {% endif %}
-        {% if author.github %}
-                    <dt>github</dt>
-                    <dd>
-                        <a rel="me" class="u-github" href="https://github.com/{{ author.github }}">{{ author.github }}</a>
-                    </dd>
-        {% endif %}
-                </dl>
-            </div>
-        </nav>
-    </div>
-    <aside>
+<footer class="p-author h-card vcard" id="site-publisher" itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+    <p>
+        <a href="https://creativecommons.org/">CC</a>,
+        1999-2018,
+        <span itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+        <img class="photo avatar u-photo u-avatar"
+            src="{{ author.avatar }}"
+            alt="Photo of {{ author.name }}"
+            itemprop="url" />
+        </span>
+        <a class="fn p-name url u-url u-uid" rel="me" href="{{ site.url }}/about.html" itemprop="url">
+            <span itemprop="name">{{ author.name }}</span></a>
+        <a rel="me" class="u-email email" href="mailto:{{ author.email }}">
+            <span itemprop="email">{{ author.email }}</span>
+        </a>
+    </p>
+    <nav>
+        <ul>
+        {% for name, value in author.contact.items() %}
+            <li>
+                <a class="url u-url x-{{name}}" rel="me" href="{{ value }}" itemprop="sameAs">
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-{{ name }}"></use>
+                    </svg>
+                    {{ name }}
+                </a>
+            </li>
+        {% endfor %}
+        </ul>
+    </nav>
+    <p>
+        Leave a tip!
+        <a rel="payment" href="{{ tips.paypal }}">
+            <svg width="16" height="16">
+                <use xlink:href="#icon-paypal"></use>
+            </svg> Paypal</a>
+        or
+        <a rel="payment" href="{{ tips.monzo }}">
+            <svg width="16" height="16">
+                <use xlink:href="#icon-monzo"></use>
+            </svg> Monzo</a> (UK only).
+    </p>
+    <p>
         <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
             Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
         <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
-    </aside>
+    </p>
 </footer>
 
 {% include 'symbols.svg' %}

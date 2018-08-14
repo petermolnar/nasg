@@ -1,9 +1,7 @@
-
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  transition: all 0.2s;
 }
 
 html {
@@ -14,7 +12,7 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-family: "Liberation Sans", sans-serif;
+  font-family: sans-serif;
   color: #ccc;
   background-color: #222;
   font-size: 110%;
@@ -127,6 +125,10 @@ input, button {
   background-color: transparent;
 }
 
+button svg {
+  transition: all 0.2s;
+}
+
 input {
   border-bottom: 3px solid #ccc;
 }
@@ -147,7 +149,7 @@ nav li {
 }
 
 code, pre, q, figcaption {
-  font-family: "Courier New", "Courier", monospace;
+  font-family: monospace;
   font-size: 0.94em;
 }
 
@@ -253,8 +255,9 @@ body > header a svg {
   margin: 0.1em auto;
 }
 
-.limit,
-body > section {
+body > main,
+body > nav,
+body > footer > div {
   max-width: 86ch;
   margin: 0 auto;
   padding: 0.6em;
@@ -266,7 +269,7 @@ body > nav ul {
 
 body > nav li {
   margin: 1em 0.6em;
-  font-size: 1.8em;
+  font-size: 1.6em;
 }
 
 body > nav .current {
@@ -274,8 +277,9 @@ body > nav .current {
 }
 
 body > footer {
-  text-align: left;
+  text-align: center;
   color: #ccc;
+  font-family: monospace;
 }
 
 body > footer img {
@@ -286,17 +290,9 @@ body > footer h2 {
   display: none;
 }
 
-body > footer dt {
-  font-weight: bold;
-  margin: 1em 0 0 0;
-}
-
-body > footer dd {
-  margin: -1.3em 0 0 4em;
-}
-
-.webring {
-  text-align: center;
+body > footer > ul >li > a > span {
+  display: block;
+  font-size: 0.8em;
 }
 
 .footnotes a {
@@ -317,8 +313,7 @@ body > footer dd {
 }
 
 @media all and (min-width: 56em) {
-  body > header,
-  body > footer nav {
+  body > header {
     text-align: unset;
     display: flex;
     justify-content:space-between;
