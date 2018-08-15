@@ -36,7 +36,7 @@
         }
     </script>
 </head>
-<body itemscope="" itemtype="http://schema.org/Blog http://schema.org/WebPage">
+<body>
 
 {% macro activemenu(name) %}{% if (post is defined and post.category ==  name ) or ( category is defined and category.name == name ) %}active{% endif %}{% endmacro %}
 
@@ -103,9 +103,9 @@
 
 {% block content %}
 <main>
-    <article class="h-entry hentry singular" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="site-publisher">
+    <article class="h-entry hentry singular" lang="{{ post.lang }}">
         <header>
-            <h1 class="entry-title p-name" itemprop="name headline">
+            <h1 class="entry-title p-name">
                 {% if post.is_reply %}
                 <span>
                     <svg width="16" height="16">
@@ -128,35 +128,32 @@
 
         {% if post.review %}
         <hr/>
-        <div class="h-review hreview" itemprop="review" itemscope="" itemtype="http://schema.org/Review">
+        <div class="h-review hreview">
             <strong>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product">{{ post.review.title }}</a></strong>
             <p>
                 By
-                <span class="p-author h-card vcard reviewer" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-                 <a class="fn p-name url u-url u-uid" href="{{ author.url }}" itemprop="url">
-                    <span itemprop="name">{{ author.name }}</span>
-                </a></span> at <time class="dt-published dtreviewed" datetime="{{ post.pubtime }}" itemprop="datePublished">{{ post.pubdate }}</time>
+                <span class="p-author h-card vcard reviewer">
+                 <a class="fn p-name url u-url u-uid" href="{{ author.url }}">{{ author.name }}</a></span> at <time class="dt-published dtreviewed" datetime="{{ post.pubtime }}">{{ post.pubdate }}</time>
             </p>
             <p>
-                <span class="rating" itemprop="reviewRating" itemscope itemtype="http://schema.org/Rating">
-                    <meta itemprop="worstRating" content = "1">
-                    <span class="value" itemprop="ratingValue">{{ post.review.rating }}</span>
+                <span class="rating">
+                    <span class="value">{{ post.review.rating }}</span>
                     out of
-                    <span class="best" itemprop="bestRating">5</span>
+                    <span class="best">5</span>
                 </span>
             </p>
-            <p class="p-summary summary" itemprop="reviewBody">{{ post.review.summary }}</p>
+            <p class="p-summary summary">{{ post.review.summary }}</p>
         </div>
         <hr/>
         {% endif %}
 
         {% if post.summary %}
-        <div class="e-summary entry-summary" itemprop="description">
+        <div class="e-summary entry-summary">
             {{ post.html_summary }}
         </div>
         {% endif %}
 
-        <div class="e-content entry-content" itemprop="articleBody">
+        <div class="e-content entry-content">
             {{ post.html_content }}
         </div>
 
@@ -167,35 +164,27 @@
                 <dd class="published">
                     <time class="dt-published"
                         datetime="{{ post.pubtime }}"
-                        itemprop="dateModified datePublished"
                     >{{ post.pubdate }}</time>
                 </dd>
 
                 <dt>Author</dt>
                 <dd>
-                    <p class="p-author h-card vcard" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+                    <p class="p-author h-card vcard">
                         <img class="photo avatar u-photo u-avatar"
                             src="{{ author.avatar }}"
                             alt="Photo of {{ author.name }}"
-                            itemprop="image" />
+                        />
                         <a class="fn p-name url u-url u-uid"
                             href="{{ author.url }}"
                             rel="author"
-                            itemprop="url">
-                            <span itemprop="name">{{ author.name }}</span>
-                        </a>
-                        <a class="u-email email" href="mailto:{{ author.email }}">
-                            <span itemprop="email">{{ author.email }}</span>
-                        </a>
+                        >{{ author.name }}</a>
+                        &lt;<a class="u-email email" href="mailto:{{ author.email }}">{{ author.email }}</a>&gt;
                     </p>
                 </dd>
 
                 <dt>Entry URL</dt>
                 <dd>
-                    {% if not post.has_mainimg %}
-                    <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image" />
-                    {% endif %}
-                    <a class="u-url u-uuid" rel="bookmark" href="{{ post.url }}" itemprop="url mainEntityOfPage">
+                    <a class="u-url u-uuid" rel="bookmark" href="{{ post.url }}">
                         {{ post.url }}
                     </a>
                 </dd>
@@ -203,7 +192,7 @@
                 <dt>License</dt>
                 <dd class="license">
                 {% if post.licence == 'by' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license" itemprop="license">CC BY 4.0</a>
+                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license">CC BY 4.0</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can republish it</li>
@@ -212,7 +201,7 @@
                         <li>you always need to make a link back here</li>
                     </ul>
                 {% elif post.licence.text == 'by-nc' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license" itemprop="license">CC BY-NC 4.0</a>
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license">CC BY-NC 4.0</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can republish it</li>
@@ -222,7 +211,7 @@
                     </ul>
                     For commercial use, please contact me.
                 {% else %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license" itemprop="license">CC BY-NC-ND 4.0</a>
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license">CC BY-NC-ND 4.0</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can't modify it</li>
@@ -332,27 +321,21 @@
 {% endblock %}
 
 
-<footer class="p-author h-card vcard" id="site-publisher" itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+<footer class="p-author h-card vcard">
     <p>
         <a href="https://creativecommons.org/">CC</a>,
         1999-2018,
-        <span itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
         <img class="photo avatar u-photo u-avatar"
             src="{{ author.avatar }}"
-            alt="Photo of {{ author.name }}"
-            itemprop="url" />
-        </span>
-        <a class="fn p-name url u-url u-uid" rel="me" href="{{ site.url }}/about.html" itemprop="url">
-            <span itemprop="name">{{ author.name }}</span></a>
-        <a rel="me" class="u-email email" href="mailto:{{ author.email }}">
-            <span itemprop="email">{{ author.email }}</span>
-        </a>
+            alt="Photo of {{ author.name }}" />
+        <a class="fn p-name url u-url u-uid" rel="me" href="{{ site.url }}/about.html">{{ author.name }}</a>
+        &lt;<a rel="me" class="u-email email" href="mailto:{{ author.email }}">{{ author.email }}</a>&gt;
     </p>
     <nav>
         <ul>
         {% for name, value in author.contact.items() %}
             <li>
-                <a class="url u-url x-{{name}}" rel="me" href="{{ value }}" itemprop="sameAs">
+                <a class="url u-url x-{{name}}" rel="me" href="{{ value }}">
                     <svg width="16" height="16">
                         <use xlink:href="#icon-{{ name }}"></use>
                     </svg>

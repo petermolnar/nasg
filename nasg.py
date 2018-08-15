@@ -41,6 +41,8 @@ MarkdownImage = namedtuple(
     ['match', 'alt', 'fname', 'title', 'css']
 )
 
+REPLY_TYPES = ['webmention', 'in-reply-to', 'reply']
+
 J2 = jinja2.Environment(
     loader=jinja2.FileSystemLoader(searchpath=settings.paths.get('tmpl')),
     lstrip_blocks=True,
@@ -78,6 +80,58 @@ class cached_property(object):
         setattr(inst, self.name, result)
         return result
 
+class Webmention(object):
+    def __init__(self, source, target, stime):
+        self.source = source
+        self.target = target
+        self.stime = stime
+
+    @property
+    def fpath(self):
+        return os.path.join(
+            settings.paths.get('webmentions'),
+            '%s => %s.txt' % (
+                url2slug(self.source, 100),
+                url2slug(self.target, 100)
+            )
+        )
+
+    @property
+    def exists(self):
+        if not os.path.isfile(self.fpath):
+            return False
+        elif os.path.getmtime(self.fpath) > self.stime:
+            return True
+        else:
+            return False
+
+    async def save(self, content):
+        d = os.path.dirname(self.fpath)
+        if not os.path.isdir(d):
+            os.makedirs(d)
+        with open(self.fpath, 'wt') as f:
+            f.write(content)
+
+    async def send(self):
+        if self.exists:
+            return
+        telegraph_url = 'https://telegraph.p3k.io/webmention'
+        telegraph_params = {
+            'token': '%s' % (keys.telegraph.get('token')),
+            'source': '%s' % (self.source),
+            'target': '%s' % (self.target)
+        }
+        r = requests.post(telegraph_url, data=telegraph_params)
+        settings.logger.info(
+            "sent webmention to telegraph from %s to %s",
+            self.source,
+            self.target
+        )
+        if r.status_code not in [200, 201, 202]:
+            settings.logger.error('sending failed: %s %s', r.status_code, r.text)
+        else:
+            await self.save(r.text)
+
 
 class MarkdownDoc(object):
     @cached_property
@@ -95,12 +149,19 @@ class MarkdownDoc(object):
     def content(self):
         return self._parsed[1]
 
+    @property
+    def has_mainimg(self):
+        if hasattr(self, 'images') and len(self.images) == 1:
+            return True
+        else:
+            return False
+
     @cached_property
     def html_content(self):
         c = "%s" % (self.content)
         if hasattr(self, 'images') and len(self.images):
             for match, img in self.images.items():
-                c = c.replace(match, str(img))
+                c = c.replace(match, img.mkstring(self.has_mainimg))
         # return MD.reset().convert(c)
         c = Pandoc(c)
         c = RE_PRECODE.sub('<pre><code lang="\g<1>" class="language-\g<1>">', c)
@@ -337,8 +398,6 @@ class Singular(MarkdownDoc):
     @property
     def syndicate(self):
         urls = self.meta.get('syndicate', [])
-        if "https://brid.gy/publish/twitter" not in urls:
-            urls.append("https://brid.gy/publish/twitter")
         if self.is_photo:
             urls.append("https://brid.gy/publish/flickr")
         return urls
@@ -376,6 +435,14 @@ class Singular(MarkdownDoc):
         return False
 
     @property
+    def to_ping(self):
+        urls = []
+        if self.is_reply:
+            w = Webmention(self.url, self.is_reply, self.mtime)
+            urls.append(w)
+        return urls
+
+    @property
     def licence(self):
         if self.category in settings.licence:
             return settings.licence[self.category]
@@ -404,15 +471,16 @@ class Singular(MarkdownDoc):
     def replies(self):
         r = OrderedDict()
         for mtime, c in self.comments.items():
-            if c.type in ['webmention', 'in-reply-to']:
-                r[mtime] = c.tmplvars
+            if c.type not in REPLY_TYPES:
+                continue
+            r[mtime] = c.tmplvars
         return r
 
     @property
     def reactions(self):
         r = OrderedDict()
         for mtime, c in self.comments.items():
-            if c.type in ['webmention', 'in-reply-to']:
+            if c.type in REPLY_TYPES:
                 continue
             t = "%s" % (c.type)
             if t not in r:
@@ -450,7 +518,10 @@ class Singular(MarkdownDoc):
             'has_code': self.has_code,
         }
         if (self.enclosure):
-            v.update({'enclosure': self.enclosure})
+            v.update({
+                'enclosure': self.enclosure,
+                'has_mainimg': self.has_mainimg
+            })
         return v
 
     @property
@@ -488,6 +559,14 @@ class Singular(MarkdownDoc):
             self.content,
         ])
 
+    #async def update(self):
+        #fm = frontmatter.loads('')
+        #fm.metadata = self.meta
+        #fm.content = self.content
+        #with open(fpath, 'wt') as f:
+            #settings.logger.info("updating %s", fpath)
+            #f.write(frontmatter.dumps(fm))
+
     async def copyfiles(self):
         copystatics( os.path.dirname(self.fpath))
 
@@ -501,7 +580,6 @@ class Singular(MarkdownDoc):
             'meta': settings.meta,
             'licence': settings.licence,
             'tips': settings.tips,
-            'labels': settings.labels
         })
         if not os.path.isdir(self.renderdir):
             settings.logger.info("creating directory: %s", self.renderdir)
@@ -530,7 +608,7 @@ class WebImage(object):
                 self.Resized(self, max(self.width, self.height))
             ))
 
-    def __str__(self):
+    def mkstring(self, is_mainimg=False):
         if len(self.mdimg.css):
             return self.mdimg.match
         tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
@@ -543,6 +621,7 @@ class WebImage(object):
             'caption': self.caption,
             'exif': self.exif,
             'is_photo': self.is_photo,
+            'is_mainimg': is_mainimg
         })
 
     @cached_property
@@ -847,18 +926,143 @@ class AsyncWorker(object):
     def run(self):
         self._loop.run_until_complete(asyncio.wait(self._tasks))
 
-
-class IndexPHP(object):
-    def __init__(self):
-        self.gone = {}
-        self.redirect = {}
+class PHPFile(object):
+    @property
+    def exists(self):
+        if settings.args.get('force'):
+            return False
+        if not os.path.exists(self.renderfile):
+            return False
+        if self.mtime > os.path.getmtime(self.renderfile):
+            return False
+        return True
 
     @property
     def mtime(self):
-        r = 0
-        if os.path.exists(self.renderfile):
-            r = os.path.getmtime(self.renderfile)
-        return r
+        return os.path.getmtime(
+            os.path.join(
+                settings.paths.get('tmpl'),
+                self.templatefile
+            )
+        )
+
+    @property
+    def renderfile(self):
+        raise ValueError('Not implemented')
+
+    @property
+    def templatefile(self):
+        raise ValueError('Not implemented')
+
+    async def render(self):
+        if self.exists:
+            return
+        await self._render()
+
+
+class Search(PHPFile):
+    def __init__(self):
+        self.fpath = os.path.join(
+            settings.paths.get('build'),
+            'search.sqlite'
+        )
+        self.db = sqlite3.connect(self.fpath)
+        self.db.execute('PRAGMA auto_vacuum = INCREMENTAL;')
+        self.db.execute('PRAGMA journal_mode = MEMORY;')
+        self.db.execute('PRAGMA temp_store = MEMORY;')
+        self.db.execute('PRAGMA locking_mode = NORMAL;')
+        self.db.execute('PRAGMA synchronous = FULL;')
+        self.db.execute('PRAGMA encoding = "UTF-8";')
+        self.db.execute('''
+            CREATE VIRTUAL TABLE IF NOT EXISTS data USING fts4(
+                url,
+                mtime,
+                name,
+                title,
+                category,
+                content,
+                notindexed=category,
+                notindexed=url,
+                notindexed=mtime,
+                tokenize=porter
+            )'''
+        )
+
+    def __exit__(self):
+        self.db.commit()
+        self.db.execute('PRAGMA auto_vacuum;')
+        self.db.close()
+
+    def check(self, name):
+        ret = 0
+        maybe = self.db.execute('''
+            SELECT
+                mtime
+            FROM
+                data
+            WHERE
+                name = ?
+        ''', (name,)).fetchone()
+        if maybe:
+            ret = int(maybe[0])
+        return ret
+
+    def append(self, url, mtime, name, title, category, content):
+        mtime = int(mtime)
+        check = self.check(name)
+        if (check and check < mtime):
+            self.db.execute('''
+            DELETE
+            FROM
+                data
+            WHERE
+                name=?''', (name,))
+            check = False
+        if not check:
+            self.db.execute('''
+                INSERT INTO
+                    data
+                    (url, mtime, name, title, category, content)
+                VALUES
+                    (?,?,?,?,?,?);
+            ''', (
+                url,
+                mtime,
+                name,
+                title,
+                category,
+                content
+            ))
+
+    @property
+    def renderfile(self):
+        return os.path.join(
+            settings.paths.get('build'),
+            'search.php'
+        )
+
+    @property
+    def templatefile(self):
+        return 'Search.j2.php'
+
+    async def _render(self):
+        r = J2.get_template(self.templatefile).render({
+            'post': {},
+            'site': settings.site,
+            'author': settings.author,
+            'meta': settings.meta,
+            'licence': settings.licence,
+            'tips': settings.tips,
+        })
+        with open(self.renderfile, 'wt') as f:
+            settings.logger.info("rendering to %s", self.renderfile)
+            f.write(r)
+
+
+class IndexPHP(PHPFile):
+    def __init__(self):
+        self.gone = {}
+        self.redirect = {}
 
     def add_gone(self, uri):
         self.gone[uri] = True
@@ -878,8 +1082,12 @@ class IndexPHP(object):
             'index.php'
         )
 
-    async def render(self):
-        r = J2.get_template('Index.j2.php').render({
+    @property
+    def templatefile(self):
+        return 'Index.j2.php'
+
+    async def _render(self):
+        r = J2.get_template(self.templatefile).render({
             'post': {},
             'site': settings.site,
             'gones': self.gone,
@@ -890,7 +1098,7 @@ class IndexPHP(object):
             f.write(r)
 
 
-class WebhookPHP(object):
+class WebhookPHP(PHPFile):
     @property
     def renderfile(self):
         return os.path.join(
@@ -898,8 +1106,12 @@ class WebhookPHP(object):
             'webhook.php'
         )
 
-    async def render(self):
-        r = J2.get_template('Webhook.j2.php').render({
+    @property
+    def templatefile(self):
+        return 'Webhook.j2.php'
+
+    async def _render(self):
+        r = J2.get_template(self.templatefile).render({
             'author': settings.author,
             'callback_secret': keys.webmentionio.get('callback_secret'),
         })
@@ -1084,7 +1296,6 @@ class Category(dict):
             'meta': settings.meta,
             'licence': settings.licence,
             'tips': settings.tips,
-            'labels': settings.labels,
             'category': self.tmplvars,
             'pages': {
                 'current': pagenum,
@@ -1118,103 +1329,6 @@ class Category(dict):
             page = page + 1
         await self.render_feed()
 
-
-class Search(object):
-    def __init__(self):
-        self.changed = False
-        self.fpath = os.path.join(
-            settings.paths.get('build'),
-            'search.sqlite'
-        )
-        self.db = sqlite3.connect(self.fpath)
-        self.db.execute('PRAGMA auto_vacuum = INCREMENTAL;')
-        self.db.execute('PRAGMA journal_mode = MEMORY;')
-        self.db.execute('PRAGMA temp_store = MEMORY;')
-        self.db.execute('PRAGMA locking_mode = NORMAL;')
-        self.db.execute('PRAGMA synchronous = FULL;')
-        self.db.execute('PRAGMA encoding = "UTF-8";')
-        self.db.execute('''
-            CREATE VIRTUAL TABLE IF NOT EXISTS data USING fts4(
-                url,
-                mtime,
-                name,
-                title,
-                category,
-                content,
-                notindexed=category,
-                notindexed=url,
-                notindexed=mtime,
-                tokenize=porter
-            )'''
-        )
-
-    def __exit__(self):
-        if (self.changed):
-            self.db.commit()
-            self.db.execute('PRAGMA auto_vacuum;')
-            self.db.close()
-
-    def exists(self, name):
-        ret = 0
-        maybe = self.db.execute('''
-            SELECT
-                mtime
-            FROM
-                data
-            WHERE
-                name = ?
-        ''', (name,)).fetchone()
-        if maybe:
-            ret = int(maybe[0])
-        return ret
-
-    def append(self, url, mtime, name, title, category, content):
-        mtime = int(mtime)
-        exists = self.exists(name)
-        if (exists and exists < mtime):
-            self.db.execute('''
-            DELETE
-            FROM
-                data
-            WHERE
-                name=?''', (name,))
-            exists = False
-        if not exists:
-            self.db.execute('''
-                INSERT INTO
-                    data
-                    (url, mtime, name, title, category, content)
-                VALUES
-                    (?,?,?,?,?,?);
-            ''', (
-                url,
-                mtime,
-                name,
-                title,
-                category,
-                content
-            ))
-            self.changed = True
-
-    async def render(self):
-        target = os.path.join(
-            settings.paths.get('build'),
-            'search.php'
-        )
-        if os.path.exists(target):
-            return
-        r = J2.get_template('Search.j2.php').render({
-            'post': {},
-            'site': settings.site,
-            'author': settings.author,
-            'meta': settings.meta,
-            'licence': settings.licence,
-            'tips': settings.tips,
-            'labels': settings.labels
-        })
-        with open(target, 'wt') as f:
-            settings.logger.info("rendering to %s", target)
-            f.write(r)
 
 class Sitemap(dict):
     @property
@@ -1280,11 +1394,7 @@ def mkcomment(webmention):
         fdir,
         "%d-%s.md" % (
             dt.timestamp,
-            slugify(
-                re.sub(r"^https?://(?:www)?", "", webmention.get('source')),
-                only_ascii=True,
-                lower=True
-            )[:200]
+            url2slug(webmention.get('source'))
         )
     )
 
@@ -1336,6 +1446,14 @@ def makecomments():
         pass
 
 
+def url2slug(url, limit=200):
+    return slugify(
+        re.sub(r"^https?://(?:www)?", "", url),
+        only_ascii=True,
+        lower=True
+    )[:limit]
+
+
 def make():
     start = int(round(time.time() * 1000))
     last = 0
@@ -1344,8 +1462,9 @@ def make():
 
     content = settings.paths.get('content')
     worker = AsyncWorker()
-    rules = IndexPHP()
+    webmentions = AsyncWorker()
 
+    rules = IndexPHP()
     for e in glob.glob(os.path.join(content, '*', '*.ptr')):
         post = Gone(e)
         if post.mtime > last:
@@ -1356,15 +1475,10 @@ def make():
         if post.mtime > last:
             last = post.mtime
         rules.add_redirect(post.source, post.target)
-
-    if rules.mtime < last or settings.args.get('force'):
-        worker.add(rules.render())
+    worker.add(rules.render())
 
     webhook = WebhookPHP()
     worker.add(webhook.render())
-
-    if rules.mtime < last or settings.args.get('force'):
-        worker.add(rules.render())
 
     sitemap = Sitemap()
     search = Search()
@@ -1375,6 +1489,9 @@ def make():
         post = Singular(e)
         for i in post.images.values():
             worker.add(i.downsize())
+        for i in post.to_ping:
+            webmentions.add(i.send())
+
         worker.add(post.render())
         worker.add(post.copyfiles())
         if post.is_future:
@@ -1400,10 +1517,9 @@ def make():
 
     search.__exit__()
     worker.add(search.render())
+    worker.add(sitemap.render())
     for category in categories.values():
         worker.add(category.render())
-
-    worker.add(sitemap.render())
 
     worker.run()
     settings.logger.info('worker finished')
@@ -1427,7 +1543,17 @@ def make():
 
     end = int(round(time.time() * 1000))
     settings.logger.info('process took %d ms' % (end - start))
-
+    settings.logger.info('starting syncing')
+    os.system(
+        "rsync -avuhH --delete-after %s/ %s/" % (
+            settings.paths.get('build'),
+            settings.syncserver
+        )
+    )
+    settings.logger.info('syncing finished')
+    settings.logger.info('sending webmentions')
+    webmentions.run()
+    settings.logger.info('sending webmentions finished')
 
 if __name__ == '__main__':
     make()

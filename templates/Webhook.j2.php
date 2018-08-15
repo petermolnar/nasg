@@ -13,5 +13,21 @@ if(! isset($payload['secret']) || $payload['secret'] != '{{ callback_secret }}' 
     die('Bad Request');
 }
 
-mail("{{ author.email }}", "[webmention] {$payload['source']}", $raw);
+$msg = sprintf('
+Type: %s
+Source: %s
+Target: %s
+From: %s
+
+%s
+',
+$payload['post']['wm-property'],
+$payload['source'],
+$payload['target'],
+$payload['post']['author']['name'],
+$payload['post']['content']['text']
+);
+
+
+mail("{{ author.email }}", "[webmention] {$payload['source']}", $msg);
 header('HTTP/1.1 202 Accepted');

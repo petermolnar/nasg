@@ -4,6 +4,7 @@ import argparse
 import logging
 
 base = os.path.abspath(os.path.expanduser('~/Projects/petermolnar.net'))
+syncserver = 'liveserver:/web/petermolnar.net/web'
 
 site = {
     'title': 'Peter Molnar',
@@ -16,10 +17,6 @@ site = {
         'journal'
     ],
     'licence': 'by-nc-nd',
-    'piwik': {
-        'domain': 'stats.petermolnar.net',
-        'id': 1
-    }
 }
 
 categorydisplay = {
@@ -33,25 +30,12 @@ licence = {
     'journal': 'by-nc',
 }
 
-labels = {
-    'tiptext': {
-        'photo':
-            "Did you like this photo?<br />"
-            "Leave a tip! If you're interested in prints, please get in touch.",
-        'article':
-            "Did you find this article useful?<br />"
-            "Support me, so I can write more like this.<br />"
-            "If you want my help for your project, get in touch.",
-        'journal':
-            "Did you like this entry?<br />"
-            "Encourage me to write more of them.",
-    }
-}
-
 meta = {
     'webmention': 'https://webmention.io/petermolnar.net/webmention',
     'pingback': 'https://webmention.io/petermolnar.net/xmlrpc',
-    'hub': 'https://petermolnar.superfeedr.com/'
+    'hub': 'https://petermolnar.superfeedr.com/',
+    'authorization_endpoint': 'https://indieauth.com/auth',
+    'token_endpoint': 'https://tokens.indieauth.com/token',
 }
 
 author = {
@@ -61,14 +45,18 @@ author = {
     'avatar': 'https://petermolnar.net/molnar_peter_avatar.jpg',
     'gpg': 'https://petermolnar.net/pgp.asc',
     'cv': 'https://petermolnar.net/about.html',
-    'xmpp': 'mail@petermolnar.net',
-    'flickr': 'petermolnareu',
-    'github': 'petermolnar',
-    'twitter': 'petermolnar'
+    'contact': {
+        'xmpp': 'xmpp:mail@petermolnar.net',
+        'tumblr': 'https://petermolnarnet.tumblr.com/',
+        'wordpress': 'https://petermolnareu.wordpress.com/',
+        'flickr': 'https://flickr.com/people/petermolnareu',
+        'github': 'https://github.com/petermolnar',
+    }
 }
 
 paths = {
     'content': os.path.join(base, 'content'),
+    'webmentions': os.path.join(base, 'content', 'webmentions'),
     'tmpl': os.path.join(base, 'nasg', 'templates'),
     'watermark': os.path.join(base, 'nasg', 'templates', 'watermark.png'),
     'build': os.path.join(base, 'www'),
@@ -85,20 +73,10 @@ photo = {
     },
 }
 
-tips = [
-    {
-        'name': 'paypal',
-        'label': 'PayPal',
-        'value': '£3',
-        'url': 'https://paypal.me/petermolnar/3GBP',
-    },
-    {
-        'name': 'monzo',
-        'label': 'Monzo (UK)',
-        'value': '£3',
-        'url': 'https://monzo.me/petermolnar/3',
-    },
-]
+tips = {
+    'paypal': 'https://paypal.me/petermolnar/3GBP',
+    'monzo': 'https://monzo.me/petermolnar/3',
+}
 
 dateformat = {
     'iso': 'YYYY-MM-DDTHH:mm:ssZZ',
