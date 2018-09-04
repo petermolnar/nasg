@@ -30,7 +30,7 @@ svg {
 a {
   color: #5193D4;
   text-decoration: none;
-  border: 1px solid transparent;
+  border-bottom: 1px solid transparent;
 }
 
 a:hover {
@@ -327,4 +327,4 @@ body > footer > ul >li > a > span {
   body > header a svg {
     display: inline-block;
   }
-}
+}    

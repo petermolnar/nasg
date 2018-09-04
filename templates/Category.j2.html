@@ -19,26 +19,26 @@
     {% endif %}
     {% set _ = year.append(post.year)%}
 
-    <article class="h-entry hentry singular" lang="{{ post.lang }}">
+    <article class="h-entry hentry singular" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
         <header>
             {% if category.display == 'flat' %}
-            <h3 class="p-name entry-title">
+            <h3 itemprop="name headline" class="p-name entry-title">
             {% else %}
-            <h2 class="p-name entry-title">
+            <h2 itemprop="name headline" class="p-name entry-title">
             {% endif %}
             {% if post.is_reply %}
                 <svg class="icon" width="16" height="16">
                     <use xlink:href="#icon-reply" />
                 </svg>
-                <a href="{{ post.url }}/" class="u-url u-uuid" rel="bookmark">
+                <a href="{{ post.url }}/" class="u-url bookmark" itemprop="url mainEntityOfPage">
                     RE:
                 </a>
                 <a href="{{ post.is_reply }}" class="u-in-reply-to">
                     {{ post.is_reply }}
                 </a>
             {% else %}
-                <a href="{{ post.url }}" title="{{ post.title }}" rel="bookmark" class="u-url u-uuid">
-                    {{ post.title }}
+                <a href="{{ post.url }}" title="{{ post.title }}" class="u-url bookmark" itemprop="url mainEntityOfPage">
+                    <span class="entry-title p-name">{{ post.title }}</span>
                 </a>
             {% endif %}
             {% if category.display == 'flat' %}
@@ -49,7 +49,7 @@
         </header>
 
         {% if post.summary %}
-        <div class="e-summary entry-summary">
+        <div class="e-summary entry-summary" itemprop="description">
             {{ post.html_summary }}
             <p class="more">
                 <a href="{{ post.url }}" title="{{ post.title }}">
@@ -58,10 +58,31 @@
             </p>
         </div>
         {% else %}
-        <div class="e-content entry-content">
+        <div class="e-content entry-content" itemprop="articleBody">
             {{ post.html_content }}
         </div>
         {% endif %}
+
+        <footer aria-hidden="true" hidden="hidden" />
+            <span class="published updated">
+            <time class="dt-published dt-updated" datetime="{{ post.pubtime }}" itemprop="dateModified datePublished">{{ post.pubdate }}</time>
+            </span>
+        {% if not post.has_mainimg %}
+            <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image" width="0" height="0" />
+        {% endif %}
+            <p class="p-author h-card vcard">
+                <img class="photo avatar u-photo u-avatar"
+                    src="{{ author.avatar }}"
+                    alt="Photo of {{ author.name }}" />
+                <a class="fn p-name url u-url u-uid"
+                    href="{{ author.url }}"
+                    rel="author">
+                        {{ author.name }}
+                </a>
+                <a class="u-email email" href="mailto:{{ author.email }}">
+                    {{ author.email }}
+                </a>
+            </p>
     </article>
 {% endfor %}
 </main>

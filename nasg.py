@@ -149,24 +149,26 @@ class MarkdownDoc(object):
     def content(self):
         return self._parsed[1]
 
-    @property
-    def has_mainimg(self):
-        if hasattr(self, 'images') and len(self.images) == 1:
-            return True
-        else:
-            return False
+    def __pandoc(self, c):
+        c = Pandoc(c)
+        c = RE_PRECODE.sub('<pre><code lang="\g<1>" class="language-\g<1>">', c)
+        return c
 
     @cached_property
     def html_content(self):
         c = "%s" % (self.content)
         if hasattr(self, 'images') and len(self.images):
             for match, img in self.images.items():
-                c = c.replace(match, img.mkstring(self.has_mainimg))
-        # return MD.reset().convert(c)
-        c = Pandoc(c)
-        c = RE_PRECODE.sub('<pre><code lang="\g<1>" class="language-\g<1>">', c)
-        return c
+                c = c.replace(match, str(img))
+        return self.__pandoc(c)
 
+    @cached_property
+    def html_content_noimg(self):
+        c = "%s" % (self.content)
+        if hasattr(self, 'images') and len(self.images):
+            for match, img in self.images.items():
+                c = c.replace(match, '')
+        return self.__pandoc(c)
 
 class Comment(MarkdownDoc):
     def __init__(self, fpath):
@@ -514,15 +516,27 @@ class Singular(MarkdownDoc):
             'reactions': self.reactions,
             'syndicate': self.syndicate,
             'url': self.url,
-            'review': self.meta.get('review', False),
+            'review': self.review,
             'has_code': self.has_code,
         }
-        if (self.enclosure):
+        if (self.is_photo):
             v.update({
                 'enclosure': self.enclosure,
-                'has_mainimg': self.has_mainimg
+                'photo': self.photo
             })
         return v
+
+    @property
+    def review(self):
+        if 'review' not in self.meta:
+            return False
+        r = self.meta.get('review')
+        rated, outof = r.get('rating').split('/')
+        r.update({
+            'rated': rated,
+            'outof': outof
+        })
+        return r
 
     @property
     def template(self):
@@ -573,7 +587,9 @@ class Singular(MarkdownDoc):
     async def render(self):
         if self.exists:
             return
+        settings.logger.info("rendering %s", self.name)
         r = J2.get_template(self.template).render({
+            'jsonld': settings.jsonld,
             'post': self.tmplvars,
             'site': settings.site,
             'author': settings.author,
@@ -585,7 +601,7 @@ class Singular(MarkdownDoc):
             settings.logger.info("creating directory: %s", self.renderdir)
             os.makedirs(self.renderdir)
         with open(self.renderfile, 'wt') as f:
-            settings.logger.info("rendering to %s", self.renderfile)
+            settings.logger.info("saving to %s", self.renderfile)
             f.write(r)
 
 
@@ -608,11 +624,15 @@ class WebImage(object):
                 self.Resized(self, max(self.width, self.height))
             ))
 
-    def mkstring(self, is_mainimg=False):
-        if len(self.mdimg.css):
-            return self.mdimg.match
-        tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
-        return tmpl.render({
+    @property
+    def is_mainimg(self):
+        if self.fname == self.parent.name:
+            return True
+        return False
+
+    @cached_property
+    def tmplvars(self):
+        return {
             'src': self.src,
             'href': self.href,
             'width': self.displayed.width,
@@ -621,8 +641,14 @@ class WebImage(object):
             'caption': self.caption,
             'exif': self.exif,
             'is_photo': self.is_photo,
-            'is_mainimg': is_mainimg
-        })
+            'is_mainimg': self.is_mainimg
+        }
+
+    def __str__(self):
+        if len(self.mdimg.css):
+            return self.mdimg.match
+        tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
+        return tmpl.render(self.tmplvars)
 
     @cached_property
     def meta(self):
@@ -1047,6 +1073,7 @@ class Search(PHPFile):
 
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
+            'jsonld': settings.jsonld,
             'post': {},
             'site': settings.site,
             'author': settings.author,
@@ -1291,6 +1318,7 @@ class Category(dict):
 
         posts = self.get_posts(start, end)
         r = J2.get_template(self.template).render({
+            'jsonld': settings.jsonld,
             'site': settings.site,
             'author': settings.author,
             'meta': settings.meta,
@@ -1528,7 +1556,8 @@ def make():
     staticfiles = []
     staticpaths = [
         os.path.join(content, '*.*'),
-        #os.path.join(settings.paths.get('tmpl'), '*.js')
+        os.path.join(settings.paths.get('tmpl'), '*.js'),
+        os.path.join(settings.paths.get('tmpl'), '*.css')
     ]
     for p in staticpaths:
         staticfiles = staticfiles + glob.glob(p)
@@ -1543,17 +1572,21 @@ def make():
 
     end = int(round(time.time() * 1000))
     settings.logger.info('process took %d ms' % (end - start))
-    settings.logger.info('starting syncing')
-    os.system(
-        "rsync -avuhH --delete-after %s/ %s/" % (
-            settings.paths.get('build'),
-            settings.syncserver
+
+    if not settings.args.get('nosync'):
+        settings.logger.info('starting syncing')
+        os.system(
+            "rsync -avuhH --delete-after %s/ %s/" % (
+                settings.paths.get('build'),
+                settings.syncserver
+            )
         )
-    )
-    settings.logger.info('syncing finished')
+        settings.logger.info('syncing finished')
+
     settings.logger.info('sending webmentions')
     webmentions.run()
     settings.logger.info('sending webmentions finished')
+
 
 if __name__ == '__main__':
     make()

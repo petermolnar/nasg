@@ -2,7 +2,7 @@
 {% if href != src %}
     <a href="{{ href }}">
 {% endif %}
-        <img src="{{ src }}" title="{{ title }}" alt="" width="{{ width }}" height="{{ height }}"{% if is_mainimg %} class="u-featured"{% endif %} />
+        <img src="{{ src }}" title="{{ title }}" alt="" width="{{ width }}" height="{{ height }}" {% if is_mainimg %}itemprop="image" class="u-featured"{% endif %} />
 {% if href != src %}
     </a>
 {% endif %}
