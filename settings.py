@@ -54,48 +54,6 @@ author = {
     }
 }
 
-jsonld = {
-    '@context': 'http://schema.org',
-    '@type': 'ProfessionalService',
-    '@id': author.get('url'),
-    'name' : 'Peter Molnar web services consultancy',
-    'url': author.get('url'),
-    'email': author.get('email'),
-    'telephone': "00447592011721",
-    'image' : 'https://petermolnar.net/logo.jpg',
-    'description' : 'WordPress, IT backend services, and infrastructure consultancy for web- and bigdata stacks.',
-    'logo': {
-        '@type': 'ImageObject',
-        'url': 'https://petermolnar.net/logo.jpg'
-    },
-    'sameAs' : [
-        'https://github.com/petermolnar',
-        'https://www.linkedin.com/in/petermolnareu',
-    ],
-    'address': {
-        '@type': 'PostalAddress',
-        'addressLocality': 'Cambridge',
-        'addressCountry': 'GB'
-    },
-    'contactPoint': [
-        {
-            '@type': 'ContactPoint',
-            'email': 'mail@petermolnar.net',
-            'url': 'https://petermolnar.net/about.html',
-            'contactType': 'customer service',
-            'availableLanguage': {
-                '@type': 'Language',
-                'name': [
-                    'Magyar',
-                    'English'
-                ]
-            }
-        }
-    ],
-    'priceRange': 'from £50/hour'
-}
-
-
 paths = {
     'content': os.path.join(base, 'content'),
     'webmentions': os.path.join(base, 'content', 'webmentions'),

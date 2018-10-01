@@ -582,14 +582,31 @@ class Singular(MarkdownDoc):
             #f.write(frontmatter.dumps(fm))
 
     async def copyfiles(self):
-        copystatics( os.path.dirname(self.fpath))
+        exclude=['.md', '.jpg', '.png', '.gif'];
+        files = glob.glob(os.path.join(
+            os.path.dirname(self.fpath),
+            '*.*'
+        ))
+        for f in files:
+            fname, fext = os.path.splitext(f)
+            if fext.lower() in exclude:
+                continue
+
+            t = os.path.join(
+                settings.paths.get('build'),
+                self.name,
+                os.path.basename(f)
+            )
+            if os.path.exists(t) and os.path.getmtime(f) <= os.path.getmtime(t):
+                continue
+            settings.logger.info("copying '%s' to '%s'", f, t)
+            cp(f, t)
 
     async def render(self):
         if self.exists:
             return
         settings.logger.info("rendering %s", self.name)
         r = J2.get_template(self.template).render({
-            'jsonld': settings.jsonld,
             'post': self.tmplvars,
             'site': settings.site,
             'author': settings.author,
@@ -1073,7 +1090,6 @@ class Search(PHPFile):
 
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
-            'jsonld': settings.jsonld,
             'post': {},
             'site': settings.site,
             'author': settings.author,
@@ -1318,7 +1334,6 @@ class Category(dict):
 
         posts = self.get_posts(start, end)
         r = J2.get_template(self.template).render({
-            'jsonld': settings.jsonld,
             'site': settings.site,
             'author': settings.author,
             'meta': settings.meta,
@@ -1375,23 +1390,6 @@ class Sitemap(dict):
             return
         with open(self.renderfile, 'wt') as f:
             f.write("\n".join(sorted(self.keys())))
-
-def copystatics(source, exclude=['.md', '.jpg', '.png', '.gif']):
-    files = glob.glob(os.path.join(
-        source, '*.*'
-    ))
-    for f in files:
-        fname, fext = os.path.splitext(f)
-        if fext.lower() in exclude:
-            continue
-        t = os.path.join(
-            settings.paths.get('build'),
-            os.path.basename(f)
-        )
-        if os.path.exists(t) and os.path.getmtime(f) <= os.path.getmtime(t):
-            continue
-        settings.logger.info("copying '%s' to '%s'", f, t)
-        cp(f, t)
 
 def mkcomment(webmention):
     if 'published_ts' in webmention.get('data'):
@@ -1556,8 +1554,8 @@ def make():
     staticfiles = []
     staticpaths = [
         os.path.join(content, '*.*'),
-        os.path.join(settings.paths.get('tmpl'), '*.js'),
-        os.path.join(settings.paths.get('tmpl'), '*.css')
+        #os.path.join(settings.paths.get('tmpl'), '*.js'),
+        #os.path.join(settings.paths.get('tmpl'), '*.css')
     ]
     for p in staticpaths:
         staticfiles = staticfiles + glob.glob(p)
