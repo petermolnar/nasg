@@ -2,7 +2,7 @@
 {% block lang %}{% endblock %}
 {% block title %}Search results for: <?php echo($_GET['q']); ?>{% endblock %}
 {% block content %}
-<section class="content-body">
+<main>
     <header>
         <h1>Search results for: <?php echo($_GET['q']); ?></h1>
     </header>
@@ -29,5 +29,5 @@ while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
 }
 printf("</dl>");
 ?>
-</section>
+</main>
 {% endblock %}

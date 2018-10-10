@@ -64,6 +64,17 @@ RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
 
+#def relurl(url,base=settings.site.get('url')):
+    #url =urlparse(url)
+    #base = urlparse(base)
+
+    #if base.netloc != url.netloc:
+        #raise ValueError('target and base netlocs do not match')
+
+    #base_dir='.%s' % (os.path.dirname(base.path))
+    #url = '.%s' % (url.path)
+    #return os.path.relpath(url,start=base_dir)
+
 class cached_property(object):
     """ extermely simple cached_property decorator:
     whenever something is called as @cached_property, on first run, the
@@ -402,6 +413,7 @@ class Singular(MarkdownDoc):
         urls = self.meta.get('syndicate', [])
         if self.is_photo:
             urls.append("https://brid.gy/publish/flickr")
+        urls.append("https://fed.brid.gy/")
         return urls
 
     def baseN(self, num, b=36,
@@ -508,6 +520,7 @@ class Singular(MarkdownDoc):
             'summary': self.summary,
             'html_summary': self.html_summary,
             'html_content': self.html_content,
+            'mtime': self.mtime,
             'pubtime': self.published.format(settings.dateformat.get('iso')),
             'pubdate': self.published.format(settings.dateformat.get('display')),
             'year': int(self.published.format('YYYY')),
@@ -1259,8 +1272,22 @@ class Category(dict):
         else:
             return True
 
-    async def render_feed(self):
-        settings.logger.info('rendering category "%s" ATOM feed', self.name)
+    async def render_feeds(self):
+        await self.render_rss();
+        await self.render_atom();
+
+    async def render_rss(self):
+        await self.render_feed('rss')
+
+    async def render_atom(self):
+        await self.render_feed('atom')
+
+    async def render_feed(self, xmlformat):
+        settings.logger.info(
+            'rendering category "%s" %s feed',
+            self.name,
+            xmlformat
+        )
         start = 0
         end = int(settings.site.get('pagination'))
 
@@ -1279,15 +1306,21 @@ class Category(dict):
         })
         fg.logo('%s/favicon.png' % settings.site.get('url'))
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
+        fg.description(settings.site.get('title'))
 
         for post in self.get_posts(start, end):
             dt = arrow.get(post.get('pubtime'))
+            mtime = arrow.get(post.get('mtime'))
             fe = fg.add_entry()
+
+            fe.id(post.get('url'))
+            fe.title(post.get('title'))
+
             fe.author({
                 'name': settings.author.get('name'),
                 'email':settings.author.get('email')
             })
-            fe.id(post.get('url'))
+
             fe.category({
                 'term': post.get('category'),
                 'label': post.get('category'),
@@ -1296,32 +1329,43 @@ class Category(dict):
                     post.get('category')
                 )
             })
-            fe.link(href=post.get('url'))
-            fe.link(href=post.get('url'), rel='alternate', type='text/html')
-            fe.title(post.get('title'))
+
             fe.published(dt.datetime)
-            fe.updated(dt.datetime)
-            fe.content(
-                post.get('html_content'),
-                #src=post.get('url')
-            )
+            fe.updated(mtime.datetime)
+
             fe.rights('%s %s %s' % (
                 post.get('licence').upper(),
                 settings.author.get('name'),
                 dt.format('YYYY')
             ))
-            if 'enclosure' in post:
-                enc = post.get('enclosure')
-                fe.enclosure(
-                    enc.get('url'),
-                    "%d" % enc.get('size'),
-                    enc.get('mime')
-                )
 
-        atom = os.path.join(dirname, 'index.xml')
-        with open(atom, 'wb') as f:
-            settings.logger.info('writing file: %s', atom)
-            f.write(fg.atom_str(pretty=True))
+            if xmlformat == 'rss':
+                fe.link(href=post.get('url'))
+                fe.content(post.get('html_content'), type='CDATA')
+                #fe.description(post.get('summary'), isSummary=True)
+                if 'enclosure' in post:
+                    enc = post.get('enclosure')
+                    fe.enclosure(
+                        enc.get('url'),
+                        "%d" % enc.get('size'),
+                        enc.get('mime')
+                    )
+            elif xmlformat == 'atom':
+                fe.link(href=post.get('url'), rel='alternate', type='text/html')
+                fe.content(src=post.get('url'), type='text/html')
+                fe.summary(post.get('summary'))
+
+        if xmlformat == 'rss':
+            feedfile = os.path.join(dirname, 'index.xml')
+        elif xmlformat == 'atom':
+            feedfile = os.path.join(dirname, 'atom.xml')
+
+        with open(feedfile, 'wb') as f:
+            settings.logger.info('writing file: %s', feedfile)
+            if xmlformat == 'rss':
+                f.write(fg.rss_str(pretty=True))
+            elif xmlformat == 'atom':
+                f.write(fg.atom_str(pretty=True))
 
     async def render_page(self, pagenum=1, pages=1):
         if self.display == 'flat':
@@ -1370,7 +1414,7 @@ class Category(dict):
         while page <= pages:
             await self.render_page(page, pages)
             page = page + 1
-        await self.render_feed()
+        await self.render_feeds()
 
 
 class Sitemap(dict):
@@ -1496,7 +1540,7 @@ def make():
         if post.mtime > last:
             last = post.mtime
         rules.add_gone(post.source)
-    for e in glob.glob(os.path.join(content, '*', '*.lnk')):
+    for e in glob.glob(os.path.join(content, '*', '*.url')):
         post = Redirect(e)
         if post.mtime > last:
             last = post.mtime
