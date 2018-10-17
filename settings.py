@@ -51,6 +51,7 @@ author = {
         'wordpress': 'https://petermolnareu.wordpress.com/',
         'flickr': 'https://flickr.com/people/petermolnareu',
         'github': 'https://github.com/petermolnar',
+        'instagram': 'https://www.instagram.com/petermolnarnet/',
     }
 }
 
