@@ -15,7 +15,7 @@ body {
   font-family: sans-serif;
   color: #ccc;
   background-color: #222;
-  font-size: 110%;
+  font-size: 100%;
   line-height: 1.3em;
 }
 
@@ -44,6 +44,10 @@ h1 {
 
 h1, h2 {
   line-height: 1.2em;
+}
+
+h2 {
+  font-size: 1.2em;
 }
 
 h2, h3 {
@@ -180,6 +184,9 @@ pre> code::before {
   content: attr(lang);
   float: right;
   color: #999;
+  border-left: 1px solid #666;
+  border-bottom: 1px solid #666;
+  padding-left: 0.3em;
 }
 
 table {
@@ -327,4 +334,4 @@ body > footer > ul >li > a > span {
   body > header a svg {
     display: inline-block;
   }
-}    
+}

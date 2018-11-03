@@ -20,8 +20,11 @@
     </style>
     <script>
         var current = localStorage.getItem("stylesheet");
-        if (current) {
+        if (current.length) {
             document.querySelector('#css_alt').setAttribute("media", current);
+        }
+        else if(window.matchMedia("(prefers-color-scheme: light)").matches) {
+            toggleStylesheet(this);
         }
 
         function toggleStylesheet(trigger){
@@ -184,9 +187,9 @@
                             itemprop="url">
                             <span itemprop="name">{{ author.name }}</span>
                         </a>
-                        <a class="u-email email" href="mailto:{{ author.email }}">
+                        &lt;<a class="u-email email" href="mailto:{{ author.email }}">
                             <span itemprop="email">{{ author.email }}</span>
-                        </a>
+                        </a>&gt;
                     </p>
                 </dd>
 

@@ -84,6 +84,7 @@ class cached_property(object):
     def __init__(self, method, name=None):
         self.method = method
         self.name = name or method.__name__
+
     def __get__(self, inst, cls):
         if inst is None:
             return self
@@ -1169,7 +1170,8 @@ class WebhookPHP(PHPFile):
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
             'author': settings.author,
-            'callback_secret': keys.webmentionio.get('callback_secret'),
+            'webmentionio': keys.webmentionio,
+            'zapier': keys.zapier,
         })
         with open(self.renderfile, 'wt') as f:
             settings.logger.info("rendering to %s", self.renderfile)
@@ -1297,8 +1299,6 @@ class Category(dict):
 
         fg = FeedGenerator()
         fg.id(self.feed)
-        fg.link(href=self.feed, rel='self')
-        fg.link(href=settings.meta.get('hub'), rel='hub')
         fg.title(self.title)
         fg.author({
             'name': settings.author.get('name'),
@@ -1308,7 +1308,7 @@ class Category(dict):
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
         fg.description(settings.site.get('title'))
 
-        for post in self.get_posts(start, end):
+        for post in reversed(self.get_posts(start, end)):
             dt = arrow.get(post.get('pubtime'))
             mtime = arrow.get(post.get('mtime'))
             fe = fg.add_entry()
@@ -1356,8 +1356,12 @@ class Category(dict):
                 fe.summary(post.get('summary'))
 
         if xmlformat == 'rss':
+            fg.link(href=self.feed)
             feedfile = os.path.join(dirname, 'index.xml')
         elif xmlformat == 'atom':
+            fg.link(href=self.feed, rel='self')
+            fg.link(href=settings.meta.get('hub'), rel='hub')
+
             feedfile = os.path.join(dirname, 'atom.xml')
 
         with open(feedfile, 'wb') as f:
@@ -1533,19 +1537,7 @@ def make():
     content = settings.paths.get('content')
     worker = AsyncWorker()
     webmentions = AsyncWorker()
-
     rules = IndexPHP()
-    for e in glob.glob(os.path.join(content, '*', '*.ptr')):
-        post = Gone(e)
-        if post.mtime > last:
-            last = post.mtime
-        rules.add_gone(post.source)
-    for e in glob.glob(os.path.join(content, '*', '*.url')):
-        post = Redirect(e)
-        if post.mtime > last:
-            last = post.mtime
-        rules.add_redirect(post.source, post.target)
-    worker.add(rules.render())
 
     webhook = WebhookPHP()
     worker.add(webhook.render())
@@ -1575,6 +1567,7 @@ def make():
             content=post.content
         )
         sitemap[post.url] = post.mtime
+        rules.add_redirect(post.shortslug, post.url)
         if post.category.startswith('_'):
             continue
         if post.category not in categories:
@@ -1588,6 +1581,21 @@ def make():
     search.__exit__()
     worker.add(search.render())
     worker.add(sitemap.render())
+
+
+    for e in glob.glob(os.path.join(content, '*', '*.ptr')):
+        post = Gone(e)
+        if post.mtime > last:
+            last = post.mtime
+        rules.add_gone(post.source)
+    for e in glob.glob(os.path.join(content, '*', '*.url')):
+        post = Redirect(e)
+        if post.mtime > last:
+            last = post.mtime
+        rules.add_redirect(post.source, post.target)
+    worker.add(rules.render())
+
+
     for category in categories.values():
         worker.add(category.render())
 

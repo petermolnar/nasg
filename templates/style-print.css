@@ -54,6 +54,7 @@ body > footer,
 video,
 audio,
 .footnote-backref,
+.footnote-back,
 .donation,
 .noprint {
   display:none !important;
