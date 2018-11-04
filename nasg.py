@@ -1185,6 +1185,7 @@ class Category(dict):
     def __init__(self, name=''):
         self.name = name
         self.page = 1
+        self.trange = 'YYYY'
 
     def __setitem__(self, key, value):
         if key in self:
@@ -1196,14 +1197,6 @@ class Category(dict):
                 )
             )
         dict.__setitem__(self, key, value)
-
-    # TODO
-    # - find all months posts were made on
-    # - use this to iterate
-    # - make a function to query per month
-    # - make archives based on this
-    # - instead of plain numbers, use YYYY-MM
-    # - feed still needs last X
 
     def get_posts(self, start=0, end=-1):
         return [
@@ -1253,21 +1246,22 @@ class Category(dict):
         else:
             return settings.paths.get('build')
 
+    def navlink(self, ts):
+        return {
+            'url': "%s%s/" % (self.url, ts.format(self.trange)),
+            'label': ts.format(self.trange)
+        }
+
     def tmplvars(self, posts=[], c=False, p=False, n=False):
         if p:
-            p = {
-                'url': "%s%s/" % (self.url, p.format('YYYY')),
-                'label': p.format('YYYY')
-            }
+            p = self.navlink(p)
 
         if n:
-            n = {
-                'url': "%s%s/" % (self.url, n.format('YYYY')),
-                'label': n.format('YYYY')
-            }
+            n = self.navlink(n)
 
         if not c:
-            c = self[0].published.format('YYYY')
+            post = self[list(self.keys()).pop()]
+            c = post.published.format(self.trange)
 
         return {
             'site': settings.site,
@@ -1462,10 +1456,9 @@ class Category(dict):
             await self.render_flat()
             return
 
-        time_format = 'YYYY'
         by_time = {}
         for key in self.sortedkeys:
-            trange = arrow.get(key).format(time_format)
+            trange = arrow.get(key).format(self.trange)
             if trange not in by_time:
                 by_time.update({
                     trange: []
@@ -1474,12 +1467,12 @@ class Category(dict):
 
         keys = list(by_time.keys())
         for p, c, n in zip([None]+keys[:-1], keys, keys[1:]+[None]):
-            if arrow.utcnow().format(time_format) == c.format(time_format):
+            if arrow.utcnow().format(self.trange) == c.format(self.trange):
                 renderdir = self.renderdir
             else:
                 renderdir = os.path.join(
                     self.renderdir,
-                    c.format(time_format)
+                    c.format(self.trange)
                 )
             #
             if not os.path.isdir(renderdir):

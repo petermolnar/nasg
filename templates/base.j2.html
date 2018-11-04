@@ -20,10 +20,10 @@
     </style>
     <script>
         var current = localStorage.getItem("stylesheet");
-        if (current.length) {
+        if (current != null) {
             document.querySelector('#css_alt').setAttribute("media", current);
         }
-        else if(window.matchMedia("(prefers-color-scheme: light)").matches) {
+        else if( ! window.matchMedia("(prefers-color-scheme: dark)").matches) {
             toggleStylesheet(this);
         }
 
