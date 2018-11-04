@@ -276,7 +276,10 @@ body > nav ul {
 
 body > nav li {
   margin: 1em 0.6em;
-  font-size: 1.6em;
+}
+
+body > nav i {
+  font-style:normal;
 }
 
 body > nav .current {

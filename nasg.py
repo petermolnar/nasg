@@ -19,6 +19,7 @@ from shutil import copy2 as cp
 from math import ceil
 from urllib.parse import urlparse
 from collections import OrderedDict, namedtuple
+import logging
 import arrow
 import langdetect
 import wand.image
@@ -35,6 +36,8 @@ import settings
 import keys
 
 from pprint import pprint
+
+logger = logging.getLogger('NASG')
 
 MarkdownImage = namedtuple(
     'MarkdownImage',
@@ -63,6 +66,18 @@ RE_CODE = re.compile(
 RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
+
+def writepath(fpath, content, mtime=0):
+    d = os.path.dirname(fpath)
+    if not os.path.isdir(d):
+        logger.debug('creating directory tree %s', d)
+        os.makedirs(d)
+    with open(fpath, 'wt') as f:
+        logger.info('writing file %s', fpath)
+        f.write(content)
+    # TODO
+    #if (mtime > 0):
+
 
 #def relurl(url,base=settings.site.get('url')):
     #url =urlparse(url)
@@ -118,11 +133,7 @@ class Webmention(object):
             return False
 
     async def save(self, content):
-        d = os.path.dirname(self.fpath)
-        if not os.path.isdir(d):
-            os.makedirs(d)
-        with open(self.fpath, 'wt') as f:
-            f.write(content)
+        writepath(self.fpath, content)
 
     async def send(self):
         if self.exists:
@@ -134,13 +145,13 @@ class Webmention(object):
             'target': '%s' % (self.target)
         }
         r = requests.post(telegraph_url, data=telegraph_params)
-        settings.logger.info(
+        logger.info(
             "sent webmention to telegraph from %s to %s",
             self.source,
             self.target
         )
         if r.status_code not in [200, 201, 202]:
-            settings.logger.error('sending failed: %s %s', r.status_code, r.text)
+            logger.error('sending failed: %s %s', r.status_code, r.text)
         else:
             await self.save(r.text)
 
@@ -149,7 +160,7 @@ class MarkdownDoc(object):
     @cached_property
     def _parsed(self):
         with open(self.fpath, mode='rt') as f:
-            settings.logger.debug('parsing YAML+MD file %s', self.fpath)
+            logger.debug('parsing YAML+MD file %s', self.fpath)
             meta, txt = frontmatter.parse(f.read())
         return(meta, txt)
 
@@ -571,19 +582,17 @@ class Singular(MarkdownDoc):
     def template(self):
         return "%s.j2.html" % (self.__class__.__name__)
 
-    @cached_property
+    @property
     def renderdir(self):
-        d = os.path.join(
-            settings.paths.get('build'),
-            self.name
-        )
-        if not os.path.isdir(d):
-            os.makedirs(d)
-        return d
+        return os.path.dirname(self.renderfile)
 
     @property
     def renderfile(self):
-        return os.path.join(self.renderdir, 'index.html')
+        return os.path.join(
+            settings.paths.get('build'),
+            self.name,
+            'index.html'
+        )
 
     @property
     def exists(self):
@@ -610,7 +619,7 @@ class Singular(MarkdownDoc):
         #fm.metadata = self.meta
         #fm.content = self.content
         #with open(fpath, 'wt') as f:
-            #settings.logger.info("updating %s", fpath)
+            #logger.info("updating %s", fpath)
             #f.write(frontmatter.dumps(fm))
 
     async def copyfiles(self):
@@ -631,13 +640,13 @@ class Singular(MarkdownDoc):
             )
             if os.path.exists(t) and os.path.getmtime(f) <= os.path.getmtime(t):
                 continue
-            settings.logger.info("copying '%s' to '%s'", f, t)
+            logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
 
     async def render(self):
         if self.exists:
             return
-        settings.logger.info("rendering %s", self.name)
+        logger.info("rendering %s", self.name)
         r = J2.get_template(self.template).render({
             'post': self.tmplvars,
             'site': settings.site,
@@ -646,17 +655,12 @@ class Singular(MarkdownDoc):
             'licence': settings.licence,
             'tips': settings.tips,
         })
-        if not os.path.isdir(self.renderdir):
-            settings.logger.info("creating directory: %s", self.renderdir)
-            os.makedirs(self.renderdir)
-        with open(self.renderfile, 'wt') as f:
-            settings.logger.info("saving to %s", self.renderfile)
-            f.write(r)
+        writepath(self.renderfile, r)
 
 
 class WebImage(object):
     def __init__(self, fpath, mdimg, parent):
-        settings.logger.debug("loading image: %s", fpath)
+        logger.debug("loading image: %s", fpath)
         self.mdimg = mdimg
         self.fpath = fpath
         self.parent = parent
@@ -868,7 +872,7 @@ class WebImage(object):
             img = self._maybe_watermark(img)
             for size, resized in self.resized_images:
                 if not resized.exists or settings.args.get('regenerate'):
-                    settings.logger.info(
+                    logger.info(
                         "resizing image: %s to size %d",
                         os.path.basename(self.fpath),
                         size
@@ -985,7 +989,7 @@ class WebImage(object):
 
                 # this is to make sure pjpeg happens
                 with open(self.fpath, 'wb') as f:
-                    settings.logger.info("writing %s", self.fpath)
+                    logger.info("writing %s", self.fpath)
                     thumb.save(file=f)
 
 
@@ -1129,9 +1133,7 @@ class Search(PHPFile):
             'licence': settings.licence,
             'tips': settings.tips,
         })
-        with open(self.renderfile, 'wt') as f:
-            settings.logger.info("rendering to %s", self.renderfile)
-            f.write(r)
+        writepath(self.renderfile, r)
 
 
 class IndexPHP(PHPFile):
@@ -1169,7 +1171,7 @@ class IndexPHP(PHPFile):
             'redirects': self.redirect
         })
         with open(self.renderfile, 'wt') as f:
-            settings.logger.info("rendering to %s", self.renderfile)
+            logger.info("rendering to %s", self.renderfile)
             f.write(r)
 
 
@@ -1192,7 +1194,7 @@ class WebhookPHP(PHPFile):
             'zapier': keys.zapier,
         })
         with open(self.renderfile, 'wt') as f:
-            settings.logger.info("rendering to %s", self.renderfile)
+            logger.info("rendering to %s", self.renderfile)
             f.write(r)
 
 
@@ -1243,7 +1245,7 @@ class Category(dict):
         return url
 
     @property
-    def feed(self):
+    def feedurl(self):
         return "%sfeed/" % (self.url)
 
     @property
@@ -1251,7 +1253,7 @@ class Category(dict):
         return "%s.j2.html" % (self.__class__.__name__)
 
     @property
-    def renderdir(self):
+    def dpath(self):
         if len(self.name):
             return os.path.join(
                 settings.paths.get('build'),
@@ -1262,9 +1264,14 @@ class Category(dict):
             return settings.paths.get('build')
 
     def navlink(self, ts):
+        label = ts.format(self.trange)
+        if arrow.utcnow().format(self.trange) == label:
+            url = self.url
+        else:
+            url = "%s%s/" % (self.url, label)
         return {
-            'url': "%s%s/" % (self.url, ts.format(self.trange)),
-            'label': ts.format(self.trange)
+            'url': url,
+            'label': label
         }
 
     def tmplvars(self, posts=[], c=False, p=False, n=False):
@@ -1288,49 +1295,68 @@ class Category(dict):
                 'name': self.name,
                 'display': self.display,
                 'url': self.url,
-                'feed': "%s%s/" % (self.url, 'feed'),
-                #'jsonfeed': "%s%s/index.json" % (self.url, 'feed'),
+                'feed': self.feedurl,
                 'title': self.title,
                 'current': c,
                 'previous': p,
                 'next': n,
+                'currentyear': arrow.utcnow().format('YYYY')
             },
             'posts': posts,
         }
 
     @property
     def mtime(self):
-        return arrow.get(self[self.sortedkeys[0]].published).timestamp
+         return arrow.get(self[self.sortedkeys[0]].published).timestamp
+
+    # @property
+    # def exists(self):
+        # if settings.args.get('force'):
+            # return False
+        # ismissing = False
+        # for f in [
+            # os.path.join(self.renderdir, 'feed', 'index.xml'),
+        # ]:
+            # if not os.path.exists(f):
+                # ismissing = True
+            # elif self.mtime > os.path.getmtime(f):
+                # ismissing = True
+        # if ismissing:
+            # return False
+        # else:
+            # return True
 
     @property
-    def exists(self):
-        if settings.args.get('force'):
-            return False
-        ismissing = False
-        for f in [
-            os.path.join(self.renderdir, 'feed', 'index.xml'),
-        ]:
-            if not os.path.exists(f):
-                ismissing = True
-            elif self.mtime > os.path.getmtime(f):
-                ismissing = True
-        if ismissing:
-            return False
+    def rssfeedfpath(self):
+        return os.path.join(
+            self.dpath,
+            'feed',
+            'index.xml'
+        )
+
+    @property
+    def atomfeedfpath(self):
+        return os.path.join(
+            self.dpath,
+            'feed',
+            'atom.xml'
+        )
+
+    def indexfpath(self, subpath=None):
+        if subpath:
+            return os.path.join(
+                self.dpath,
+                subpath,
+                'index.html'
+            )
         else:
-            return True
-
-    async def render_feeds(self):
-        await self.render_rss();
-        await self.render_atom();
-
-    async def render_rss(self):
-        await self.render_feed('rss')
-
-    async def render_atom(self):
-        await self.render_feed('atom')
+            return os.path.join(
+                self.dpath,
+                'index.html'
+            )
 
     async def render_feed(self, xmlformat):
-        settings.logger.info(
+        logger.info(
             'rendering category "%s" %s feed',
             self.name,
             xmlformat
@@ -1338,12 +1364,8 @@ class Category(dict):
         start = 0
         end = int(settings.site.get('pagination'))
 
-        dirname = os.path.join(self.renderdir, 'feed')
-        if not os.path.isdir(dirname):
-            os.makedirs(dirname)
-
         fg = FeedGenerator()
-        fg.id(self.feed)
+        fg.id(self.feedurl)
         fg.title(self.title)
         fg.author({
             'name': settings.author.get('name'),
@@ -1401,74 +1423,74 @@ class Category(dict):
                 fe.summary(post.get('summary'))
 
         if xmlformat == 'rss':
-            fg.link(href=self.feed)
-            feedfile = os.path.join(dirname, 'index.xml')
+            fg.link(href=self.feedurl)
+            writepath(self.rssfeedfpath, '%s' % fg.rss_str(pretty=True))
         elif xmlformat == 'atom':
-            fg.link(href=self.feed, rel='self')
+            fg.link(href=self.feedurl, rel='self')
             fg.link(href=settings.meta.get('hub'), rel='hub')
-
-            feedfile = os.path.join(dirname, 'atom.xml')
-
-        with open(feedfile, 'wb') as f:
-            settings.logger.info('writing file: %s', feedfile)
-            if xmlformat == 'rss':
-                f.write(fg.rss_str(pretty=True))
-            elif xmlformat == 'atom':
-                f.write(fg.atom_str(pretty=True))
+            writepath(self.atomfeedfpath, '%s' % fg.atom_str(pretty=True))
 
     async def render_flat(self):
         r = J2.get_template(self.template).render(
-            self.tmplvars([self[k].tmplvars for k in self.sortedkeys])
+            self.tmplvars(self.get_posts())
+            #[self[k].tmplvars for k in self.sortedkeys]
         )
+        writepath(self.indexfpath(), r)
 
-        renderfile = os.path.join(self.renderdir, 'index.html')
-        with open(renderfile, 'wt') as f:
-            f.write(r)
+    def is_uptodate(self, fpath, ts):
+        if not os.path.exists(fpath):
+            return False
+        if os.path.getmtime(fpath) >= ts:
+            return True
+        return False
 
-
-    #async def render_page(self, tmplvars):
-
-
-    # async def render_page(self, pagenum=1, pages=1):
-        # if self.display == 'flat':
-            # start = 0
-            # end = -1
-        # else:
-            # pagination = int(settings.site.get('pagination'))
-            # start = int((pagenum - 1) * pagination)
-            # end = int(start + pagination)
-
-        # posts = self.get_posts(start, end)
-        # r = J2.get_template(self.template).render({
-            # 'site': settings.site,
-            # 'author': settings.author,
-            # 'meta': settings.meta,
-            # 'licence': settings.licence,
-            # 'tips': settings.tips,
-            # 'category': self.tmplvars,
-            # 'pages': {
-                # 'current': pagenum,
-                # 'total': pages,
-            # },
-            # 'posts': posts,
-        # })
-        # if pagenum > 1:
-            # renderdir = os.path.join(self.renderdir, 'page', str(pagenum))
-        # else:
-            # renderdir = self.renderdir
-        # if not os.path.isdir(renderdir):
-            # os.makedirs(renderdir)
-        # renderfile = os.path.join(renderdir, 'index.html')
-        # with open(renderfile, 'wt') as f:
-            # f.write(r)
+    def newest(self, start=0, end=-1):
+        if start == end:
+            end = -1
+        s = sorted(
+            [self[k].mtime for k in self.sortedkeys[start:end]],
+            reverse=True
+        )
+        return s[0]
 
     async def render(self):
-        if self.exists:
-            return
+        newest = self.newest()
+        if not self.is_uptodate(self.rssfeedfpath, newest):
+            logger.info(
+                '%s RSS feed outdated, generating new',
+                self.name
+            )
+            await self.render_feed('rss')
+        else:
+            logger.info(
+                '%s RSS feed up to date',
+                self.name
+            )
 
-        await self.render_feeds()
+        if not self.is_uptodate(self.atomfeedfpath, newest):
+            logger.info(
+                '%s ATOM feed outdated, generating new',
+                self.name
+            )
+            await self.render_feed('atom')
+        else:
+            logger.info(
+                '%s ATOM feed up to date',
+                self.name
+            )
+
         if self.display == 'flat':
-            await self.render_flat()
+            if not self.is_uptodate(self.indexfpath(), newest):
+                logger.info(
+                    '%s flat index outdated, generating new',
+                    self.name
+                )
+                await self.render_flat()
+            else:
+                logger.info(
+                    '%s flat index is up to date',
+                    self.name
+                )
             return
 
         by_time = {}
@@ -1482,32 +1504,43 @@ class Category(dict):
 
         keys = list(by_time.keys())
         for p, c, n in zip([None]+keys[:-1], keys, keys[1:]+[None]):
-            if arrow.utcnow().format(self.trange) == c.format(self.trange):
-                renderdir = self.renderdir
+            form = c.format(self.trange)
+            if arrow.utcnow().format(self.trange) == form:
+                fpath = self.indexfpath()
             else:
-                renderdir = os.path.join(
-                    self.renderdir,
-                    c.format(self.trange)
-                )
-            #
-            if not os.path.isdir(renderdir):
-                os.makedirs(renderdir)
-            renderfile = os.path.join(
-                renderdir,
-                'index.html'
-            )
+                fpath = self.indexfpath(form)
 
-            r = J2.get_template(self.template).render(
-                self.tmplvars(
-                    [self[k].tmplvars for k in by_time[c]],
-                    c=c,
-                    p=p,
-                    n=n
+            try:
+                findex = self.sortedkeys.index(by_time[c][0])
+                lindex = self.sortedkeys.index(by_time[c][-1])
+                newest = self.newest(findex, lindex)
+            except Exception as e:
+                #logger.info('newest called with start: %s, end: %s', start, end)
+                logger.error('calling newest failed with %s for %s', self.name, c)
+                continue
+
+            if self.is_uptodate(fpath, newest):
+                logger.info(
+                    '%s/%s index is up to date',
+                    self.name,
+                    form
                 )
-            )
-            with open(renderfile, 'wt') as f:
-                settings.logger.info('writing category archive to: %s', renderfile)
-                f.write(r)
+                continue
+            else:
+                logger.info(
+                    '%s/%s index is outdated, generating new',
+                    self.name,
+                    form
+                )
+                r = J2.get_template(self.template).render(
+                    self.tmplvars(
+                        [self[k].tmplvars for k in by_time[c]],
+                        c=c,
+                        p=p,
+                        n=n
+                    )
+                )
+                writepath(fpath, r)
 
 class Sitemap(dict):
     @property
@@ -1539,13 +1572,13 @@ def mkcomment(webmention):
 
     fdir = glob.glob(os.path.join(settings.paths.get('content'), '*', slug))
     if not len(fdir):
-        settings.logger.error(
+        logger.error(
             "couldn't find post for incoming webmention: %s",
             webmention
             )
         return
     elif len(fdir) > 1:
-        settings.logger.error(
+        logger.error(
             "multiple posts found for incoming webmention: %s",
             webmention
             )
@@ -1574,7 +1607,7 @@ def mkcomment(webmention):
     else:
         fm.content = c
     with open(fpath, 'wt') as f:
-        settings.logger.info("saving webmention to %s", fpath)
+        logger.info("saving webmention to %s", fpath)
         f.write(frontmatter.dumps(fm))
 
 
@@ -1596,7 +1629,7 @@ def makecomments():
     }
     wio_url = "https://webmention.io/api/mentions"
     webmentions = requests.get(wio_url, params=wio_params)
-    settings.logger.info("queried webmention.io with: %s", webmentions.url)
+    logger.info("queried webmention.io with: %s", webmentions.url)
     if webmentions.status_code != requests.codes.ok:
         return
     try:
@@ -1604,7 +1637,7 @@ def makecomments():
         for webmention in mentions.get('links'):
             mkcomment(webmention)
     except ValueError as e:
-        settings.logger.error('failed to query webmention.io: %s', e)
+        logger.error('failed to query webmention.io: %s', e)
         pass
 
 
@@ -1620,7 +1653,10 @@ def make():
     start = int(round(time.time() * 1000))
     last = 0
 
-    makecomments()
+    try:
+        makecomments()
+    except Exception as e:
+        logger.error('failed to make comments - are we offline?')
 
     content = settings.paths.get('content')
     worker = AsyncWorker()
@@ -1688,7 +1724,7 @@ def make():
         worker.add(category.render())
 
     worker.run()
-    settings.logger.info('worker finished')
+    logger.info('worker finished')
 
     # copy static
     staticfiles = []
@@ -1709,21 +1745,24 @@ def make():
         cp(e, t)
 
     end = int(round(time.time() * 1000))
-    settings.logger.info('process took %d ms' % (end - start))
+    logger.info('process took %d ms' % (end - start))
 
     if not settings.args.get('nosync'):
-        settings.logger.info('starting syncing')
+        logger.info('starting syncing')
         os.system(
             "rsync -avuhH --delete-after %s/ %s/" % (
                 settings.paths.get('build'),
                 settings.syncserver
             )
         )
-        settings.logger.info('syncing finished')
+        logger.info('syncing finished')
 
-    settings.logger.info('sending webmentions')
-    webmentions.run()
-    settings.logger.info('sending webmentions finished')
+    logger.info('sending webmentions')
+    try:
+        webmentions.run()
+    except Exception as e:
+        logger.error('failed to send webmentions - are we offline?')
+    logger.info('sending webmentions finished')
 
 
 if __name__ == '__main__':

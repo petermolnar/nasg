@@ -100,17 +100,32 @@
     <ul>
         {% if category.previous %}
         <li>
-            <a rel="prev" href="{{ category.previous.url }}">« {{ category.previous.label }}</a>
+            <a rel="prev" href="{{ category.previous.url }}">
+                <i>«</i>
+                <strong>{{ category.previous.label }}</strong>
+                {% if category.currentyear != category.previous.label %}
+                Jan - Dec
+                {% endif %}
+            </a>
         </li>
         {% endif %}
 
         <li>
-            <span class="current">{{ category.current }}</span>
+            <span class="current">
+                {{ category.current }}
+                {% if category.currentyear != category.current %}
+                Jan - Dec
+                {% endif %}
+            </span>
         </li>
 
         {% if category.next %}
         <li>
-            <a rel="next" href="{{ category.next.url }}">{{ category.next.label }} »</a>
+            <a rel="next" href="{{ category.next.url }}">
+                <strong>{{ category.next.label }}</strong>
+                Jan - Dec
+                <i>»</i>
+            </a>
         </li>
         {% endif %}
 

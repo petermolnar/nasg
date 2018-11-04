@@ -118,8 +118,10 @@ args = vars(_parser.parse_args())
 
 loglevel = loglevels.get(args.get('loglevel'))
 
-logger = logging.getLogger("nasg")
+logger = logging.getLogger('NASG')
 logger.setLevel(loglevel)
 console_handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 logging.getLogger('asyncio').setLevel(loglevel)
