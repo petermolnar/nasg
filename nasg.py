@@ -510,6 +510,20 @@ class Singular(MarkdownDoc):
         else:
             return False
 
+    @property
+    def event(self):
+        if 'event' not in self.meta:
+            return False
+
+        event = self.meta.get('event', {})
+        event.update({
+            'startdate': arrow.get(event.get('start')).format(settings.dateformat.get('display')),
+            'starttime': arrow.get(event.get('start')).format(settings.dateformat.get('iso')),
+            'enddate': arrow.get(event.get('end')).format(settings.dateformat.get('display')),
+            'endtime': arrow.get(event.get('end')).format(settings.dateformat.get('iso')),
+        })
+        return event
+
     @cached_property
     def tmplvars(self):
         v = {
@@ -532,6 +546,7 @@ class Singular(MarkdownDoc):
             'url': self.url,
             'review': self.review,
             'has_code': self.has_code,
+            'event': self.event,
         }
         if (self.is_photo):
             v.update({

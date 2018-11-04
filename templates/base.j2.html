@@ -105,8 +105,13 @@
 </header>
 
 {% block content %}
+{% if post.event %}
+    {% set mftype = 'h-entry h-event' %}
+{% else %}
+    {% set mftype = 'h-entry' %}
+{% endif %}
 <main>
-    <article class="h-entry hentry singular" lang="{{ post.lang }}" property="h-entry" itemscope="" itemprop="blogPost" itemtype="http://schema.org/BlogPosting" itemref="author">
+    <article class="{{ mftype }} hentry singular" lang="{{ post.lang }}" property="{{ mftype }}" itemscope="" itemprop="blogPost" itemtype="http://schema.org/BlogPosting" itemref="author">
         <header>
             <h1 class="entry-title p-name" itemprop="name headline" property="p-name">
                 {% if post.is_reply %}
@@ -166,6 +171,24 @@
         <hr/>
         <footer>
             <dl>
+                {% if post.event %}
+                <dt>Trip details</dt>
+                <dd>
+                    From
+                    <time class="dt-start dtstart" property="dt-end" datetime="{{ post.event.starttime }}">
+                        {{ post.event.startdate }}
+                    </time>
+                    to
+                    <time class="dt-end dtend" property="dt-end" datetime="{{ post.event.endtime }}">
+                        {{ post.event.enddate }}
+                    </time>, in
+                    <span class="p-location location" property="p-location">
+                        {{ post.event.location }}
+                    </span>
+                </dd>
+                {% endif %}
+
+
                 <dt>Published</dt>
                 <dd class="published updated">
                     <time class="dt-published dt-updated"
