@@ -62,7 +62,7 @@ audio,
 
 code, pre {
    max-width: 96%;
-   page-break-inside: enabled;
+   page-break-inside: auto;
    font-family: "Courier", "Courier New", monospace !important;
 }
 
@@ -79,5 +79,5 @@ pre {
 }
 
 .h-feed .h-entry {
-  page-break-after:always;
+  page-break-after: always;
 }

@@ -556,12 +556,15 @@ class Singular(MarkdownDoc):
     def template(self):
         return "%s.j2.html" % (self.__class__.__name__)
 
-    @property
+    @cached_property
     def renderdir(self):
-        return os.path.join(
+        d = os.path.join(
             settings.paths.get('build'),
             self.name
         )
+        if not os.path.isdir(d):
+            os.makedirs(d)
+        return d
 
     @property
     def renderfile(self):
@@ -1194,6 +1197,14 @@ class Category(dict):
             )
         dict.__setitem__(self, key, value)
 
+    # TODO
+    # - find all months posts were made on
+    # - use this to iterate
+    # - make a function to query per month
+    # - make archives based on this
+    # - instead of plain numbers, use YYYY-MM
+    # - feed still needs last X
+
     def get_posts(self, start=0, end=-1):
         return [
             self[k].tmplvars
@@ -1242,15 +1253,40 @@ class Category(dict):
         else:
             return settings.paths.get('build')
 
-    @property
-    def tmplvars(self):
+    def tmplvars(self, posts=[], c=False, p=False, n=False):
+        if p:
+            p = {
+                'url': "%s%s/" % (self.url, p.format('YYYY')),
+                'label': p.format('YYYY')
+            }
+
+        if n:
+            n = {
+                'url': "%s%s/" % (self.url, n.format('YYYY')),
+                'label': n.format('YYYY')
+            }
+
+        if not c:
+            c = self[0].published.format('YYYY')
+
         return {
-            'name': self.name,
-            'display': self.display,
-            'url': self.url,
-            'feed': "%s%s/" % (self.url, 'feed'),
-            'jsonfeed': "%s%s/index.json" % (self.url, 'feed'),
-            'title': self.title
+            'site': settings.site,
+            'author': settings.author,
+            'meta': settings.meta,
+            'licence': settings.licence,
+            'tips': settings.tips,
+            'category': {
+                'name': self.name,
+                'display': self.display,
+                'url': self.url,
+                'feed': "%s%s/" % (self.url, 'feed'),
+                #'jsonfeed': "%s%s/index.json" % (self.url, 'feed'),
+                'title': self.title,
+                'current': c,
+                'previous': p,
+                'next': n,
+            },
+            'posts': posts,
         }
 
     @property
@@ -1371,55 +1407,99 @@ class Category(dict):
             elif xmlformat == 'atom':
                 f.write(fg.atom_str(pretty=True))
 
-    async def render_page(self, pagenum=1, pages=1):
-        if self.display == 'flat':
-            start = 0
-            end = -1
-        else:
-            pagination = int(settings.site.get('pagination'))
-            start = int((pagenum - 1) * pagination)
-            end = int(start + pagination)
+    async def render_flat(self):
+        r = J2.get_template(self.template).render(
+            self.tmplvars([self[k].tmplvars for k in self.sortedkeys])
+        )
 
-        posts = self.get_posts(start, end)
-        r = J2.get_template(self.template).render({
-            'site': settings.site,
-            'author': settings.author,
-            'meta': settings.meta,
-            'licence': settings.licence,
-            'tips': settings.tips,
-            'category': self.tmplvars,
-            'pages': {
-                'current': pagenum,
-                'total': pages,
-            },
-            'posts': posts,
-        })
-        if pagenum > 1:
-            renderdir = os.path.join(self.renderdir, 'page', str(pagenum))
-        else:
-            renderdir = self.renderdir
-        if not os.path.isdir(renderdir):
-            os.makedirs(renderdir)
-        renderfile = os.path.join(renderdir, 'index.html')
+        renderfile = os.path.join(self.renderdir, 'index.html')
         with open(renderfile, 'wt') as f:
             f.write(r)
+
+
+    #async def render_page(self, tmplvars):
+
+
+    # async def render_page(self, pagenum=1, pages=1):
+        # if self.display == 'flat':
+            # start = 0
+            # end = -1
+        # else:
+            # pagination = int(settings.site.get('pagination'))
+            # start = int((pagenum - 1) * pagination)
+            # end = int(start + pagination)
+
+        # posts = self.get_posts(start, end)
+        # r = J2.get_template(self.template).render({
+            # 'site': settings.site,
+            # 'author': settings.author,
+            # 'meta': settings.meta,
+            # 'licence': settings.licence,
+            # 'tips': settings.tips,
+            # 'category': self.tmplvars,
+            # 'pages': {
+                # 'current': pagenum,
+                # 'total': pages,
+            # },
+            # 'posts': posts,
+        # })
+        # if pagenum > 1:
+            # renderdir = os.path.join(self.renderdir, 'page', str(pagenum))
+        # else:
+            # renderdir = self.renderdir
+        # if not os.path.isdir(renderdir):
+            # os.makedirs(renderdir)
+        # renderfile = os.path.join(renderdir, 'index.html')
+        # with open(renderfile, 'wt') as f:
+            # f.write(r)
 
     async def render(self):
         if self.exists:
             return
 
-        if self.display == 'flat':
-            pagination = len(self)
-        else:
-            pagination = int(settings.site.get('pagination'))
-
-        pages = ceil(len(self) / pagination)
-        page = 1
-        while page <= pages:
-            await self.render_page(page, pages)
-            page = page + 1
         await self.render_feeds()
+        if self.display == 'flat':
+            await self.render_flat()
+            return
 
+        time_format = 'YYYY'
+        by_time = {}
+        for key in self.sortedkeys:
+            trange = arrow.get(key).format(time_format)
+            if trange not in by_time:
+                by_time.update({
+                    trange: []
+                })
+            by_time[trange].append(key)
+
+        keys = list(by_time.keys())
+        for p, c, n in zip([None]+keys[:-1], keys, keys[1:]+[None]):
+            if arrow.utcnow().format(time_format) == c.format(time_format):
+                renderdir = self.renderdir
+            else:
+                renderdir = os.path.join(
+                    self.renderdir,
+                    c.format(time_format)
+                )
+            #
+            if not os.path.isdir(renderdir):
+                os.makedirs(renderdir)
+            renderfile = os.path.join(
+                renderdir,
+                'index.html'
+            )
+
+            r = J2.get_template(self.template).render(
+                self.tmplvars(
+                    [self[k].tmplvars for k in by_time[c]],
+                    c=c,
+                    p=p,
+                    n=n
+                )
+            )
+            with open(renderfile, 'wt') as f:
+                settings.logger.info('writing category archive to: %s', renderfile)
+                f.write(r)
 
 class Sitemap(dict):
     @property

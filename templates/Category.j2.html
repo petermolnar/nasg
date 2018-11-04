@@ -6,9 +6,9 @@
     <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}atom.xml" />
 {% endblock %}
 {% block content %}
-<main class="content-body h-feed hfeed">
+<main class="content-body h-feed hfeed" property="h-feed">
     <header>
-        <h1 class="p-name">{{ category.name }}</h1>
+        <h1 class="p-name" property="p-name">{{ category.name }}</h1>
     </header>
 
 
@@ -20,26 +20,26 @@
     {% endif %}
     {% set _ = year.append(post.year)%}
 
-    <article class="h-entry hentry singular" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
+    <article class="h-entry hentry singular" property="h-entry" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
         <header>
             {% if category.display == 'flat' %}
-            <h3 itemprop="name headline" class="p-name entry-title">
+            <h3 class="p-name entry-title" property="p-name" itemprop="name headline" >
             {% else %}
-            <h2 itemprop="name headline" class="p-name entry-title">
+            <h2 class="p-name entry-title" property="p-name" itemprop="name headline" >
             {% endif %}
             {% if post.is_reply %}
                 <svg class="icon" width="16" height="16">
                     <use xlink:href="#icon-reply" />
                 </svg>
-                <a href="{{ post.url }}/" class="u-url bookmark" itemprop="url mainEntityOfPage">
+                <a href="{{ post.url }}/" class="u-url bookmark" property="u-url" itemprop="url mainEntityOfPage">
                     RE:
                 </a>
-                <a href="{{ post.is_reply }}" class="u-in-reply-to">
+                <a href="{{ post.is_reply }}" class="u-in-reply-to" property="u-in-reply-to">
                     {{ post.is_reply }}
                 </a>
             {% else %}
-                <a href="{{ post.url }}" title="{{ post.title }}" class="u-url bookmark" itemprop="url mainEntityOfPage">
-                    <span class="entry-title p-name">{{ post.title }}</span>
+                <a href="{{ post.url }}" title="{{ post.title }}" class="u-url bookmark" property="u-url" itemprop="url mainEntityOfPage">
+                    <span class="entry-title p-name" property="p-name">{{ post.title }}</span>
                 </a>
             {% endif %}
             {% if category.display == 'flat' %}
@@ -50,7 +50,7 @@
         </header>
 
         {% if post.summary %}
-        <div class="e-summary entry-summary" itemprop="description">
+        <div class="e-summary entry-summary" property="e-summary" itemprop="description">
             {{ post.html_summary }}
             <p class="more">
                 <a href="{{ post.url }}" title="{{ post.title }}">
@@ -59,98 +59,61 @@
             </p>
         </div>
         {% else %}
-        <div class="e-content entry-content" itemprop="articleBody">
+        <div class="e-content entry-content" property="e-content" itemprop="articleBody">
             {{ post.html_content }}
         </div>
         {% endif %}
 
-        <footer aria-hidden="true" hidden="hidden" />
+        <footer aria-hidden="true" hidden="hidden">
             <span class="published updated">
-            <time class="dt-published dt-updated" datetime="{{ post.pubtime }}" itemprop="dateModified datePublished">{{ post.pubdate }}</time>
+            <time class="dt-published dt-updated" property="dt-published dt-updated" datetime="{{ post.pubtime }}" itemprop="dateModified datePublished">{{ post.pubdate }}</time>
             </span>
         {% if not post.has_mainimg %}
-            <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image" width="0" height="0" />
+            <img src="{{ author.avatar }}"
+                itemprop="image"
+                width="0"
+                height="0"
+                alt="Photo of {{ author.name }}" />
         {% endif %}
-            <p class="p-author h-card vcard">
+            <p class="p-author h-card vcard" property="p-author h-card">
                 <img class="photo avatar u-photo u-avatar"
+                    property="u-photo u-avatar"
                     src="{{ author.avatar }}"
                     alt="Photo of {{ author.name }}" />
                 <a class="fn p-name url u-url u-uid"
+                    property="p-name u-url u-uid"
                     href="{{ author.url }}"
                     rel="author">
                         {{ author.name }}
                 </a>
-                <a class="u-email email" href="mailto:{{ author.email }}">
+                <a class="u-email email" property="u-email" href="mailto:{{ author.email }}">
                     {{ author.email }}
                 </a>
             </p>
+        </footer>
     </article>
 {% endfor %}
 </main>
 {% endblock %}
 {% block pagination %}
-{% if pages.total > 1 %}
-
-    {# based on: http://dev.dbl-a.com/symfony-2-0/symfony2-and-twig-pagination/ #}
-    <nav>
-        <ul>
-    {% if pages.current > 1 %}
-    {% set prev = pages.current - 1 %}
-            <li>
-                <a rel="prev" href="{{ category.url }}page/{{ prev }}/">«</a>
-            </li>
-            <li>
-                <a rel="prev" href="{{ category.url }}">1</a>
-            </li>
-    {% endif %}
-
-    {% if pages.current - 4 > 0 %}
-            <li>
-                <span class="dots">…</span>
-            </li>
-    {% endif %}
-
-
-        {% if ( pages.current - 1 > 1 ) %}
-            <li>
-                <a href="{{ category.url }}page/{{ pages.current - 1 }}/">{{ pages.current - 1 }}</a>
-            </li>
+<nav>
+    <ul>
+        {% if category.previous %}
+        <li>
+            <a rel="prev" href="{{ category.previous.url }}">« {{ category.previous.label }}</a>
+        </li>
         {% endif %}
 
+        <li>
+            <span class="current">{{ category.current }}</span>
+        </li>
 
-            <li>
-                <span class="current">{{ pages.current }}</span>
-            </li>
-
-
-        {% if ( pages.current + 1 <= pages.total -1 ) %}
-            <li>
-                <a href="{{ category.url }}page/{{ pages.current + 1 }}/">{{ pages.current + 1 }}</a>
-            </li>
+        {% if category.next %}
+        <li>
+            <a rel="next" href="{{ category.next.url }}">{{ category.next.label }} »</a>
+        </li>
         {% endif %}
 
-
-    {% if pages.current  + 3 < pages.total %}
-            <li>
-                <span class="dots">…</span>
-            </li>
-    {% endif %}
-
-
-    {% if pages.current != pages.total %}
-            <li>
-                <a href="{{ category.url }}page/{{ pages.total }}/">{{ pages.total }}</a>
-            </li>
-    {% endif %}
-
-    {% if pages.current < pages.total %}
-    {% set next = pages.current + 1 %}
-            <li>
-                <a rel="next" href="{{ category.url }}page/{{ next }}/">»</a>
-            </li>
-    {% endif %}
-        </ul>
-    </nav>
-
-{% endif %}
+    </ul>
+</nav>
 {% endblock %}
