@@ -5,6 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
     <link rel="icon" href="{{ site.url }}/favicon.ico" />
+    {% block licence %}{% endblock %}
     {% for key, value in meta.items() %}
     <link rel="{{ key }}" href="{{ value }}" />
     {% endfor %}
@@ -12,7 +13,7 @@
     <style media="all">
         {% include 'style.css' %}
     </style>
-    <style id="css_alt" media="aural">
+    <style id="css_alt" media="speech">
         {% include 'style-alt.css' %}
     </style>
     <style media="print">
@@ -31,7 +32,7 @@
             var setto = 'all';
             var e = document.querySelector('#css_alt');
             if (e.getAttribute("media") == 'all') {
-                setto = 'aural';
+                setto = 'speech';
             }
             localStorage.setItem("stylesheet", setto);
             e.setAttribute("media", setto);
@@ -231,8 +232,8 @@
 
                 <dt>License</dt>
                 <dd class="license">
-                {% if post.licence == 'by' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license" property="u-licence" itemprop="license">CC BY 4.0</a>
+                {% if post.licence == 'CC-BY-4.0' %}
+                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license" property="u-licence" itemprop="license">{{ post.licence }}</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can republish it</li>
@@ -240,8 +241,8 @@
                         <li>you can use it for commercial purposes</li>
                         <li>you always need to make a link back here</li>
                     </ul>
-                {% elif post.licence.text == 'by-nc' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license" property="u-licence" itemprop="license">CC BY-NC 4.0</a>
+                {% elif post.licence == 'CC-BY-NC-4.0' %}
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license" property="u-licence" itemprop="license">{{ post.licence }}</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can republish it</li>
@@ -250,8 +251,8 @@
                         <li>you always need to make a link back here</li>
                     </ul>
                     For commercial use, please contact me.
-                {% else %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license" property="u-licence" itemprop="license">CC BY-NC-ND 4.0</a>
+                {% elif post.licence == 'CC-BY-NC-ND-4.0' %}
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license" property="u-licence" itemprop="license">{{ post.licence }}</a>
                     <ul>
                         <li>you can share it</li>
                         <li>you can't modify it</li>

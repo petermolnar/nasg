@@ -67,28 +67,41 @@ RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
 
+def url2slug(url, limit=200):
+    return slugify(
+        re.sub(r"^https?://(?:www)?", "", url),
+        only_ascii=True,
+        lower=True
+    )[:limit]
+
 def writepath(fpath, content, mtime=0):
     d = os.path.dirname(fpath)
     if not os.path.isdir(d):
         logger.debug('creating directory tree %s', d)
         os.makedirs(d)
-    with open(fpath, 'wt') as f:
+
+    if isinstance(content, str):
+        mode = 'wt'
+    else:
+        mode = 'wb'
+
+    with open(fpath, mode) as f:
         logger.info('writing file %s', fpath)
         f.write(content)
     # TODO
-    #if (mtime > 0):
+    # if (mtime > 0):
 
 
-#def relurl(url,base=settings.site.get('url')):
+# def relurl(url,base=settings.site.get('url')):
     #url =urlparse(url)
     #base = urlparse(base)
 
-    #if base.netloc != url.netloc:
+    # if base.netloc != url.netloc:
         #raise ValueError('target and base netlocs do not match')
 
     #base_dir='.%s' % (os.path.dirname(base.path))
     #url = '.%s' % (url.path)
-    #return os.path.relpath(url,start=base_dir)
+    # return os.path.relpath(url,start=base_dir)
 
 class cached_property(object):
     """ extermely simple cached_property decorator:
@@ -96,6 +109,7 @@ class cached_property(object):
     result is calculated, then the class method is overwritten to be
     a property, contaning the result from the method
     """
+
     def __init__(self, method, name=None):
         self.method = method
         self.name = name or method.__name__
@@ -106,6 +120,7 @@ class cached_property(object):
         result = self.method(inst)
         setattr(inst, self.name, result)
         return result
+
 
 class Webmention(object):
     def __init__(self, source, target, stime):
@@ -132,10 +147,10 @@ class Webmention(object):
         else:
             return False
 
-    async def save(self, content):
+    def save(self, content):
         writepath(self.fpath, content)
 
-    async def send(self):
+    def send(self):
         if self.exists:
             return
         telegraph_url = 'https://telegraph.p3k.io/webmention'
@@ -153,7 +168,7 @@ class Webmention(object):
         if r.status_code not in [200, 201, 202]:
             logger.error('sending failed: %s %s', r.status_code, r.text)
         else:
-            await self.save(r.text)
+            self.save(r.text)
 
 
 class MarkdownDoc(object):
@@ -174,7 +189,8 @@ class MarkdownDoc(object):
 
     def __pandoc(self, c):
         c = Pandoc(c)
-        c = RE_PRECODE.sub('<pre><code lang="\g<1>" class="language-\g<1>">', c)
+        c = RE_PRECODE.sub(
+            '<pre><code lang="\g<1>" class="language-\g<1>">', c)
         return c
 
     @cached_property
@@ -192,6 +208,7 @@ class MarkdownDoc(object):
             for match, img in self.images.items():
                 c = c.replace(match, '')
         return self.__pandoc(c)
+
 
 class Comment(MarkdownDoc):
     def __init__(self, fpath):
@@ -429,7 +446,7 @@ class Singular(MarkdownDoc):
         return urls
 
     def baseN(self, num, b=36,
-        numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
+              numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
         """
         Creates short, lowercase slug for a number (an epoch) passed
         """
@@ -614,16 +631,8 @@ class Singular(MarkdownDoc):
             self.content,
         ])
 
-    #async def update(self):
-        #fm = frontmatter.loads('')
-        #fm.metadata = self.meta
-        #fm.content = self.content
-        #with open(fpath, 'wt') as f:
-            #logger.info("updating %s", fpath)
-            #f.write(frontmatter.dumps(fm))
-
     async def copyfiles(self):
-        exclude=['.md', '.jpg', '.png', '.gif'];
+        exclude = ['.md', '.jpg', '.png', '.gif']
         files = glob.glob(os.path.join(
             os.path.dirname(self.fpath),
             '*.*'
@@ -638,7 +647,8 @@ class Singular(MarkdownDoc):
                 self.name,
                 os.path.basename(f)
             )
-            if os.path.exists(t) and os.path.getmtime(f) <= os.path.getmtime(t):
+            if os.path.exists(t) and os.path.getmtime(
+                    f) <= os.path.getmtime(t):
                 continue
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
@@ -999,11 +1009,12 @@ class AsyncWorker(object):
         self._loop = asyncio.get_event_loop()
 
     def add(self, job):
-        task = self._loop.create_task(job)
-        self._tasks.append(task)
+        #task = self._loop.create_task(job)
+        self._tasks.append(asyncio.ensure_future(job))
 
     def run(self):
         self._loop.run_until_complete(asyncio.wait(self._tasks))
+
 
 class PHPFile(object):
     @property
@@ -1066,10 +1077,12 @@ class Search(PHPFile):
                 tokenize=porter
             )'''
         )
+        self.is_changed = False
 
     def __exit__(self):
-        self.db.commit()
-        self.db.execute('PRAGMA auto_vacuum;')
+        if self.is_changed:
+            self.db.commit()
+            self.db.execute('PRAGMA auto_vacuum;')
         self.db.close()
 
     def check(self, name):
@@ -1112,6 +1125,7 @@ class Search(PHPFile):
                 category,
                 content
             ))
+            self.is_changed = True
 
     @property
     def renderfile(self):
@@ -1170,9 +1184,7 @@ class IndexPHP(PHPFile):
             'gones': self.gone,
             'redirects': self.redirect
         })
-        with open(self.renderfile, 'wt') as f:
-            logger.info("rendering to %s", self.renderfile)
-            f.write(r)
+        writepath(self.renderfile, r)
 
 
 class WebhookPHP(PHPFile):
@@ -1193,9 +1205,27 @@ class WebhookPHP(PHPFile):
             'webmentionio': keys.webmentionio,
             'zapier': keys.zapier,
         })
-        with open(self.renderfile, 'wt') as f:
-            logger.info("rendering to %s", self.renderfile)
-            f.write(r)
+        writepath(self.renderfile, r)
+
+
+class MicropubPHP(PHPFile):
+    @property
+    def renderfile(self):
+        return os.path.join(
+            settings.paths.get('build'),
+            'micropub.php'
+        )
+
+    @property
+    def templatefile(self):
+        return 'Micropub.j2.php'
+
+    async def _render(self):
+        r = J2.get_template(self.templatefile).render({
+            'site': settings.site,
+            'paths': settings.paths
+        })
+        writepath(self.renderfile, r)
 
 
 class Category(dict):
@@ -1214,12 +1244,6 @@ class Category(dict):
                 )
             )
         dict.__setitem__(self, key, value)
-
-    def get_posts(self, start=0, end=-1):
-        return [
-            self[k].tmplvars
-            for k in self.sortedkeys[start:end]
-        ]
 
     @property
     def sortedkeys(self):
@@ -1263,6 +1287,50 @@ class Category(dict):
         else:
             return settings.paths.get('build')
 
+    @property
+    def mtime(self):
+        return arrow.get(self[self.sortedkeys[0]].published).timestamp
+
+    @property
+    def rssfeedfpath(self):
+        return os.path.join(
+            self.dpath,
+            'feed',
+            'index.xml'
+        )
+
+    @property
+    def atomfeedfpath(self):
+        return os.path.join(
+            self.dpath,
+            'feed',
+            'atom.xml'
+        )
+
+    def get_posts(self, start=0, end=-1):
+        return [
+            self[k].tmplvars
+            for k in self.sortedkeys[start:end]
+        ]
+
+    def is_uptodate(self, fpath, ts):
+        if settings.args.get('force'):
+            return False
+        if not os.path.exists(fpath):
+            return False
+        if os.path.getmtime(fpath) >= ts:
+            return True
+        return False
+
+    def newest(self, start=0, end=-1):
+        if start == end:
+            end = -1
+        s = sorted(
+            [self[k].mtime for k in self.sortedkeys[start:end]],
+            reverse=True
+        )
+        return s[0]
+
     def navlink(self, ts):
         label = ts.format(self.trange)
         if arrow.utcnow().format(self.trange) == label:
@@ -1304,43 +1372,6 @@ class Category(dict):
             },
             'posts': posts,
         }
-
-    @property
-    def mtime(self):
-         return arrow.get(self[self.sortedkeys[0]].published).timestamp
-
-    # @property
-    # def exists(self):
-        # if settings.args.get('force'):
-            # return False
-        # ismissing = False
-        # for f in [
-            # os.path.join(self.renderdir, 'feed', 'index.xml'),
-        # ]:
-            # if not os.path.exists(f):
-                # ismissing = True
-            # elif self.mtime > os.path.getmtime(f):
-                # ismissing = True
-        # if ismissing:
-            # return False
-        # else:
-            # return True
-
-    @property
-    def rssfeedfpath(self):
-        return os.path.join(
-            self.dpath,
-            'feed',
-            'index.xml'
-        )
-
-    @property
-    def atomfeedfpath(self):
-        return os.path.join(
-            self.dpath,
-            'feed',
-            'atom.xml'
-        )
 
     def indexfpath(self, subpath=None):
         if subpath:
@@ -1385,7 +1416,7 @@ class Category(dict):
 
             fe.author({
                 'name': settings.author.get('name'),
-                'email':settings.author.get('email')
+                'email': settings.author.get('email')
             })
 
             fe.category({
@@ -1418,40 +1449,79 @@ class Category(dict):
                         enc.get('mime')
                     )
             elif xmlformat == 'atom':
-                fe.link(href=post.get('url'), rel='alternate', type='text/html')
+                fe.link(
+                    href=post.get('url'),
+                    rel='alternate',
+                    type='text/html')
                 fe.content(src=post.get('url'), type='text/html')
                 fe.summary(post.get('summary'))
 
         if xmlformat == 'rss':
             fg.link(href=self.feedurl)
-            writepath(self.rssfeedfpath, '%s' % fg.rss_str(pretty=True))
+            writepath(self.rssfeedfpath, fg.rss_str(pretty=True))
         elif xmlformat == 'atom':
             fg.link(href=self.feedurl, rel='self')
             fg.link(href=settings.meta.get('hub'), rel='hub')
-            writepath(self.atomfeedfpath, '%s' % fg.atom_str(pretty=True))
+            writepath(self.atomfeedfpath, fg.atom_str(pretty=True))
 
     async def render_flat(self):
         r = J2.get_template(self.template).render(
             self.tmplvars(self.get_posts())
-            #[self[k].tmplvars for k in self.sortedkeys]
         )
         writepath(self.indexfpath(), r)
 
-    def is_uptodate(self, fpath, ts):
-        if not os.path.exists(fpath):
-            return False
-        if os.path.getmtime(fpath) >= ts:
-            return True
-        return False
+    async def render_archives(self):
+        by_time = {}
+        for key in self.sortedkeys:
+            trange = arrow.get(key).format(self.trange)
+            if trange not in by_time:
+                by_time.update({
+                    trange: []
+                })
+            by_time[trange].append(key)
 
-    def newest(self, start=0, end=-1):
-        if start == end:
-            end = -1
-        s = sorted(
-            [self[k].mtime for k in self.sortedkeys[start:end]],
-            reverse=True
-        )
-        return s[0]
+        keys = list(by_time.keys())
+        for p, c, n in zip([None] + keys[:-1], keys, keys[1:] + [None]):
+            form = c.format(self.trange)
+            if arrow.utcnow().format(self.trange) == form:
+                fpath = self.indexfpath()
+            else:
+                fpath = self.indexfpath(form)
+
+            try:
+                findex = self.sortedkeys.index(by_time[c][0])
+                lindex = self.sortedkeys.index(by_time[c][-1])
+                newest = self.newest(findex, lindex)
+            except Exception as e:
+                logger.error(
+                    'calling newest failed with %s for %s',
+                    self.name,
+                    c
+                )
+                continue
+
+            if self.is_uptodate(fpath, newest):
+                logger.info(
+                    '%s/%s index is up to date',
+                    self.name,
+                    form
+                )
+                continue
+            else:
+                logger.info(
+                    '%s/%s index is outdated, generating new',
+                    self.name,
+                    form
+                )
+                r = J2.get_template(self.template).render(
+                    self.tmplvars(
+                        [self[k].tmplvars for k in by_time[c]],
+                        c=c,
+                        p=p,
+                        n=n
+                    )
+                )
+                writepath(fpath, r)
 
     async def render(self):
         newest = self.newest()
@@ -1492,55 +1562,9 @@ class Category(dict):
                     self.name
                 )
             return
+        else:
+            await self.render_archives()
 
-        by_time = {}
-        for key in self.sortedkeys:
-            trange = arrow.get(key).format(self.trange)
-            if trange not in by_time:
-                by_time.update({
-                    trange: []
-                })
-            by_time[trange].append(key)
-
-        keys = list(by_time.keys())
-        for p, c, n in zip([None]+keys[:-1], keys, keys[1:]+[None]):
-            form = c.format(self.trange)
-            if arrow.utcnow().format(self.trange) == form:
-                fpath = self.indexfpath()
-            else:
-                fpath = self.indexfpath(form)
-
-            try:
-                findex = self.sortedkeys.index(by_time[c][0])
-                lindex = self.sortedkeys.index(by_time[c][-1])
-                newest = self.newest(findex, lindex)
-            except Exception as e:
-                #logger.info('newest called with start: %s, end: %s', start, end)
-                logger.error('calling newest failed with %s for %s', self.name, c)
-                continue
-
-            if self.is_uptodate(fpath, newest):
-                logger.info(
-                    '%s/%s index is up to date',
-                    self.name,
-                    form
-                )
-                continue
-            else:
-                logger.info(
-                    '%s/%s index is outdated, generating new',
-                    self.name,
-                    form
-                )
-                r = J2.get_template(self.template).render(
-                    self.tmplvars(
-                        [self[k].tmplvars for k in by_time[c]],
-                        c=c,
-                        p=p,
-                        n=n
-                    )
-                )
-                writepath(fpath, r)
 
 class Sitemap(dict):
     @property
@@ -1560,7 +1584,8 @@ class Sitemap(dict):
         with open(self.renderfile, 'wt') as f:
             f.write("\n".join(sorted(self.keys())))
 
-def mkcomment(webmention):
+
+def makecomment(webmention):
     if 'published_ts' in webmention.get('data'):
         maybe = webmention.get('data').get('published')
         if not maybe or maybe == 'None':
@@ -1569,19 +1594,21 @@ def mkcomment(webmention):
             dt = arrow.get(webmention.get('data').get('published'))
 
     slug = webmention.get('target').strip('/').split('/')[-1]
+    if slug == settings.site.get('domain'):
+        return
 
     fdir = glob.glob(os.path.join(settings.paths.get('content'), '*', slug))
     if not len(fdir):
         logger.error(
             "couldn't find post for incoming webmention: %s",
             webmention
-            )
+        )
         return
     elif len(fdir) > 1:
         logger.error(
             "multiple posts found for incoming webmention: %s",
             webmention
-            )
+        )
         return
 
     fdir = fdir.pop()
@@ -1606,9 +1633,7 @@ def mkcomment(webmention):
         fm.content = ''
     else:
         fm.content = c
-    with open(fpath, 'wt') as f:
-        logger.info("saving webmention to %s", fpath)
-        f.write(frontmatter.dumps(fm))
+    writepath(fpath, frontmatter.dumps(fm))
 
 
 def makecomments():
@@ -1635,19 +1660,69 @@ def makecomments():
     try:
         mentions = webmentions.json()
         for webmention in mentions.get('links'):
-            mkcomment(webmention)
+            makecomment(webmention)
     except ValueError as e:
         logger.error('failed to query webmention.io: %s', e)
         pass
 
+def makepost(fpath):
+    try:
+        fname = os.path.basename(fpath)
+        mtime = arrow.get(fname.split('.')[0])
+        with open(fpath, 'r') as f:
+            payload = json.loads(f.read())
+            pprint(payload)
+            if 'content' not in payload:
+                logger.error('missing content from %s', fname)
+                return False
 
-def url2slug(url, limit=200):
-    return slugify(
-        re.sub(r"^https?://(?:www)?", "", url),
-        only_ascii=True,
-        lower=True
-    )[:limit]
+        fm = frontmatter.loads('')
+        fm.metadata = {
+            'published': mtime.format(
+                settings.dateformat.get('iso')
+            ),
+            'tags': payload.get('category', [])
+        }
+        fm.content = payload.get('content')
 
+        for maybe in ['title', 'summary', 'in-reply-to']:
+            x = payload.get(maybe, None)
+            if x:
+                fm.metadata.update({maybe: x})
+
+        slug = payload.get('slug', '')
+        if not len(slug):
+            if 'in-reply-to' in fm.metadata:
+                slug = "re-%s" % (url2slug(fm.metadata.get('in-reply-to')))
+            else:
+                slug = mtime.format(settings.dateformat.get('fname'))
+
+        fpath = os.path.join(
+            settings.paths.get('micropub'),
+            slug,
+            'index.md'
+        )
+        writepath(fpath, frontmatter.dumps(fm))
+        return True
+    except Exception as e:
+        logger.error('parsing entry at %s failed: %s', fpath, e)
+        return False
+
+
+def makeposts():
+    logger.info('getting micropub queue...')
+    os.system(
+        "rsync -avuhH --remove-source-files %s/ %s/" % (
+            '%s/%s' % (settings.syncserver, settings.paths.get('remotequeue')),
+            '%s' % (settings.paths.get('queue'))
+        )
+    )
+    logger.info('...done')
+
+    for js in glob.glob(os.path.join(settings.paths.get('queue'), '*.json')):
+        logging.info('processing micropub post %s', js)
+        if makepost(js):
+            os.unlink(js)
 
 def make():
     start = int(round(time.time() * 1000))
@@ -1658,10 +1733,15 @@ def make():
     except Exception as e:
         logger.error('failed to make comments - are we offline?')
 
+    makeposts();
+
     content = settings.paths.get('content')
     worker = AsyncWorker()
-    webmentions = AsyncWorker()
+    webmentions = []
     rules = IndexPHP()
+
+    micropub = MicropubPHP()
+    worker.add(micropub.render())
 
     webhook = WebhookPHP()
     worker.add(webhook.render())
@@ -1676,7 +1756,7 @@ def make():
         for i in post.images.values():
             worker.add(i.downsize())
         for i in post.to_ping:
-            webmentions.add(i.send())
+            webmentions.append(i)
 
         worker.add(post.render())
         worker.add(post.copyfiles())
@@ -1706,8 +1786,7 @@ def make():
     worker.add(search.render())
     worker.add(sitemap.render())
 
-
-    for e in glob.glob(os.path.join(content, '*', '*.ptr')):
+    for e in glob.glob(os.path.join(content, '*', '*.del')):
         post = Gone(e)
         if post.mtime > last:
             last = post.mtime
@@ -1719,7 +1798,6 @@ def make():
         rules.add_redirect(post.source, post.target)
     worker.add(rules.render())
 
-
     for category in categories.values():
         worker.add(category.render())
 
@@ -1730,8 +1808,6 @@ def make():
     staticfiles = []
     staticpaths = [
         os.path.join(content, '*.*'),
-        #os.path.join(settings.paths.get('tmpl'), '*.js'),
-        #os.path.join(settings.paths.get('tmpl'), '*.css')
     ]
     for p in staticpaths:
         staticfiles = staticfiles + glob.glob(p)
@@ -1752,17 +1828,19 @@ def make():
         os.system(
             "rsync -avuhH --delete-after %s/ %s/" % (
                 settings.paths.get('build'),
-                settings.syncserver
+                '%s/%s' % (settings.syncserver,
+                           settings.paths.get('remotewww'))
             )
         )
         logger.info('syncing finished')
 
-    logger.info('sending webmentions')
-    try:
-        webmentions.run()
-    except Exception as e:
-        logger.error('failed to send webmentions - are we offline?')
-    logger.info('sending webmentions finished')
+        logger.info('sending webmentions')
+        try:
+            for i in webmentions:
+                i.send()
+        except Exception as e:
+            logger.error('failed to send webmentions - are we offline?')
+        logger.info('sending webmentions finished')
 
 
 if __name__ == '__main__':

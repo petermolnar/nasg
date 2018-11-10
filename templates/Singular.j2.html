@@ -3,7 +3,6 @@
     <meta name="author" content="{{ author.name }} <{{ author.email }}>" />
     <meta name="description" content="{{ post.summary|e }}" />
     <link rel="canonical" href="{{ post.url }}" />
-    <link rel="license" href="https://creativecommons.org/licenses/4.0/{{ post.licence }}" />
     {% if post.has_code %}
     <style media="all">
         {% include 'prism.css' %}
@@ -16,4 +15,7 @@
         {% include 'prism.js' %}
     </script>
     {% endif %}
+{% endblock %}
+{% block licence %}
+    <link rel="license" href="https://spdx.org/licenses/{{ post.licence }}.html" type="{{ post.licence }}" />
 {% endblock %}

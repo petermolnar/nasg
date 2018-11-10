@@ -1,5 +1,10 @@
 {% extends "base.j2.html" %}
 {% block lang %}{% endblock %}
+
+{% block licence %}
+    <link rel="license" href="https://spdx.org/licenses/{{ site.licence }}.html" type="{{ site.licence }}" />
+{% endblock %}
+
 {% block title %}{{ category.title }}{% endblock %}
 {% block meta %}
     <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />

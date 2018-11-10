@@ -4,7 +4,7 @@ import argparse
 import logging
 
 base = os.path.abspath(os.path.expanduser('~/Projects/petermolnar.net'))
-syncserver = 'liveserver:/web/petermolnar.net/web'
+syncserver = 'liveserver:/web/petermolnar.net'
 
 site = {
     'title': 'Peter Molnar',
@@ -16,7 +16,7 @@ site = {
         'photo',
         'journal'
     ],
-    'licence': 'by-nc-nd',
+    'licence': 'CC-BY-NC-ND-4.0',
 }
 
 categorydisplay = {
@@ -26,8 +26,8 @@ categorydisplay = {
 }
 
 licence = {
-    'article': 'by',
-    'journal': 'by-nc',
+    'article': 'CC-BY-4.0',
+    'journal': 'CC-BY-NC-4.0',
 }
 
 meta = {
@@ -36,6 +36,8 @@ meta = {
     'hub': 'https://petermolnar.superfeedr.com/',
     'authorization_endpoint': 'https://indieauth.com/auth',
     'token_endpoint': 'https://tokens.indieauth.com/token',
+    'micropub': 'https://petermolnar.net/micropub.php',
+    'microsub': 'https://aperture.p3k.io/microsub/83'
 }
 
 author = {
@@ -62,6 +64,10 @@ paths = {
     'tmpl': os.path.join(base, 'nasg', 'templates'),
     'watermark': os.path.join(base, 'nasg', 'templates', 'watermark.png'),
     'build': os.path.join(base, 'www'),
+    'queue': os.path.join(base, 'queue'),
+    'remotewww': 'web',
+    'remotequeue': 'queue',
+    'micropub': os.path.join(base, 'content', 'note'),
 }
 
 photo = {
@@ -83,6 +89,7 @@ tips = {
 dateformat = {
     'iso': 'YYYY-MM-DDTHH:mm:ssZZ',
     'display': 'YYYY-MM-DD HH:mm',
+    'fname': 'YYYYMMDDHHmmssZ',
 }
 
 loglevels = {
