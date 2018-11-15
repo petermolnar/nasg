@@ -4,6 +4,7 @@
     <title>{% block title %}{{ post.title }} - {{ site.domain }}{% endblock %}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
+    <meta name="supported-color-schemes" content="dark light">
     <link rel="icon" href="{{ site.url }}/favicon.ico" />
     {% block licence %}{% endblock %}
     {% for key, value in meta.items() %}
@@ -19,26 +20,6 @@
     <style media="print">
         {% include 'style-print.css' %}
     </style>
-    <script>
-        var current = localStorage.getItem("stylesheet");
-        if (current != null) {
-            document.querySelector('#css_alt').setAttribute("media", current);
-        }
-        else if( ! window.matchMedia("(prefers-color-scheme: dark)").matches) {
-            toggleStylesheet(this);
-        }
-
-        function toggleStylesheet(trigger){
-            var setto = 'all';
-            var e = document.querySelector('#css_alt');
-            if (e.getAttribute("media") == 'all') {
-                setto = 'speech';
-            }
-            localStorage.setItem("stylesheet", setto);
-            e.setAttribute("media", setto);
-            return false;
-        }
-    </script>
 </head>
 <body itemscope="" itemtype="http://schema.org/Blog http://schema.org/WebPage">
 
@@ -81,17 +62,27 @@
     </nav>
 
     <div>
+        <form class="theme" aria-hidden="true">
+            <svg width="16" height="16">
+                <use xlink:href="#icon-contrast"></use>
+            </svg>
+            <span>
+                <input name="colorscheme" value="auto" id="autoscheme" type="radio">
+                <label for="autoscheme">auto</label>
+            </span>
+            <span>
+                <input name="colorscheme" value="dark" id="darkscheme" type="radio">
+                <label for="darkscheme">dark</label>
+            </span>
+            <span>
+                <input name="colorscheme" value="light" id="lightscheme" type="radio">
+                <label for="lightscheme">light</label>
+            </span>
+        </form>
+
         <form role="search" method="get" action="{{ site.url }}/search.php">
-            <label for="q">Search</label>
             <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
             <input type="submit" value="➡" />
-
-            <label for="contrast">Toggle website contrast</label>
-            <button title="toggle website contrast" id="contrast" name="contrast" onclick="return toggleStylesheet(this)">
-               <svg width="16" height="16">
-                    <use xlink:href="#icon-contrast"></use>
-                </svg>
-            </button>
         </form>
 
         <p class="follow">
@@ -102,6 +93,7 @@
                 follow
             </a>
         </p>
+
     </div>
 </header>
 
@@ -421,6 +413,10 @@
         <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
     </p>
 </footer>
+
+<script>
+{% include 'themeswitcher.js' %}
+</script>
 
 {% include 'symbols.svg' %}
 

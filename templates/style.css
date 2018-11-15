@@ -17,6 +17,7 @@ body {
   background-color: #222;
   font-size: 100%;
   line-height: 1.3em;
+  transition: all 0.2s;
 }
 
 svg {
@@ -123,22 +124,42 @@ li p {
   margin: 0;
 }
 
-input, button {
+input, button, label {
   border: none;
   color: #ccc;
   background-color: transparent;
+  vertical-align: middle;
 }
 
-button svg {
-  transition: all 0.2s;
+label {
+  font-weight: bold;
+  font-size: 0.8em;
+  cursor: pointer;
+  margin: 0 0.3em;
+}
+
+.theme {
+  margin: 0 0.3em;
+  display: none;
+  color: #ccc;
+}
+
+.theme input {
+  display: none;
+}
+
+.theme input + label::before {
+  content: '\2718';
+  display: inline-block;
+  padding: 0 0.1em;
+}
+
+.theme input:checked + label::before {
+  content: '\2714';
 }
 
 input {
   border-bottom: 3px solid #ccc;
-}
-
-label {
-  display: none;
 }
 
 nav ul {
@@ -223,10 +244,8 @@ body > header form {
 }
 
 body > header p {
-  margin: 1em 0 0 0;
   font-size: 0.8em;
 }
-
 
 body > svg,
 body > script {
@@ -337,4 +356,4 @@ body > footer > ul >li > a > span {
   body > header a svg {
     display: inline-block;
   }
-}
+}    
