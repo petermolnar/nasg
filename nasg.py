@@ -188,9 +188,10 @@ class MarkdownDoc(object):
         return self._parsed[1]
 
     def __pandoc(self, c):
-        c = Pandoc(c)
-        c = RE_PRECODE.sub(
-            '<pre><code lang="\g<1>" class="language-\g<1>">', c)
+        if c and len(c):
+            c = Pandoc(c)
+            c = RE_PRECODE.sub(
+                '<pre><code lang="\g<1>" class="language-\g<1>">', c)
         return c
 
     @cached_property
@@ -419,8 +420,10 @@ class Singular(MarkdownDoc):
 
     @cached_property
     def html_summary(self):
-        # return MD.reset().convert(self.summary)
-        return Pandoc(self.summary)
+        c = self.summary
+        if c and len(c):
+            c = Pandoc(self.summary)
+        return c
 
     @property
     def title(self):
