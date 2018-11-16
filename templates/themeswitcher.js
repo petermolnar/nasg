@@ -3,15 +3,12 @@ var ALT_THEME = 'light';
 var STORAGE_KEY = 'theme';
 var colorscheme = document.getElementsByName('colorscheme');
 
-function setTheme(e) {
-    var mode = e.target.value;
-    if (mode == 'auto') {
-        localStorage.removeItem(STORAGE_KEY);
+function indicateTheme(mode) {
+    for(var i = colorscheme.length; i--; ) {
+        if(colorscheme[i].value == mode) {
+            colorscheme[i].checked = true;
+        }
     }
-    else {
-        localStorage.setItem(STORAGE_KEY, mode);
-    }
-    applyTheme(mode);
 }
 
 function applyTheme(mode) {
@@ -22,32 +19,38 @@ function applyTheme(mode) {
     else {
         st.setAttribute('media', 'speech');
     }
-
-    for(var i = colorscheme.length; i--; ) {
-        if(colorscheme[i].value == mode) {
-            colorscheme[i].checked = true;
-        }
-    }
 }
 
-function mqlTheme(e) {
-    if (localStorage.getItem(STORAGE_KEY) != null) {
-        return false;
-    }
-    if (e.matches) {
-        applyTheme(ALT_THEME);
+function setTheme(e) {
+    var mode = e.target.value;
+    if (mode == 'auto') {
+        localStorage.removeItem(STORAGE_KEY);
     }
     else {
-        applyTheme(DEFAULT_THEME);
+        localStorage.setItem(STORAGE_KEY, mode);
     }
+    var e = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
+    autoTheme(e);
 }
 
-var current = localStorage.getItem(STORAGE_KEY);
-if (current == null) { current = 'auto'; }
-applyTheme(current);
+function autoTheme(e) {
+    var current = localStorage.getItem(STORAGE_KEY);
+    var mode = 'auto';
+    var indicate = 'auto';
+    if ( current != null) {
+        indicate = mode = current;
+    }
+    else if (e.matches) {
+        mode = ALT_THEME;
+    }
+    applyTheme(mode);
+    indicateTheme(indicate);
+}
 
 var mql = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
-mql.addListener(mqlTheme);
+autoTheme(mql);
+mql.addListener(autoTheme);
+
 for(var i = colorscheme.length; i--; ) {
     colorscheme[i].onclick = setTheme;
 }

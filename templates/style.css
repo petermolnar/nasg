@@ -15,15 +15,11 @@ body {
   font-family: sans-serif;
   color: #ccc;
   background-color: #222;
-  font-size: 100%;
   line-height: 1.3em;
-  transition: all 0.2s;
 }
 
 svg {
   transform: rotate(0deg);
-  width: 16px;
-  height: 16px;
   fill: currentColor;
   vertical-align: middle;
 }
@@ -92,6 +88,7 @@ figcaption {
   text-align: center;
 }
 
+video,
 figure img {
   display: block;
   max-height: 98vh;
@@ -102,14 +99,14 @@ figure img {
   border: 1px solid #000;
 }
 
-figcaption dt {
-  display: none;
-}
-
-figcaption dd {
+figcaption dd, label {
   font-size: 0.8em;
   display: inline-block;
   margin:0.3em 0.3em;
+}
+
+label {
+  cursor: pointer;
 }
 
 ul {
@@ -131,33 +128,6 @@ input, button, label {
   vertical-align: middle;
 }
 
-label {
-  font-weight: bold;
-  font-size: 0.8em;
-  cursor: pointer;
-  margin: 0 0.3em;
-}
-
-.theme {
-  margin: 0 0.3em;
-  display: none;
-  color: #ccc;
-}
-
-.theme input {
-  display: none;
-}
-
-.theme input + label::before {
-  content: '\2718';
-  display: inline-block;
-  padding: 0 0.1em;
-}
-
-.theme input:checked + label::before {
-  content: '\2714';
-}
-
 input {
   border-bottom: 3px solid #ccc;
 }
@@ -175,7 +145,7 @@ nav li {
 
 code, pre, q, figcaption {
   font-family: monospace;
-  font-size: 0.94em;
+  font-size: 1em;
 }
 
 code, pre {
@@ -238,18 +208,8 @@ body > footer {
   background-color: #111;
 }
 
-body > header form {
-  padding: 0.2em 0 0 0;
-  display: inline-block;
-}
-
 body > header p {
   font-size: 0.8em;
-}
-
-body > svg,
-body > script {
-  display: none;
 }
 
 body > header {
@@ -260,12 +220,19 @@ body > header nav {
   margin: 0.3em 0;
 }
 
+body > header form {
+  padding: 0.6em;
+  color: #ccc;
+  display: inline-block;
+}
+
 body > header a {
   font-weight: bold;
   color: #ccc;
   border-bottom: 3px solid transparent;
   text-decoration: none;
   padding-bottom: 0.3em;
+  font-size: 0.9em;
 }
 
 body > header a:hover,
@@ -279,6 +246,14 @@ input:hover {
 body > header a svg {
   display: block;
   margin: 0.1em auto;
+}
+
+.theme input + label {
+  border-bottom: 3px solid transparent;
+}
+
+.theme input:checked + label {
+  border-bottom: 3px solid #ccc;
 }
 
 body > main,
@@ -315,10 +290,6 @@ body > footer img {
   width: 1em;
 }
 
-body > footer h2 {
-  display: none;
-}
-
 body > footer > ul >li > a > span {
   display: block;
   font-size: 0.8em;
@@ -337,11 +308,17 @@ body > footer > ul >li > a > span {
   margin: 0 0 0 0.1em;
 }
 
-.h-feed h1 {
+figcaption dt,
+body > svg,
+body > script,
+body > footer h2,
+.h-feed h1,
+.theme,
+.theme input {
   display: none;
 }
 
-@media all and (min-width: 56em) {
+@media all and (min-width: 58em) {
   body > header {
     text-align: unset;
     display: flex;
@@ -356,4 +333,10 @@ body > footer > ul >li > a > span {
   body > header a svg {
     display: inline-block;
   }
-}    
+  
+ 
+  body > header form {
+    padding: 0.3em;
+  }
+
+}                    
