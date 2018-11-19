@@ -23,7 +23,7 @@
 </head>
 <body itemscope="" itemtype="http://schema.org/Blog http://schema.org/WebPage">
 
-{% macro activemenu(name) %}{% if (post is defined and post.category ==  name ) or ( category is defined and category.name == name ) %}active{% endif %}{% endmacro %}
+{% macro activemenu(name) %}{% if (post is defined and post.slug ==  name ) or (post is defined and post.category ==  name ) or ( category is defined and category.name == name ) %}active{% endif %}{% endmacro %}
 
 <header>
     <nav>
@@ -59,7 +59,7 @@
                 </a>
             </li>
             <li>
-                <a title="follow petermolnar.net" href="{{ site.url }}/follow/">
+                <a title="follow petermolnar.net" href="{{ site.url }}/follow/" class="{{ activemenu('follow') }}">
                     <svg width="16" height="16"><use xlink:href="#icon-feed" /></svg>
                     follow
                 </a>

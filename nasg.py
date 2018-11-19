@@ -150,7 +150,7 @@ class Webmention(object):
     def save(self, content):
         writepath(self.fpath, content)
 
-    def send(self):
+    async def send(self):
         if self.exists:
             return
         telegraph_url = 'https://telegraph.p3k.io/webmention'
@@ -1012,8 +1012,7 @@ class AsyncWorker(object):
         self._loop = asyncio.get_event_loop()
 
     def add(self, job):
-        #task = self._loop.create_task(job)
-        self._tasks.append(asyncio.ensure_future(job))
+        self._tasks.append(job)
 
     def run(self):
         self._loop.run_until_complete(asyncio.wait(self._tasks))
@@ -1740,7 +1739,7 @@ def make():
 
     content = settings.paths.get('content')
     worker = AsyncWorker()
-    webmentions = []
+    webmentions = AsyncWorker()
     rules = IndexPHP()
 
     micropub = MicropubPHP()
@@ -1759,7 +1758,7 @@ def make():
         for i in post.images.values():
             worker.add(i.downsize())
         for i in post.to_ping:
-            webmentions.append(i)
+            webmentions.add(i.send())
 
         worker.add(post.render())
         worker.add(post.copyfiles())
@@ -1837,12 +1836,10 @@ def make():
         )
         logger.info('syncing finished')
 
+
+
         logger.info('sending webmentions')
-        try:
-            for i in webmentions:
-                i.send()
-        except Exception as e:
-            logger.error('failed to send webmentions - are we offline?')
+        webmentions.run()
         logger.info('sending webmentions finished')
 
 

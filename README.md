@@ -1,70 +1,68 @@
 # NASG - not another static generator...
 
-## Near full circle: from static to full dynamic to semi-static
+Nearly 20 years ago I did my very first website with a thing called Microsoft FrontPage. I loved it. Times changed, and I wrote a CMS in PHP, first with flat files, then with MySQL, then moved on to WordPress. 
 
-Nearly 20 years ago I did my very first website with a thing called Microsoft FrontPage. I was static, but assembled from footer, nav, etc. html parts by FrontPage, then uploaded to a free webhost, and I was very happy with it: it was extremely simple to edit and to maintain.
+Now I'm back on a static generator. I love it.
 
-Years passed and first I wrote a CMS that used text files as storage, based on a PHP library that stored serialized objects in text files - basically JSON, before JSON even existed. Then I moved to MySQL, then dropped the whole thing for WordPress, which I loved, up until Gutenberg was announced, at which point I realized how nastily I tinkered and altered my WordPress already to use it with Markdown, to make image and handling a tiny bit better, etc.
+**WARNING: this is a personal project, scratching my itches. No warranties. If you want to deploy it on your own, feel free to, but not all the things are documented.**
 
-So I dropped it and make a static generator, only to realize, there are things I can't make static. At that point - 2017 -, these were:
+## ## What does it do
 
-- search
-- proper redirect and gone entry handling (you can't set HTTP headers from a HTML file)
-- receiving webmentions
+- content is structured in folders
+- content files are YAML frontmatter + Multimarkdown
+- EXIF from images are read via [exiftool](https://www.sno.phy.queensu.ca/~phil/exiftool/) _this is an external dependency_
+- Markdown is converted with [pandoc](https://pandoc.org/) _this is an external dependency_
 
-Because I wanted to learn Python, the static generator is coded in Python, so I decided to run a Python web service with Sanic. It took me 3 iterations to realize, I'm doing it wrong, because the one and only thing that is available on nearly any webhost - think of plain old Apache - is PHP.
+How it works
 
-So the abomination I'm doing right now is to generate some near-static PHP files from the Python code which handles:
+- pulls in webmentions from https://webmention.io and stores them in .md files next to the index.md of a post (see later) as: `[unix epoch]-[slugified source url].md`
+- pulls in micropub from the queue received by the micropub receiver PHP (see later)
+- finds 'redirect' files:
+    - anything with a `.url` extension
+    - content is the URL to redirect to
+    - filename without extension is the slug to redirect from
+    - for `HTTP 302` 
+- finds 'gone' files:
 
-- search
-  still with SQLite, but due to PHP versions, with FTS4 instead of FTS5; populated from Python, read by PHP
-- gone (HTTP 410) and redirect (HTTP 301)
+    - anything with a `.del` extension
+    - filename without extension is the slug deleted
+    - for `HTTP 410` 
+- finds content:
 
-As for webmentions, as much as I try avoiding external dependencies, I came to realize a very simple fact: webmentions are external as well. So I started using [webmention.io](http://webmention.io) to receive them and query it on build time.
-
-## Now, about that the generator itself
-
-The content is [StriclYAML](https://github.com/crdoconnor/strictyaml) + [MultiMarkdown](http://fletcherpenney.net/multimarkdown/features/). Except [exiftool](https://www.sno.phy.queensu.ca/~phil/exiftool/), there are no non-python dependencies any more, but `exiftool` is the only thing that parses lends data for photos.
-
-Python libraries used:
-
-- [arrow](https://arrow.readthedocs.io/en/latest/)
-- [bleach](https://github.com/mozilla/bleach)
-- [emoji](https://github.com/carpedm20/emoji/)
-- [feedgen](https://github.com/lkiesow/python-feedgen)
-- [Jinja2](http://jinja.pocoo.org/)
-- [langdetect](https://github.com/Mimino666/langdetect)
-- [Markdown](https://github.com/Python-Markdown/markdown)
-- [markdown-urlize](https://github.com/r0wb0t/markdown-urlize)
-- [Pygments](http://pygments.org/)
-- [python-frontmatter](https://github.com/eyeseast/python-frontmatter)
-- [requests](http://docs.python-requests.org/en/master/)
-- [unicode-slugify](https://github.com/mozilla/unicode-slugify)
-- [Wand](http://docs.wand-py.org/en/0.4.4/)
-- ... and their dependencies
-
-Most of the processing relies on the structuring of my data:
-
-- whatever is not a directory in the root folder of the contents will be copied as is
-- directories mean category
-- 1 sub-directory per entry within the category, named as the post slug
-- index.md as main file
-- timestamp-sanitizedurl.md for webmentions and comments
-- if there is a .jpg, named the same as the post directory name, the post is a photo
-- all markdown image entries are replaced with `<figure>` with added visible exif data if they math the criterias that they are my photos, namely they match a regular expression in their exif Copyright or Artist field - this is produced by my camera
-- all images will be downsized and, if matched as photo, watermarked on build
+    - all `index.md` files
+    - corresponding comment `.md` file next to it
+    - the parent directory name is the post slug
+    - finds all images in the same directory (`.jpg`, `.png`, `.gif`)
+        - reads EXIF data into a hidden, `.[filename].json` file next to the original file
+        - generates downsized and watermarked images into the `build/post slug` directory
+        - if a `.jpg` if found with the same slug as the parent dir, the post will be a special photo post
+    - anything else in the same directory will be copies to `build/post slug`
+- send webmentions via https://telegraph.p3k.io/
 
 ```
 /
-├── about.html
+├── about.html -> will be copied
 ├── category-1
-│   ├── article-1
-│   │   └── index.md
-│   │   └── extra-file.mp4
-│   │   └── 1509233601-domaincomentrytitle.md
-│   ├── fancy-photo
-│   │   └── index.md
-│   │   └── fancy-photo.jpg
+│   ├── article-1 -> slug
+│   │   └── index.md -> content file
+│   │   └── extra-file.mp4 -> will be copied
+│   │   └── 1509233601-domaincomentrytitle.md -> comment
+│   ├── fancy-photo -> slug of photo post
+│   │   └── index.md -> content
+│   │   └── fancy-photo.jpg -> to downsize, watermark, get EXIF
 ```
 
-Mostly that's all.
+
+
+Special features:
+
+- complete `microformats2` and schema.org markup in templates
+- has light/dark theme, dark by default, but supports experimental prefers-color-scheme media query
+- generates 3 special PHP files:
+    - search - uses and SQLite DB which is populated by Python on build
+    - fallback - 404 handler to do redirects/gones, gets populated with an array of both
+    - micropub - a micropub endpoint that accepts micropub content and puts the incoming payload into a json file, nothing else
+
+## Why GPL
+
+Because I want believe.

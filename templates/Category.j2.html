@@ -101,6 +101,7 @@
 </main>
 {% endblock %}
 {% block pagination %}
+{% if category.display != 'flat' %}
 <nav>
     <ul>
         {% if category.previous %}
@@ -136,4 +137,5 @@
 
     </ul>
 </nav>
+{% endif %}
 {% endblock %}
