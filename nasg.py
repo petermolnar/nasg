@@ -67,12 +67,14 @@ RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
 
+
 def url2slug(url, limit=200):
     return slugify(
         re.sub(r"^https?://(?:www)?", "", url),
         only_ascii=True,
         lower=True
     )[:limit]
+
 
 def writepath(fpath, content, mtime=0):
     d = os.path.dirname(fpath)
@@ -88,8 +90,6 @@ def writepath(fpath, content, mtime=0):
     with open(fpath, mode) as f:
         logger.info('writing file %s', fpath)
         f.write(content)
-    # TODO
-    # if (mtime > 0):
 
 
 # def relurl(url,base=settings.site.get('url')):
@@ -102,6 +102,7 @@ def writepath(fpath, content, mtime=0):
     #base_dir='.%s' % (os.path.dirname(base.path))
     #url = '.%s' % (url.path)
     # return os.path.relpath(url,start=base_dir)
+
 
 class cached_property(object):
     """ extermely simple cached_property decorator:
@@ -1645,7 +1646,11 @@ def makecomments():
         if os.path.basename(e) == 'index.md':
             continue
         # filenames are like [received epoch]-[slugified source url].md
-        mtime = int(os.path.basename(e).split('-')[0])
+        try:
+            mtime = int(os.path.basename(e).split('-')[0])
+        except Exception as exc:
+            logger.error('int conversation failed: %s, file was: %s', exc, e)
+            continue
         if mtime > newest:
             newest = mtime
     newest = arrow.get(newest)
@@ -1666,6 +1671,7 @@ def makecomments():
     except ValueError as e:
         logger.error('failed to query webmention.io: %s', e)
         pass
+
 
 def makepost(fpath):
     try:
@@ -1726,6 +1732,7 @@ def makeposts():
         if makepost(js):
             os.unlink(js)
 
+
 def make():
     start = int(round(time.time() * 1000))
     last = 0
@@ -1733,7 +1740,7 @@ def make():
     try:
         makecomments()
     except Exception as e:
-        logger.error('failed to make comments - are we offline?')
+        logger.error('failed to make comments: %s', e)
 
     makeposts();
 
@@ -1810,6 +1817,8 @@ def make():
     staticfiles = []
     staticpaths = [
         os.path.join(content, '*.*'),
+        os.path.join(settings.paths.get('tmpl'), '*.css'),
+        os.path.join(settings.paths.get('tmpl'), '*.js'),
     ]
     for p in staticpaths:
         staticfiles = staticfiles + glob.glob(p)
@@ -1835,8 +1844,6 @@ def make():
             )
         )
         logger.info('syncing finished')
-
-
 
         logger.info('sending webmentions')
         webmentions.run()
