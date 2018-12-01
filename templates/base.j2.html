@@ -17,6 +17,9 @@
     <style id="css_alt" media="speech">
         {% include 'style-alt.css' %}
     </style>
+    <style id="css_kcl" media="speech">
+        {% include 'style-kcl.css' %}
+    </style>
     <style media="print">
         {% include 'style-print.css' %}
     </style>
@@ -72,10 +75,6 @@
             <svg width="16" height="16">
                 <use xlink:href="#icon-contrast"></use>
             </svg>
-            <span>
-                <input name="colorscheme" value="auto" id="autoscheme" type="radio">
-                <label for="autoscheme">auto</label>
-            </span>
             <span>
                 <input name="colorscheme" value="dark" id="darkscheme" type="radio">
                 <label for="darkscheme">dark</label>
@@ -272,6 +271,27 @@
         </section>
         {% endif %}
 
+        <section class="encourage">
+            <hr />
+            <h2>Encourage creation!</h2>
+            <p>If this entry helped you, or you simply liked it, leave a tip.</p>
+            <nav>
+                <ul>
+                    <li>
+                        <a rel="payment" href="https://paypal.me/petermolnar/3GBP">
+                        <svg width="16" height="16">
+                            <use xlink:href="#icon-paypal"></use>
+                        </svg> Paypal</a>
+                    </li>
+                    <li>
+                        <a rel="payment" href="https://monzo.me/petermolnar/3">
+                        <svg width="16" height="16">
+                            <use xlink:href="#icon-monzo"></use>
+                        </svg> Monzo (UK or Google Pay)</a>
+                    </li>
+                </ul>
+            </nav>
+        </section>
 
         {% if post.replies|length %}
         <section class="replies">
@@ -370,12 +390,11 @@
                 alt="Photo of {{ author.name }}"
                 itemprop="image url" />
             </span>
-            <a class="fn p-name url u-url u-uid" property="p-name u-url u-uid" rel="me" href="{{ site.url }}/about.html">
-                <span itemprop="name">{{ author.name }}</span>
-            </a>
-            <a class="u-email email" property="u-email" rel="me" href="mailto:{{ author.email }}">
-                <span itemprop="email">{{ author.email }}</span>
-            </a>
+            <a class="fn p-name url u-url u-uid" property="p-name u-url u-uid" rel="me" href="{{ site.url }}"><span itemprop="name">{{ author.name }}</span></a>
+            <!--
+            <a class="u-url" property="u-url" rel="me" href="{{ site.url }}/about.html">CV</a>
+            -->
+            <a class="u-email email" property="u-email" rel="me" href="mailto:{{ author.email }}"><span itemprop="email">{{ author.email }}</span></a>
         </p>
         <nav>
             <ul>
@@ -392,18 +411,6 @@
             </ul>
         </nav>
     </div>
-    <p>
-        Leave a tip!
-        <a rel="payment" href="{{ tips.paypal }}">
-            <svg width="16" height="16">
-                <use xlink:href="#icon-paypal"></use>
-            </svg> Paypal</a>
-        or
-        <a rel="payment" href="{{ tips.monzo }}">
-            <svg width="16" height="16">
-                <use xlink:href="#icon-monzo"></use>
-            </svg> Monzo</a> (UK only).
-    </p>
     <p>
         <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
             Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>

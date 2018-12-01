@@ -1,0 +1,34 @@
+main.photo {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+main.photo article {
+  max-width: 24em;
+  margin: 0.6em;
+  display: grid;
+  position: relative;
+}
+
+main.photo article figure {
+  margin: 0;
+  padding: 0;
+}
+
+main.photo article h2 {
+  margin: 0;
+  padding: 0.6em;
+  background: rgba(0,0,0,0.7);
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  text-align: center;  
+  
+}
+
+main.photo article figcaption,
+main.photo article p,
+main.photo article section {
+  display: none;
+}

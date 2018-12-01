@@ -31,7 +31,7 @@ from emoji import UNICODE_EMOJI
 from slugify import slugify
 import requests
 from pandoc import Pandoc
-from exiftool import Exif
+from exiftool import Exif, GoogleVision
 import settings
 import keys
 
@@ -716,6 +716,10 @@ class WebImage(object):
             return self.mdimg.match
         tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
         return tmpl.render(self.tmplvars)
+
+    @cached_property
+    def vision(self):
+        return GoogleVision(self.fpath, self.src)
 
     @cached_property
     def meta(self):
@@ -1737,12 +1741,12 @@ def make():
     start = int(round(time.time() * 1000))
     last = 0
 
-    try:
-        makecomments()
-    except Exception as e:
-        logger.error('failed to make comments: %s', e)
-
-    makeposts();
+    if not settings.args.get('nosync'):
+        try:
+            makecomments()
+        except Exception as e:
+            logger.error('failed to make comments: %s', e)
+        makeposts();
 
     content = settings.paths.get('content')
     worker = AsyncWorker()
@@ -1817,8 +1821,8 @@ def make():
     staticfiles = []
     staticpaths = [
         os.path.join(content, '*.*'),
-        os.path.join(settings.paths.get('tmpl'), '*.css'),
-        os.path.join(settings.paths.get('tmpl'), '*.js'),
+        #os.path.join(settings.paths.get('tmpl'), '*.css'),
+        #os.path.join(settings.paths.get('tmpl'), '*.js'),
     ]
     for p in staticpaths:
         staticfiles = staticfiles + glob.glob(p)

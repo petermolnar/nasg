@@ -23,28 +23,28 @@ function applyTheme(mode) {
 
 function setTheme(e) {
     var mode = e.target.value;
-    if (mode == 'auto') {
+    var mql = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
+    /* user wants == mql match => remove storage */
+    if ((mode == DEFAULT_THEME && !mql.matches) || (mode == ALT_THEME && mql.matches)) {
         localStorage.removeItem(STORAGE_KEY);
     }
     else {
         localStorage.setItem(STORAGE_KEY, mode);
     }
-    var e = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
-    autoTheme(e);
+    autoTheme(mql);
 }
 
 function autoTheme(e) {
+    var mode = DEFAULT_THEME;
     var current = localStorage.getItem(STORAGE_KEY);
-    var mode = 'auto';
-    var indicate = 'auto';
     if ( current != null) {
-        indicate = mode = current;
+        mode = current;
     }
     else if (e.matches) {
         mode = ALT_THEME;
     }
     applyTheme(mode);
-    indicateTheme(indicate);
+    indicateTheme(mode);
 }
 
 var mql = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
@@ -59,3 +59,21 @@ var themeforms = document.getElementsByClassName(STORAGE_KEY);
 for(var i = themeforms.length; i--; ) {
     themeforms[i].style.display = 'inline-block';
 }
+
+function kcl(cb) {
+  var input = '';
+  var key = '38384040373937396665';
+  document.addEventListener('keydown', function (e) {
+    input += ("" + e.keyCode);
+    if (input === key) {
+      return cb();
+    }
+    if (!key.indexOf(input)) return;
+    input = ("" + e.keyCode);
+  });
+}
+
+kcl(function () {
+    var st = document.getElementById('css_kcl');
+    st.setAttribute('media', 'all');
+})

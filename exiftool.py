@@ -2,22 +2,28 @@ import re
 import subprocess
 import json
 import os
+import keys
+import requests
+
+from pprint import pprint
 
 EXIFDATE = re.compile(
     r'^(?P<year>[0-9]{4}):(?P<month>[0-9]{2}):(?P<day>[0-9]{2})\s+'
     r'(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2})$'
 )
 
-class Exif(dict):
+class CachedMeta(dict):
     def __init__(self, fpath):
         self.fpath = fpath
-        self._read()
 
     @property
     def cfile(self):
         return os.path.join(
             os.path.dirname(self.fpath),
-            ".%s.json" % (os.path.basename(self.fpath))
+            ".%s.%s.json" % (
+                self.__class__.__name__,
+                os.path.basename(self.fpath)
+            )
         )
 
     @property
@@ -31,7 +37,7 @@ class Exif(dict):
 
     def _read(self):
         if not self._is_cached:
-            self._call_exiftool()
+            self._call_tool()
             self._cache_update()
         else:
             self._cache_read()
@@ -44,9 +50,65 @@ class Exif(dict):
         with open(self.cfile, 'rt') as f:
             data = json.loads(f.read())
             for k, v in data.items():
-                self[k] = self.exifdate2rfc(v)
+                self[k] = v
 
-    def _call_exiftool(self):
+class GoogleVision(CachedMeta):
+    def __init__(self, fpath, imgurl):
+        self.fpath = fpath
+        self.imgurl = imgurl
+        self._read()
+
+    @property
+    def cntr(self):
+        curr = 0
+        if os.path.exists('/tmp/visionapicallcounter'):
+            with open('/tmp/visionapicallcounter', 'rt') as f:
+                curr = int(f.read())
+        curr = curr + 1
+        with open('/tmp/visionapicallcounter', 'wt') as f:
+            f.write("%d" % curr)
+        return curr
+
+    def _call_tool(self):
+        if (self.cntr >= 500 ):
+            raise ValueError('already at 500 requests!')
+
+        params = {
+          "requests": [
+            {
+              "image": {
+                "source": {
+                  "imageUri": self.imgurl,
+                }
+              },
+              "features": [
+                {
+                  "type": "LANDMARK_DETECTION",
+                },
+                {
+                  "type": "LABEL_DETECTION",
+                },
+              ]
+            }
+          ]
+        }
+
+        url = "https://vision.googleapis.com/v1/images:annotate?key=%s" % (keys.gcloud.get('key'))
+        r = requests.post(url, json=params)
+        try:
+            resp = r.json()
+            resp = resp['responses'][0]
+            for k, v in resp.items():
+                self[k] = v
+        except Exception as e:
+            logging.error('failed to call Google Vision API on: %s, reason: %s', self.fpath, e)
+
+class Exif(CachedMeta):
+    def __init__(self, fpath):
+        self.fpath = fpath
+        self._read()
+
+    def _call_tool(self):
         """
         Why like this: the # on some of the params forces exiftool to
         display values like decimals, so the latitude / longitude params

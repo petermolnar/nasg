@@ -319,6 +319,19 @@ body > footer h2,
   display: none;
 }
 
+.encourage {
+  text-align: center;
+  padding-bottom: 2em;
+}
+
+.encourage h2 {
+  color: #080;
+}
+
+.encourage li {
+  margin: 0 0.6em;
+}
+
 @media all and (min-width: 58em) {
   body > header {
     text-align: unset;

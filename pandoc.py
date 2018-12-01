@@ -3,10 +3,6 @@ import logging
 
 class Pandoc(str):
    def __new__(cls, text):
-        # TODO: cache?
-        # import hashlib
-        # print(hashlib.md5("whatever your string is".encode('utf-8')).hexdigest())
-
         """ Pandoc command line call with piped in- and output """
         cmd = (
             'pandoc',
