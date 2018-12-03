@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-import _json
 
 __author__ = "Peter Molnar"
 __copyright__ = "Copyright 2017-2018, Peter Molnar"
-__license__ = "GNU LGPLv3 "
+__license__ = "apache-2.0"
 __maintainer__ = "Peter Molnar"
 __email__ = "mail@petermolnar.net"
 
