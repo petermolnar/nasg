@@ -34,14 +34,34 @@ class TestSingular(unittest.TestCase):
     def test_singular_tags(self):
         self.assertEqual(
             self.singular.tags,
-            ['Llyn Idwal', 'winter', 'spring', 'cloudy', 'Snowdonia', 'mountain', 'clouds', 'lake', 'mountains', 'snow', 'Wales', 'water']
+            [
+                'Llyn Idwal',
+                'winter',
+                'spring',
+                'cloudy',
+                'Snowdonia',
+                'mountain',
+                'clouds',
+                'lake',
+                'mountains',
+                'snow',
+                'Wales',
+                'water'
+            ]
         )
 
 class TestExiftool(unittest.TestCase):
     def test_exiftool(self):
-        with open('tests/.tests.jpg.json', 'rt') as expected:
+        if os.path.exists('tests/.Exif.tests.jpg.json'):
+            os.unlink('tests/.Exif.tests.jpg.json')
+        with open('tests/tests.jpg.json', 'rt') as expected:
             o = json.loads(expected.read())
         self.assertEqual(exiftool.Exif('tests/tests.jpg'), o)
+        self.assertTrue(os.path.exists('tests/.Exif.tests.jpg.json'))
+        self.assertTrue(
+            os.path.getmtime('tests/.Exif.tests.jpg.json') >
+            os.path.getmtime('tests/tests.jpg.json')
+        )
 
 class TestPandoc(unittest.TestCase):
     def test_pandoc(self):

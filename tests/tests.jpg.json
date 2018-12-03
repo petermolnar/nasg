@@ -8,7 +8,7 @@
     "ExposureTime": "1/320",
     "FNumber": 11.0,
     "FOV": "67.4 deg",
-    "FileName": "llyn-idwal.jpg",
+    "FileName": "tests.jpg",
     "FileSize": 29123,
     "FileType": "JPEG",
     "FocalLength": "18.0 mm",
@@ -25,5 +25,5 @@
     "Model": "PENTAX K-5 II s",
     "ModifyDate": "2016-05-01T00:08:24+00:00",
     "ReleaseDate": "2016-07-23T09:00:23+00:00",
-    "SourceFile": "tests/llyn-idwal.jpg"
+    "SourceFile": "tests/tests.jpg"
 }

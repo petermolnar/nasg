@@ -22,7 +22,6 @@ site = {
 categorydisplay = {
     'article': 'flat',
     'journal': 'flat',
-    'photo': 'gallery',
 }
 
 licence = {
