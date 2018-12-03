@@ -3,3 +3,5 @@ _scratch
 keys.py
 .idea
 lib
+gcloud.json
+tests/.Exif.tests.jpg.json
