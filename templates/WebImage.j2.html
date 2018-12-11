@@ -54,5 +54,12 @@
             </dd>
         </dl>
 {% endif %}
+{% if onlinecopies|length > 1 %}
+<ul>
+{% for copy in onlinecopies %}
+    <li><a href="{{ copy }}">[{{ loop.index }}]</a></li>
+{% endfor %}
+</ul>
+{% endif %}
     </figcaption>
 </figure>

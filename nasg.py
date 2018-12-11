@@ -30,7 +30,7 @@ from emoji import UNICODE_EMOJI
 from slugify import slugify
 import requests
 from pandoc import Pandoc
-from exiftool import Exif, GoogleVision
+from meta import Exif, GoogleVision, GoogleClassifyText
 import settings
 import keys
 
@@ -507,6 +507,16 @@ class Singular(MarkdownDoc):
         return lang
 
     @property
+    def classification(self):
+        c = GoogleClassifyText(self.fpath, self.content, self.lang)
+        k = '/Arts & Entertainment/Visual Art & Design/Photographic & Digital Arts'
+        if self.is_photo and k not in c.keys():
+            c.update({
+                k : '1.0'
+            })
+        return c
+
+    @property
     def url(self):
         return "%s/%s/" % (
             settings.site.get('url'),
@@ -578,6 +588,7 @@ class Singular(MarkdownDoc):
             'review': self.review,
             'has_code': self.has_code,
             'event': self.event,
+            'classification': self.classification.keys()
         }
         if (self.is_photo):
             v.update({
@@ -707,7 +718,8 @@ class WebImage(object):
             'caption': self.caption,
             'exif': self.exif,
             'is_photo': self.is_photo,
-            'is_mainimg': self.is_mainimg
+            'is_mainimg': self.is_mainimg,
+            'onlinecopies': self.onlinecopies
         }
 
     def __str__(self):
@@ -717,8 +729,16 @@ class WebImage(object):
         return tmpl.render(self.tmplvars)
 
     @cached_property
-    def vision(self):
+    def visionapi(self):
         return GoogleVision(self.fpath, self.src)
+
+    @property
+    def onlinecopies(self):
+        copies = {}
+        for m in self.visionapi.onlinecopies:
+            if settings.site.get('domain') not in m:
+                copies[m] = True
+        return copies.keys()
 
     @cached_property
     def meta(self):

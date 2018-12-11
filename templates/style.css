@@ -133,10 +133,20 @@ input {
   border-bottom: 3px solid #ccc;
 }
 
+figcaption > ul,
 nav ul {
   list-style-type: none;
   margin: 0;
   padding: 0;
+}
+
+figcaption > ul {
+  display:none;
+  text-align: right;
+}
+
+figcaption ul li {
+  display: inline-block;
 }
 
 nav li {

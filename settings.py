@@ -60,6 +60,7 @@ author = {
         'github': 'https://github.com/petermolnar',
         'instagram': 'https://www.instagram.com/petermolnarnet/',
         'twitter': 'https://twitter.com/petermolnar',
+        'micro.blog': 'https://micro.blog/petermolnar',
     }
 }
 

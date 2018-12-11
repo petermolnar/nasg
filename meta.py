@@ -10,6 +10,7 @@ import json
 import os
 import keys
 import requests
+import logging
 
 from pprint import pprint
 
@@ -58,6 +59,38 @@ class CachedMeta(dict):
             for k, v in data.items():
                 self[k] = v
 
+class GoogleClassifyText(CachedMeta):
+    def __init__(self, fpath, txt, lang='en'):
+        self.fpath = fpath
+        self.txt = txt
+        self.lang = lang
+        self._read()
+
+    def _call_tool(self):
+        params = {
+            "document": {
+                "type": "PLAIN_TEXT",
+                "content": self.txt,
+                "language": self.lang,
+            }
+        }
+
+        url = "https://language.googleapis.com/v1beta2/documents:classifyText?key=%s" % (
+            keys.gcloud.get('key')
+        )
+        logging.info('calling Google classidyText')
+        r = requests.post(url, json=params)
+        try:
+            resp = r.json()
+            for cat in resp.get('categories', []):
+                self[cat.get('name')] = cat.get('confidence')
+        except Exception as e:
+            logging.error(
+                'failed to call Google Vision API on: %s, reason: %s',
+                self.fpath,
+                e
+            )
+
 class GoogleVision(CachedMeta):
     def __init__(self, fpath, imgurl):
         self.fpath = fpath
@@ -65,49 +98,84 @@ class GoogleVision(CachedMeta):
         self._read()
 
     @property
-    def cntr(self):
-        curr = 0
-        if os.path.exists('/tmp/visionapicallcounter'):
-            with open('/tmp/visionapicallcounter', 'rt') as f:
-                curr = int(f.read())
-        curr = curr + 1
-        with open('/tmp/visionapicallcounter', 'wt') as f:
-            f.write("%d" % curr)
-        return curr
+    def response(self):
+        if 'responses' not in self:
+            return {}
+        if not len(self['responses']):
+            return {}
+        if 'labelAnnotations' not in self['responses'][0]:
+            return {}
+        return self['responses'][0]
+
+    @property
+    def tags(self):
+        tags = []
+
+        if 'labelAnnotations' in self.response:
+            for label in self.response['labelAnnotations']:
+                tags.append(label['description'])
+
+        if 'webDetection' in self.response:
+            if 'webEntities' in self.response['webDetection']:
+                for label in self.response['webDetection']['webEntities']:
+                    tags.append(label['description'])
+        return tags
+
+    @property
+    def landmark(self):
+        landmark = None
+        if 'landmarkAnnotations' in self.response:
+            if len(self.response['landmarkAnnotations']):
+                match = self.response['landmarkAnnotations'].pop()
+                landmark = {
+                    'name': match['description'],
+                    'latitude': match['locations'][0]['latLng']['latitude'],
+                    'longitude': match['locations'][0]['latLng']['longitude']
+                }
+        return landmark
+
+    @property
+    def onlinecopies(self):
+        copies = []
+        if 'webDetection' in self.response:
+            if 'pagesWithMatchingImages' in self.response['webDetection']:
+                for match in self.response['webDetection']['pagesWithMatchingImages']:
+                    copies.append(match['url'])
+        return copies
 
     def _call_tool(self):
-        if (self.cntr >= 500 ):
-            raise ValueError('already at 500 requests!')
-
         params = {
-          "requests": [
-            {
-              "image": {
-                "source": {
-                  "imageUri": self.imgurl,
-                }
-              },
-              "features": [
-                {
-                  "type": "LANDMARK_DETECTION",
-                },
-                {
-                  "type": "LABEL_DETECTION",
-                },
-              ]
-            }
-          ]
+            "requests": [{
+                "image": {"source": {"imageUri": self.imgurl}},
+                "features": [
+                    {
+                      "type": "LANDMARK_DETECTION",
+                    },
+                    {
+                      "type": "WEB_DETECTION",
+                    },
+                    {
+                      "type": "LABEL_DETECTION",
+                    }
+                ]
+            }]
         }
 
-        url = "https://vision.googleapis.com/v1/images:annotate?key=%s" % (keys.gcloud.get('key'))
+        url = "https://vision.googleapis.com/v1/images:annotate?key=%s" % (
+            keys.gcloud.get('key')
+        )
+        logging.info('calling Google Vision API for %s', self.fpath)
         r = requests.post(url, json=params)
         try:
             resp = r.json()
-            resp = resp['responses'][0]
             for k, v in resp.items():
                 self[k] = v
         except Exception as e:
-            logging.error('failed to call Google Vision API on: %s, reason: %s', self.fpath, e)
+            logging.error(
+                'failed to call Google Vision API on: %s, reason: %s',
+                self.fpath,
+                e
+            )
 
 class Exif(CachedMeta):
     def __init__(self, fpath):

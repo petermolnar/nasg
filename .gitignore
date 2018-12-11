@@ -5,4 +5,3 @@ keys.py
 lib
 gcloud.json
 tests/.Exif.tests.jpg.json
-Pipfile.lock

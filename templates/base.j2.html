@@ -218,6 +218,15 @@
                     </a>
                 </dd>
 
+                <dt>Classification</dt>
+                <dd>
+                    <ul>
+                    {% for c in post.classification %}
+                        <li>{{ c }}</li>
+                    {% endfor %}
+                    </ul>
+                </dd>
+
                 <dt>License</dt>
                 <dd class="license">
                 {% if post.licence == 'CC-BY-4.0' %}
