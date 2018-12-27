@@ -17,9 +17,6 @@
     <style id="css_alt" media="speech">
         {% include 'style-alt.css' %}
     </style>
-    <style id="css_kcl" media="speech">
-        {% include 'style-kcl.css' %}
-    </style>
     <style media="print">
         {% include 'style-print.css' %}
     </style>
@@ -67,6 +64,14 @@
                     follow
                 </a>
             </li>
+            <!--
+            <li>
+                <a title="websites I read" href="{{ site.url }}/following.opml">
+                    <svg width="16" height="16"><use xlink:href="#icon-people" /></svg>
+                    following
+                </a>
+            </li>
+            -->
         </ul>
     </nav>
 
@@ -84,12 +89,15 @@
                 <label for="lightscheme">light</label>
             </span>
         </form>
-
         <form role="search" method="get" action="{{ site.url }}/search.php">
+            <label for="qsub">
+                <input type="submit" value="search" id="qsub" name="qsub" />
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-search"></use>
+                </svg>
+            </label>
             <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
-            <input type="submit" value="➡" />
         </form>
-
     </div>
 </header>
 
@@ -99,7 +107,7 @@
 {% else %}
     {% set mftype = 'h-entry' %}
 {% endif %}
-<main>
+<main role="main">
     <article class="{{ mftype }} hentry singular" lang="{{ post.lang }}" property="{{ mftype }}" itemscope="" itemprop="blogPost" itemtype="http://schema.org/BlogPosting" itemref="author">
         <header>
             <h1 class="entry-title p-name" itemprop="name headline" property="p-name">
@@ -177,16 +185,6 @@
                 </dd>
                 {% endif %}
 
-
-                <dt>Published</dt>
-                <dd class="published updated">
-                    <time class="dt-published dt-updated"
-                        property="dt-published dt-updated"
-                        datetime="{{ post.pubtime }}"
-                        itemprop="dateModified datePublished"
-                    >{{ post.pubdate }}</time>
-                </dd>
-
                 <dt>Author</dt>
                 <dd>
                     <p class="p-author h-card vcard" property="p-author h-card" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -208,24 +206,15 @@
                     </p>
                 </dd>
 
-                <dt>Entry URL</dt>
-                <dd>
-                    {% if not post.has_mainimg %}
-                    <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image"  hidden="hidden" />
-                    {% endif %}
-                    <a class="u-url u-uuid" property="u-url u-uuid" rel="bookmark" href="{{ post.url }}" itemprop="url mainEntityOfPage">
-                        {{ post.url }}
-                    </a>
+                <dt>Published</dt>
+                <dd class="published updated">
+                    <time class="dt-published dt-updated"
+                        property="dt-published dt-updated"
+                        datetime="{{ post.pubtime }}"
+                        itemprop="dateModified datePublished"
+                    >{{ post.pubdate }}</time>
                 </dd>
 
-                <dt>Classification</dt>
-                <dd>
-                    <ul>
-                    {% for c in post.classification %}
-                        <li>{{ c }}</li>
-                    {% endfor %}
-                    </ul>
-                </dd>
 
                 <dt>License</dt>
                 <dd class="license">
@@ -261,6 +250,27 @@
                 {% endif %}
                 </dd>
 
+                <dt>Entry URL</dt>
+                <dd>
+                    {% if not post.has_mainimg %}
+                    <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image"  hidden="hidden" />
+                    {% endif %}
+                    <a class="u-url u-uuid" property="u-url u-uuid" rel="bookmark" href="{{ post.url }}" itemprop="url mainEntityOfPage">
+                        {{ post.url }}
+                    </a>
+                </dd>
+
+                <!--
+                <dt>Classification</dt>
+                <dd>
+                    <ul>
+                    {% for c in post.classification %}
+                        <li>{{ c }}</li>
+                    {% endfor %}
+                    </ul>
+                </dd>
+                -->
+
             </dl>
             <p aria-hidden="true" hidden="hidden" itemprop="publisher" itemscope="" itemtype="https://schema.org/Organization">
                 <span itemprop="name">{{ site.domain }}</span>
@@ -271,7 +281,7 @@
             </p>
         </footer>
 
-
+    {% if not post.is_page %}
         {% if post.syndicate|length %}
         <section class="syndication">
             {% for url in post.syndicate %}
@@ -378,6 +388,7 @@
         </section>
         {% endif %}
 
+    {% endif %}
     </article>
 </main>
 
@@ -387,44 +398,74 @@
 {% endblock %}
 
 
-<footer>
-    <div class="p-author h-card vcard" property="p-author h-card" id="author" itemprop="author publisher" itemscope="" itemtype="https://schema.org/Person https://schema.org/Organization">
-        <p>
-            <a href="https://creativecommons.org/">CC</a>,
-            1999-2018,
-            <span itemprop="logo" itemscope="" itemtype="https://schema.org/ImageObject">
-            <img class="photo avatar u-photo u-avatar"
-                property="u-photo u-avatar"
-                src="{{ author.avatar }}"
-                alt="Photo of {{ author.name }}"
-                itemprop="image url" />
-            </span>
-            <a class="fn p-name url u-url u-uid" property="p-name u-url u-uid" rel="me" href="{{ site.url }}"><span itemprop="name">{{ author.name }}</span></a>
-            <!--
-            <a class="u-url" property="u-url" rel="me" href="{{ site.url }}/about.html">CV</a>
-            -->
-            <a class="u-email email" property="u-email" rel="me" href="mailto:{{ author.email }}"><span itemprop="email">{{ author.email }}</span></a>
-        </p>
+<footer class="p-author h-card vcard" property="p-author h-card" id="author" itemprop="author publisher" itemscope="" itemtype="https://schema.org/Person https://schema.org/Organization">
+    <div>
+        <section>
+            <p>
+                <a href="https://creativecommons.org/">CC</a>,
+                1999-2018,
+                <span itemprop="logo" itemscope="" itemtype="https://schema.org/ImageObject">
+                <img class="photo avatar u-photo u-avatar"
+                    property="u-photo u-avatar"
+                    src="{{ author.avatar }}"
+                    alt="Photo of {{ author.name }}"
+                    itemprop="image url" />
+                </span>
+                <a class="fn p-name url u-url u-uid" property="p-name u-url u-uid" rel="me" href="{{ site.url }}"><span itemprop="name">{{ author.name }}</span></a>
+            </p>
+            <nav>
+                <ul>
+                    <li>
+                        <a title="CV" href="{{ site.url }}/about/">
+                            <svg width="16" height="16"><use xlink:href="#icon-me" /></svg>
+                            about me
+                        </a>
+                    </li>
+                    <li>
+                        <a title="following" href="{{ site.url }}/following.opml">
+                            <svg width="16" height="16"><use xlink:href="#icon-following" /></svg>
+                            followings
+                        </a>
+                    </li>
+                    <li>
+                        <a title="CV" href="{{ site.url }}/cv.html">
+                            <svg width="16" height="16"><use xlink:href="#icon-resume" /></svg>
+                            resume
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <p>
+                <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
+                    Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
+                <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
+            </p>
+        </section>
         <nav>
-            <ul>
-            {% for name, value in author.contact.items() %}
-                <li>
+            <dl>
+                <dt>email</dt>
+                <dd>
+                    <a class="u-email email" property="u-email" rel="me" href="mailto:{{ author.email }}">
+                        <svg width="16" height="16">
+                            <use xlink:href="#icon-mail"></use>
+                        </svg>
+                        <span itemprop="email">{{ author.email }}</span>
+                    </a>
+                </dd>
+                {% for name, value in author.contact.items() %}
+                <dt>{{ name }}</dt>
+                <dd>
                     <a class="url u-url x-{{name}}" property="u-url x-{{name}}" rel="me" href="{{ value }}" itemprop="sameAs">
                         <svg width="16" height="16">
                             <use xlink:href="#icon-{{ name }}"></use>
                         </svg>
-                        {{ name }}
+                        <span>{{ value }}</span>
                     </a>
-                </li>
-            {% endfor %}
-            </ul>
+                </dd>
+                {% endfor %}
+            </dl>
         </nav>
     </div>
-    <p>
-        <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
-            Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
-        <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
-    </p>
 </footer>
 
 <script>

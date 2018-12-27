@@ -8,9 +8,10 @@ import re
 import subprocess
 import json
 import os
-import keys
-import requests
 import logging
+import requests
+import keys
+import settings
 
 from pprint import pprint
 
@@ -25,11 +26,15 @@ class CachedMeta(dict):
 
     @property
     def cfile(self):
+        fname = os.path.basename(self.fpath)
+        if fname  == 'index.md':
+            fname = os.path.basename(os.path.dirname(self.fpath))
+
         return os.path.join(
-            os.path.dirname(self.fpath),
-            ".%s.%s.json" % (
+            settings.paths.get('tmp', 'tmp'),
+            "%s.%s.json" % (
+                fname,
                 self.__class__.__name__,
-                os.path.basename(self.fpath)
             )
         )
 
@@ -51,6 +56,11 @@ class CachedMeta(dict):
 
     def _cache_update(self):
         with open(self.cfile, 'wt') as f:
+            logging.debug(
+                "writing cached meta file of %s to %s",
+                self.fpath,
+                self.cfile
+            )
             f.write(json.dumps(self, indent=4, sort_keys=True))
 
     def _cache_read(self):
@@ -78,7 +88,10 @@ class GoogleClassifyText(CachedMeta):
         url = "https://language.googleapis.com/v1beta2/documents:classifyText?key=%s" % (
             keys.gcloud.get('key')
         )
-        logging.info('calling Google classidyText')
+        logging.info(
+            "calling Google classifyText for %s",
+            self.fpath
+        )
         r = requests.post(url, json=params)
         try:
             resp = r.json()
@@ -164,7 +177,10 @@ class GoogleVision(CachedMeta):
         url = "https://vision.googleapis.com/v1/images:annotate?key=%s" % (
             keys.gcloud.get('key')
         )
-        logging.info('calling Google Vision API for %s', self.fpath)
+        logging.info(
+            "calling Google Vision for %s",
+            self.fpath
+        )
         r = requests.post(url, json=params)
         try:
             resp = r.json()

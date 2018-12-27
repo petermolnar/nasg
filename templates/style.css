@@ -16,6 +16,7 @@ body {
   color: #ccc;
   background-color: #222;
   line-height: 1.3em;
+  position: relative;
 }
 
 svg {
@@ -100,7 +101,6 @@ figure img {
 }
 
 figcaption dd, label {
-  font-size: 0.8em;
   display: inline-block;
   margin:0.3em 0.3em;
 }
@@ -131,6 +131,7 @@ input, button, label {
 
 input {
   border-bottom: 3px solid #ccc;
+  margin: 0 0 0 0.3em;
 }
 
 figcaption > ul,
@@ -156,7 +157,6 @@ nav li {
 
 code, pre, q, figcaption {
   font-family: monospace;
-  font-size: 1em;
 }
 
 code, pre {
@@ -182,7 +182,7 @@ pre > code {
   border: none;
 }
 
-pre> code::before {
+pre > code::before {
   content: attr(lang);
   float: right;
   color: #999;
@@ -214,17 +214,9 @@ th, tr:nth-child(even) {
 
 body > header,
 body > footer {
-  text-align: center;
   padding: 0.6em 0.6em;
   background-color: #111;
-}
-
-body > header p {
-  font-size: 0.8em;
-}
-
-body > header {
-  position: relative;
+  text-align: center;
 }
 
 body > header nav {
@@ -232,9 +224,10 @@ body > header nav {
 }
 
 body > header form {
-  padding: 0.6em;
   color: #ccc;
   display: inline-block;
+  margin: 0.6em 0 0 0;
+  padding-left: 0.6em;
 }
 
 body > header a {
@@ -243,7 +236,6 @@ body > header a {
   border-bottom: 3px solid transparent;
   text-decoration: none;
   padding-bottom: 0.3em;
-  font-size: 0.9em;
 }
 
 body > header a:hover,
@@ -265,6 +257,10 @@ body > header a svg {
 
 .theme input:checked + label {
   border-bottom: 3px solid #ccc;
+}
+
+input[type=submit] {
+  display: none;
 }
 
 body > main,
@@ -291,19 +287,29 @@ body > nav .current {
   color: #999;
 }
 
+
 body > footer {
-  text-align: center;
   color: #ccc;
-  font-family: monospace;
 }
 
 body > footer img {
   width: 1em;
 }
 
-body > footer > ul >li > a > span {
-  display: block;
-  font-size: 0.8em;
+
+body > footer dt {
+  display: none;
+}
+
+body > footer > div > * {
+  font-family: monospace;
+  font-size: 1.1em;
+}
+
+body > footer > div > nav {
+  text-align: left;
+  display: inline-block;
+  margin: 0 auto;
 }
 
 .footnotes a {
@@ -343,24 +349,28 @@ body > footer h2,
 }
 
 @media all and (min-width: 58em) {
-  body > header {
-    text-align: unset;
+  body > header,
+  body > footer > div {
+    text-align: left;
     display: flex;
     justify-content:space-between;
   }
 
-  body > header p {
-    display: inline-block;
+  body > header form,
+  body > footer > div > nav {
     margin: 0;
   }
 
   body > header a svg {
     display: inline-block;
+    vertical-align: top;
   }
-
-
-  body > header form {
-    padding: 0.3em;
-  }
-
 }
+
+body > img {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 10em;
+  height: auto;
+}                                

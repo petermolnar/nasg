@@ -53,20 +53,17 @@ author = {
     'gpg': 'https://petermolnar.net/pgp.asc',
     'cv': 'https://petermolnar.net/about.html',
     'contact': {
-        'xmpp': 'xmpp:mail@petermolnar.net',
-        'tumblr': 'https://petermolnarnet.tumblr.com/',
-        'wordpress': 'https://petermolnareu.wordpress.com/',
+        'xmpp': 'xmpp:mail@petermolnar.net?message',
         'flickr': 'https://flickr.com/people/petermolnareu',
         'github': 'https://github.com/petermolnar',
-        'instagram': 'https://www.instagram.com/petermolnarnet/',
-        'twitter': 'https://twitter.com/petermolnar',
-        'micro.blog': 'https://micro.blog/petermolnar',
+        'whatsapp': 'https://wa.me/447592011721',
+        'telegram': 'https://t.me/petermolnar',
     }
 }
 
 paths = {
     'content': os.path.join(base, 'content'),
-    'webmentions': os.path.join(base, 'content', 'webmentions'),
+    #'webmentions': os.path.join(base, 'content', 'webmentions'),
     'tmpl': os.path.join(base, 'nasg', 'templates'),
     'watermark': os.path.join(base, 'nasg', 'templates', 'watermark.png'),
     'build': os.path.join(base, 'www'),
@@ -74,6 +71,7 @@ paths = {
     'remotewww': 'web',
     'remotequeue': 'queue',
     'micropub': os.path.join(base, 'content', 'note'),
+    'tmp': os.path.join(base, 'tmp'),
 }
 
 photo = {

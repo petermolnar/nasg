@@ -14,6 +14,7 @@ import imghdr
 import asyncio
 import sqlite3
 import json
+import queue
 from shutil import copy2 as cp
 from math import ceil
 from urllib.parse import urlparse
@@ -91,18 +92,6 @@ def writepath(fpath, content, mtime=0):
         f.write(content)
 
 
-# def relurl(url,base=settings.site.get('url')):
-    #url =urlparse(url)
-    #base = urlparse(base)
-
-    # if base.netloc != url.netloc:
-        #raise ValueError('target and base netlocs do not match')
-
-    #base_dir='.%s' % (os.path.dirname(base.path))
-    #url = '.%s' % (url.path)
-    # return os.path.relpath(url,start=base_dir)
-
-
 class cached_property(object):
     """ extermely simple cached_property decorator:
     whenever something is called as @cached_property, on first run, the
@@ -122,19 +111,38 @@ class cached_property(object):
         return result
 
 
+class AQ:
+    def __init__(self):
+        self.loop = asyncio.get_event_loop()
+        self.queue = asyncio.Queue(loop=self.loop)
+
+    def put(self, task):
+        self.queue.put(asyncio.ensure_future(task))
+
+    async def consume(self):
+        while not self.queue.empty():
+            item = await self.queue.get()
+            self.queue.task_done()
+        #asyncio.gather() ?
+
+    def run(self):
+        consumer = asyncio.ensure_future(self.consume())
+        self.loop.run_until_complete(consumer)
+
+
 class Webmention(object):
-    def __init__(self, source, target, stime):
-        self.source = source
-        self.target = target
-        self.stime = stime
+    def __init__(self, parent):
+        self.dpath = os.path.dirname(parent.fpath)
+        self.source = parent.url
+        self.target = parent.is_reply
+        self.mtime = parent.mtime
 
     @property
     def fpath(self):
         return os.path.join(
-            settings.paths.get('webmentions'),
-            '%s => %s.txt' % (
-                url2slug(self.source, 100),
-                url2slug(self.target, 100)
+            self.dpath,
+            '%s.ping' % (
+                url2slug(self.target, 200)
             )
         )
 
@@ -142,7 +150,7 @@ class Webmention(object):
     def exists(self):
         if not os.path.isfile(self.fpath):
             return False
-        elif os.path.getmtime(self.fpath) > self.stime:
+        elif os.path.getmtime(self.fpath) > self.mtime:
             return True
         else:
             return False
@@ -333,7 +341,12 @@ class Singular(MarkdownDoc):
         return [
             k
             for k in glob.glob(os.path.join(os.path.dirname(self.fpath), '*.*'))
-            if not k.endswith('.md') and not k.startswith('.')
+            if
+                not k.startswith('.')
+                and not k.endswith('.md')
+                and not k.endswith('.ping')
+                and not k.endswith('.url')
+                and not k.endswith('.del')
         ]
 
     @cached_property
@@ -372,6 +385,12 @@ class Singular(MarkdownDoc):
                 if imghdr.what(imgpath):
                     images.update({match: WebImage(imgpath, mdimg, self)})
         return images
+
+    @property
+    def is_page(self):
+        if self.category.startswith('_'):
+            return True
+        return False
 
     @property
     def is_front(self):
@@ -484,7 +503,7 @@ class Singular(MarkdownDoc):
     def to_ping(self):
         urls = []
         if self.is_reply:
-            w = Webmention(self.url, self.is_reply, self.mtime)
+            w = Webmention(self)
             urls.append(w)
         return urls
 
@@ -573,6 +592,7 @@ class Singular(MarkdownDoc):
             'lang': self.lang,
             'slug': self.name,
             'is_reply': self.is_reply,
+            'is_page': self.is_page,
             'summary': self.summary,
             'html_summary': self.html_summary,
             'html_content': self.html_content,
@@ -646,7 +666,7 @@ class Singular(MarkdownDoc):
         ])
 
     async def copyfiles(self):
-        exclude = ['.md', '.jpg', '.png', '.gif']
+        exclude = ['.md', '.jpg', '.png', '.gif', '.ping']
         files = glob.glob(os.path.join(
             os.path.dirname(self.fpath),
             '*.*'
@@ -1030,18 +1050,6 @@ class WebImage(object):
                     thumb.save(file=f)
 
 
-class AsyncWorker(object):
-    def __init__(self):
-        self._tasks = []
-        self._loop = asyncio.get_event_loop()
-
-    def add(self, job):
-        self._tasks.append(job)
-
-    def run(self):
-        self._loop.run_until_complete(asyncio.wait(self._tasks))
-
-
 class PHPFile(object):
     @property
     def exists(self):
@@ -1125,16 +1133,16 @@ class Search(PHPFile):
             ret = int(maybe[0])
         return ret
 
-    def append(self, url, mtime, name, title, category, content):
-        mtime = int(mtime)
-        check = self.check(name)
+    def append(self, post):
+        mtime = int(post.mtime)
+        check = self.check(post.name)
         if (check and check < mtime):
             self.db.execute('''
             DELETE
             FROM
                 data
             WHERE
-                name=?''', (name,))
+                name=?''', (post.name,))
             check = False
         if not check:
             self.db.execute('''
@@ -1144,12 +1152,12 @@ class Search(PHPFile):
                 VALUES
                     (?,?,?,?,?,?);
             ''', (
-                url,
+                post.url,
                 mtime,
-                name,
-                title,
-                category,
-                content
+                post.name,
+                post.title,
+                post.category,
+                post.content
             ))
             self.is_changed = True
 
@@ -1600,6 +1608,9 @@ class Sitemap(dict):
             r = os.path.getmtime(self.renderfile)
         return r
 
+    def append(self, post):
+        self[post.url] = post.mtime
+
     @property
     def renderfile(self):
         return os.path.join(settings.paths.get('build'), 'sitemap.txt')
@@ -1611,245 +1622,194 @@ class Sitemap(dict):
             f.write("\n".join(sorted(self.keys())))
 
 
-def makecomment(webmention):
-    if 'published_ts' in webmention.get('data'):
-        maybe = webmention.get('data').get('published')
-        if not maybe or maybe == 'None':
-            dt = arrow.get(webmention.get('verified_date'))
-        else:
-            dt = arrow.get(webmention.get('data').get('published'))
+class WebmentionIO(object):
+    def __init__(self):
+        self.params = {
+            'token': '%s' % (keys.webmentionio.get('token')),
+            'since': '%s' % self.since.format(settings.dateformat.get('iso')),
+            'domain': '%s' % (keys.webmentionio.get('domain'))
+        }
+        self.url = 'https://webmention.io/api/mentions'
 
-    slug = webmention.get('target').strip('/').split('/')[-1]
-    if slug == settings.site.get('domain'):
-        return
+    @property
+    def since(self):
+        newest = 0
+        content = settings.paths.get('content')
+        for e in glob.glob(os.path.join(content, '*', '*', '*.md')):
+            if os.path.basename(e) == 'index.md':
+                continue
+            # filenames are like [received epoch]-[slugified source url].md
+            try:
+                mtime = int(os.path.basename(e).split('-')[0])
+            except Exception as exc:
+                logger.error(
+                    'int conversation failed: %s, file was: %s',
+                    exc,
+                    e
+                )
+                continue
+            if mtime > newest:
+                newest = mtime
+        return arrow.get(newest+1)
 
-    fdir = glob.glob(os.path.join(settings.paths.get('content'), '*', slug))
-    if not len(fdir):
-        logger.error(
-            "couldn't find post for incoming webmention: %s",
-            webmention
+    def makecomment(self, webmention):
+        if 'published_ts' in webmention.get('data'):
+            maybe = webmention.get('data').get('published')
+            if not maybe or maybe == 'None':
+                dt = arrow.get(webmention.get('verified_date'))
+            else:
+                dt = arrow.get(webmention.get('data').get('published'))
+
+        slug = webmention.get('target').strip('/').split('/')[-1]
+        # ignore selfpings
+        if slug == settings.site.get('domain'):
+            return
+
+        fdir = glob.glob(os.path.join(settings.paths.get('content'), '*', slug))
+        if not len(fdir):
+            logger.error(
+                "couldn't find post for incoming webmention: %s",
+                webmention
+            )
+            return
+        elif len(fdir) > 1:
+            logger.error(
+                "multiple posts found for incoming webmention: %s",
+                webmention
+            )
+            return
+
+        fdir = fdir.pop()
+        fpath = os.path.join(
+            fdir,
+            "%d-%s.md" % (
+                dt.timestamp,
+                url2slug(webmention.get('source'))
+            )
         )
-        return
-    elif len(fdir) > 1:
-        logger.error(
-            "multiple posts found for incoming webmention: %s",
-            webmention
-        )
-        return
-
-    fdir = fdir.pop()
-    fpath = os.path.join(
-        fdir,
-        "%d-%s.md" % (
-            dt.timestamp,
-            url2slug(webmention.get('source'))
-        )
-    )
-
-    fm = frontmatter.loads('')
-    fm.metadata = {
-        'author': webmention.get('data').get('author'),
-        'date': dt.format(settings.dateformat.get('iso')),
-        'source': webmention.get('source'),
-        'target': webmention.get('target'),
-        'type': webmention.get('activity').get('type', 'webmention')
-    }
-    c = webmention.get('data').get('content')
-    if not c:
-        fm.content = ''
-    else:
-        fm.content = c
-    writepath(fpath, frontmatter.dumps(fm))
-
-
-def makecomments():
-    newest = 0
-    content = settings.paths.get('content')
-    for e in glob.glob(os.path.join(content, '*', '*', '*.md')):
-        if os.path.basename(e) == 'index.md':
-            continue
-        # filenames are like [received epoch]-[slugified source url].md
-        try:
-            mtime = int(os.path.basename(e).split('-')[0])
-        except Exception as exc:
-            logger.error('int conversation failed: %s, file was: %s', exc, e)
-            continue
-        if mtime > newest:
-            newest = mtime
-    newest = arrow.get(newest)
-    wio_params = {
-        'token': '%s' % (keys.webmentionio.get('token')),
-        'since': '%s' % newest.format(settings.dateformat.get('iso')),
-        'domain': '%s' % (keys.webmentionio.get('domain'))
-    }
-    wio_url = "https://webmention.io/api/mentions"
-    webmentions = requests.get(wio_url, params=wio_params)
-    logger.info("queried webmention.io with: %s", webmentions.url)
-    if webmentions.status_code != requests.codes.ok:
-        return
-    try:
-        mentions = webmentions.json()
-        for webmention in mentions.get('links'):
-            makecomment(webmention)
-    except ValueError as e:
-        logger.error('failed to query webmention.io: %s', e)
-        pass
-
-
-def makepost(fpath):
-    try:
-        fname = os.path.basename(fpath)
-        mtime = arrow.get(fname.split('.')[0])
-        with open(fpath, 'r') as f:
-            payload = json.loads(f.read())
-            pprint(payload)
-            if 'content' not in payload:
-                logger.error('missing content from %s', fname)
-                return False
 
         fm = frontmatter.loads('')
         fm.metadata = {
-            'published': mtime.format(
-                settings.dateformat.get('iso')
-            ),
-            'tags': payload.get('category', [])
+            'author': webmention.get('data').get('author'),
+            'date': dt.format(settings.dateformat.get('iso')),
+            'source': webmention.get('source'),
+            'target': webmention.get('target'),
+            'type': webmention.get('activity').get('type', 'webmention')
         }
-        fm.content = payload.get('content')
-
-        for maybe in ['title', 'summary', 'in-reply-to']:
-            x = payload.get(maybe, None)
-            if x:
-                fm.metadata.update({maybe: x})
-
-        slug = payload.get('slug', '')
-        if not len(slug):
-            if 'in-reply-to' in fm.metadata:
-                slug = "re-%s" % (url2slug(fm.metadata.get('in-reply-to')))
-            else:
-                slug = mtime.format(settings.dateformat.get('fname'))
-
-        fpath = os.path.join(
-            settings.paths.get('micropub'),
-            slug,
-            'index.md'
-        )
+        c = webmention.get('data').get('content')
+        if not c:
+            fm.content = ''
+        else:
+            fm.content = c
         writepath(fpath, frontmatter.dumps(fm))
-        return True
-    except Exception as e:
-        logger.error('parsing entry at %s failed: %s', fpath, e)
-        return False
 
-
-def makeposts():
-    logger.info('getting micropub queue...')
-    os.system(
-        "rsync -avuhH --remove-source-files %s/ %s/" % (
-            '%s/%s' % (settings.syncserver, settings.paths.get('remotequeue')),
-            '%s' % (settings.paths.get('queue'))
-        )
-    )
-    logger.info('...done')
-
-    for js in glob.glob(os.path.join(settings.paths.get('queue'), '*.json')):
-        logging.info('processing micropub post %s', js)
-        if makepost(js):
-            os.unlink(js)
+    def run(self):
+        webmentions = requests.get(self.url, params=self.params)
+        logger.info("queried webmention.io with: %s", webmentions.url)
+        if webmentions.status_code != requests.codes.ok:
+            return
+        try:
+            mentions = webmentions.json()
+            for webmention in mentions.get('links'):
+                self.makecomment(webmention)
+        except ValueError as e:
+            logger.error('failed to query webmention.io: %s', e)
+            pass
 
 
 def make():
     start = int(round(time.time() * 1000))
     last = 0
 
+    # this needs to be before collecting the 'content' itself
     if not settings.args.get('nosync'):
-        try:
-            makecomments()
-        except Exception as e:
-            logger.error('failed to make comments: %s', e)
-        makeposts();
+        incoming = WebmentionIO()
+        incoming.run()
+
+    queue = AQ()
+    send = []
 
     content = settings.paths.get('content')
-    worker = AsyncWorker()
-    webmentions = AsyncWorker()
     rules = IndexPHP()
 
     micropub = MicropubPHP()
-    worker.add(micropub.render())
+    queue.put(micropub.render())
 
     webhook = WebhookPHP()
-    worker.add(webhook.render())
+    queue.put(webhook.render())
 
     sitemap = Sitemap()
     search = Search()
     categories = {}
-    categories['/'] = Category()
+    frontposts = Category()
+    categories['/'] = frontposts
 
     for e in sorted(glob.glob(os.path.join(content, '*', '*', 'index.md'))):
         post = Singular(e)
+        # deal with images, if needed
         for i in post.images.values():
-            worker.add(i.downsize())
+            queue.put(i.downsize())
         for i in post.to_ping:
-            webmentions.add(i.send())
+            send.append(i)
 
-        worker.add(post.render())
-        worker.add(post.copyfiles())
+        # render and arbitrary file copy tasks for this very post
+        queue.put(post.render())
+        queue.put(post.copyfiles())
+
+        # skip draft posts from anything further
         if post.is_future:
             continue
-        search.append(
-            url=post.url,
-            mtime=post.mtime,
-            name=post.name,
-            title=post.title,
-            category=post.category,
-            content=post.content
-        )
-        sitemap[post.url] = post.mtime
+
+        # add post to search database
+        search.append(post)
+
+        # start populating sitemap
+        sitemap.append(post)
+
+        # populate redirects, if any
         rules.add_redirect(post.shortslug, post.url)
-        if post.category.startswith('_'):
+
+        # any category starting with '_' are special: they shouldn't have a
+        # category archive page
+        if post.is_page:
             continue
+
+        # populate the category with the post
         if post.category not in categories:
             categories[post.category] = Category(post.category)
         categories[post.category][post.published.timestamp] = post
+
+        # add to front, if allowed
         if post.is_front:
-            categories['/'][post.published.timestamp] = post
-        if post.ctime > last:
-            last = post.ctime
+            frontposts[post.published.timestamp] = post
 
+    # commit to search database - this saves quite a few disk writes
     search.__exit__()
-    worker.add(search.render())
-    worker.add(sitemap.render())
 
+    # render search and sitemap
+    queue.put(search.render())
+    queue.put(sitemap.render())
+
+    # make gone and redirect arrays for PHP
     for e in glob.glob(os.path.join(content, '*', '*.del')):
         post = Gone(e)
-        if post.mtime > last:
-            last = post.mtime
         rules.add_gone(post.source)
     for e in glob.glob(os.path.join(content, '*', '*.url')):
         post = Redirect(e)
-        if post.mtime > last:
-            last = post.mtime
         rules.add_redirect(post.source, post.target)
-    worker.add(rules.render())
+    # render 404 fallback PHP
+    queue.put(rules.render())
 
+    # render categories
     for category in categories.values():
-        worker.add(category.render())
+        queue.put(category.render())
 
-    worker.run()
-    logger.info('worker finished')
+    # actually run all the render & copy tasks
+    queue.run()
 
-    # copy static
-    staticfiles = []
-    staticpaths = [
-        os.path.join(content, '*.*'),
-        #os.path.join(settings.paths.get('tmpl'), '*.css'),
-        #os.path.join(settings.paths.get('tmpl'), '*.js'),
-    ]
-    for p in staticpaths:
-        staticfiles = staticfiles + glob.glob(p)
-    for e in staticfiles:
-        t = os.path.join(
-            settings.paths.get('build'),
-            os.path.basename(e)
-        )
+    # copy static files
+    for e in glob.glob(os.path.join(content, '*.*')):
+        t = os.path.join(settings.paths.get('build'),os.path.basename(e))
         if os.path.exists(t) and os.path.getmtime(e) <= os.path.getmtime(t):
             continue
         cp(e, t)
@@ -1858,6 +1818,7 @@ def make():
     logger.info('process took %d ms' % (end - start))
 
     if not settings.args.get('nosync'):
+        # upload site
         logger.info('starting syncing')
         os.system(
             "rsync -avuhH --delete-after %s/ %s/" % (
@@ -1868,8 +1829,11 @@ def make():
         )
         logger.info('syncing finished')
 
+    if not settings.args.get('nosync'):
         logger.info('sending webmentions')
-        webmentions.run()
+        for wm in send:
+            queue.put(wm.send())
+        queue.run()
         logger.info('sending webmentions finished')
 
 

@@ -1,12 +1,12 @@
 # NASG - not another static generator...
 
-Nearly 20 years ago I did my very first website with a thing called Microsoft FrontPage. I loved it. Times changed, and I wrote a CMS in PHP, first with flat files, then with MySQL, then moved on to WordPress. 
+Nearly 20 years ago I did my very first website with a thing called Microsoft FrontPage. I loved it. Times changed, and I wrote a CMS in PHP, first with flat files, then with MySQL, then moved on to WordPress.
 
 Now I'm back on a static generator. I love it.
 
 **WARNING: this is a personal project, scratching my itches. No warranties. If you want to deploy it on your own, feel free to, but not all the things are documented.**
 
-## ## What does it do
+## What does it do
 
 - content is structured in folders
 - content files are YAML frontmatter + Multimarkdown
@@ -21,12 +21,12 @@ How it works
     - anything with a `.url` extension
     - content is the URL to redirect to
     - filename without extension is the slug to redirect from
-    - for `HTTP 302` 
+    - for `HTTP 302`
 - finds 'gone' files:
 
     - anything with a `.del` extension
     - filename without extension is the slug deleted
-    - for `HTTP 410` 
+    - for `HTTP 410`
 - finds content:
 
     - all `index.md` files
@@ -52,9 +52,7 @@ How it works
 │   │   └── fancy-photo.jpg -> to downsize, watermark, get EXIF
 ```
 
-
-
-Special features:
+## Special features
 
 - complete `microformats2` and schema.org markup in templates
 - has light/dark theme, dark by default, but supports experimental prefers-color-scheme media query
@@ -63,6 +61,11 @@ Special features:
     - fallback - 404 handler to do redirects/gones, gets populated with an array of both
     - micropub - a micropub endpoint that accepts micropub content and puts the incoming payload into a json file, nothing else
 
-## Why GPL
+## Functionalities based on file extensions/names
 
-Because I want believe.
+- **entry_name/index.md**: main entry (YAML + Multimarkdown)
+- **entry_name/entry_name.jpg**: photo of photo posts, only for photo posts
+- **entry_name/slufigiedtargeturl.ping**: outgoing webmentions
+- **entry_name/slugifiedsourceurl.md**: comments and incoming webmentions
+- **some_slug.del**: deleted slug, shall return 410
+- **another_slug.url**: redirection, contains redirect URL, shall return 301 or 302
