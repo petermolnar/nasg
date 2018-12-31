@@ -36,4 +36,18 @@ th, tr:nth-child(even) {
 
 pre> code::before {
   color: #444;
+}    
+
+body > header,
+body > footer {
+  background-color: #333
+}
+
+body > footer a {
+  color: #71B3F4;
+}
+
+body > footer a:hover {
+  color: #fff;
+  border-bottom: 1px solid #fff;
 }

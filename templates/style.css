@@ -4,17 +4,12 @@
   box-sizing: border-box;
 }
 
-html {
-  background-color: #111;
-  color: #bbb;
-}
-
 body {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
   color: #ccc;
-  background-color: #222;
+  background-color: #26272A;
   line-height: 1.3em;
   position: relative;
 }
@@ -22,13 +17,15 @@ body {
 svg {
   transform: rotate(0deg);
   fill: currentColor;
-  vertical-align: middle;
+  vertical-align:text-bottom;
 }
 
 a {
-  color: #5193D4;
+  color: #f90;
+  /*color: #5193D4;*/
   text-decoration: none;
   border-bottom: 1px solid transparent;
+  
 }
 
 a:hover {
@@ -217,6 +214,8 @@ body > footer {
   padding: 0.6em 0.6em;
   background-color: #111;
   text-align: center;
+/*background-color: #424747;
+  text-shadow: 1px 1px #222;*/
 }
 
 body > header nav {
@@ -263,11 +262,24 @@ input[type=submit] {
   display: none;
 }
 
+footer img {
+  width: 1em;
+}
+
 body > main,
 body > nav,
-body > footer > div {
+body > header > section,
+body > footer > section {
   max-width: 86ch;
   margin: 0 auto;
+  padding: 0 0.6em;
+}
+
+body > header > section > * {
+  font-size: 0.9em;
+}
+
+body > nav {
   padding: 0.6em;
 }
 
@@ -287,29 +299,21 @@ body > nav .current {
   color: #999;
 }
 
-
 body > footer {
   color: #ccc;
 }
 
-body > footer img {
-  width: 1em;
-}
-
-
-body > footer dt {
+body > footer li span {
   display: none;
 }
 
-body > footer > div > * {
+body > footer > section > * {
   font-family: monospace;
   font-size: 1.1em;
 }
 
-body > footer > div > nav {
-  text-align: left;
-  display: inline-block;
-  margin: 0 auto;
+body > footer nav {
+  margin: 1em 0;
 }
 
 .footnotes a {
@@ -325,16 +329,6 @@ body > footer > div > nav {
   margin: 0 0 0 0.1em;
 }
 
-figcaption dt,
-body > svg,
-body > script,
-body > footer h2,
-.h-feed h1,
-.theme,
-.theme input {
-  display: none;
-}
-
 .encourage {
   text-align: center;
   padding-bottom: 2em;
@@ -348,16 +342,29 @@ body > footer h2,
   margin: 0 0.6em;
 }
 
+.h-feed > article > footer {
+  display: none;
+}
+
+figcaption dt,
+body > svg,
+body > script,
+body > footer h2,
+.h-feed h1,
+.theme,
+.theme input {
+  display: none;
+}
 @media all and (min-width: 58em) {
-  body > header,
-  body > footer > div {
+  body > header > section,
+  body > footer > section {
     text-align: left;
     display: flex;
     justify-content:space-between;
   }
 
   body > header form,
-  body > footer > div > nav {
+  body > footer > section > nav {
     margin: 0;
   }
 
@@ -373,4 +380,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}                                
+}            

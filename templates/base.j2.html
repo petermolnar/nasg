@@ -26,79 +26,73 @@
 {% macro activemenu(name) %}{% if (post is defined and post.slug ==  name ) or (post is defined and post.category ==  name ) or ( category is defined and category.name == name ) %}active{% endif %}{% endmacro %}
 
 <header>
-    <nav>
-        <ul>
-            <li>
-                <a title="home" href="{{ site.url }}/" class="{{ activemenu('') }}">
-                    <svg width="16" height="16"><use xlink:href="#icon-home" /></svg>
-                    home
-                </a>
-            </li>
-            <li>
-                <a title="photos" href="{{ site.url }}/category/photo/" class="{{ activemenu('photo') }}">
-                    <svg width="18" height="16"><use xlink:href="#icon-photo" /></svg>
-                    photos
-                </a>
-            </li>
-            <li>
-                <a title="journal" href="{{ site.url }}/category/journal/" class="{{ activemenu('journal') }}">
-                    <svg width="16" height="16"><use xlink:href="#icon-journal" /></svg>
-                    journal
-                </a>
-            </li>
-            <li>
-                <a title="IT" href="{{ site.url }}/category/article/" class="{{ activemenu('article') }}">
-                    <svg width="16" height="16"><use xlink:href="#icon-article" /></svg>
-                    IT
-                </a>
-            </li>
-            <li>
-                <a title="notes" href="{{ site.url }}/category/note/" class="{{ activemenu('note') }}">
-                    <svg width="16" height="16"><use xlink:href="#icon-note" /></svg>
-                    notes
-                </a>
-            </li>
-            <li>
-                <a title="follow petermolnar.net" href="{{ site.url }}/follow/" class="{{ activemenu('follow') }}">
-                    <svg width="16" height="16"><use xlink:href="#icon-feed" /></svg>
-                    follow
-                </a>
-            </li>
-            <!--
-            <li>
-                <a title="websites I read" href="{{ site.url }}/following.opml">
-                    <svg width="16" height="16"><use xlink:href="#icon-people" /></svg>
-                    following
-                </a>
-            </li>
-            -->
-        </ul>
-    </nav>
+    <section>
+        <nav>
+            <ul>
+                <li>
+                    <a title="home" href="{{ site.url }}/" class="{{ activemenu('') }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-home" /></svg>
+                        home
+                    </a>
+                </li>
+                <li>
+                    <a title="photos" href="{{ site.url }}/category/photo/" class="{{ activemenu('photo') }}">
+                        <svg width="18" height="16"><use xlink:href="#icon-photo" /></svg>
+                        photos
+                    </a>
+                </li>
+                <li>
+                    <a title="journal" href="{{ site.url }}/category/journal/" class="{{ activemenu('journal') }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-journal" /></svg>
+                        journal
+                    </a>
+                </li>
+                <li>
+                    <a title="IT" href="{{ site.url }}/category/article/" class="{{ activemenu('article') }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-article" /></svg>
+                        IT
+                    </a>
+                </li>
+                <li>
+                    <a title="notes" href="{{ site.url }}/category/note/" class="{{ activemenu('note') }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-note" /></svg>
+                        notes
+                    </a>
+                </li>
+                <li>
+                    <a title="follow petermolnar.net" href="{{ site.url }}/follow/" class="{{ activemenu('follow') }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-feed" /></svg>
+                        follow
+                    </a>
+                </li>
+            </ul>
+        </nav>
 
-    <div>
-        <form class="theme" aria-hidden="true">
-            <svg width="16" height="16">
-                <use xlink:href="#icon-contrast"></use>
-            </svg>
-            <span>
-                <input name="colorscheme" value="dark" id="darkscheme" type="radio">
-                <label for="darkscheme">dark</label>
-            </span>
-            <span>
-                <input name="colorscheme" value="light" id="lightscheme" type="radio">
-                <label for="lightscheme">light</label>
-            </span>
-        </form>
-        <form role="search" method="get" action="{{ site.url }}/search.php">
-            <label for="qsub">
-                <input type="submit" value="search" id="qsub" name="qsub" />
+        <div>
+            <form class="theme" aria-hidden="true">
                 <svg width="16" height="16">
-                    <use xlink:href="#icon-search"></use>
+                    <use xlink:href="#icon-contrast"></use>
                 </svg>
-            </label>
-            <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
-        </form>
-    </div>
+                <span>
+                    <input name="colorscheme" value="dark" id="darkscheme" type="radio">
+                    <label for="darkscheme">dark</label>
+                </span>
+                <span>
+                    <input name="colorscheme" value="light" id="lightscheme" type="radio">
+                    <label for="lightscheme">light</label>
+                </span>
+            </form>
+            <form role="search" method="get" action="{{ site.url }}/search.php">
+                <label for="qsub">
+                    <input type="submit" value="search" id="qsub" name="qsub" />
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-search"></use>
+                    </svg>
+                </label>
+                <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
+            </form>
+        </div>
+    </section>
 </header>
 
 {% block content %}
@@ -260,17 +254,6 @@
                     </a>
                 </dd>
 
-                <!--
-                <dt>Classification</dt>
-                <dd>
-                    <ul>
-                    {% for c in post.classification %}
-                        <li>{{ c }}</li>
-                    {% endfor %}
-                    </ul>
-                </dd>
-                -->
-
             </dl>
             <p aria-hidden="true" hidden="hidden" itemprop="publisher" itemscope="" itemtype="https://schema.org/Organization">
                 <span itemprop="name">{{ site.domain }}</span>
@@ -399,8 +382,8 @@
 
 
 <footer class="p-author h-card vcard" property="p-author h-card" id="author" itemprop="author publisher" itemscope="" itemtype="https://schema.org/Person https://schema.org/Organization">
-    <div>
-        <section>
+    <section>
+        <div>
             <p>
                 <a href="https://creativecommons.org/">CC</a>,
                 1999-2018,
@@ -413,6 +396,36 @@
                 </span>
                 <a class="fn p-name url u-url u-uid" property="p-name u-url u-uid" rel="me" href="{{ site.url }}"><span itemprop="name">{{ author.name }}</span></a>
             </p>
+            <p>
+                <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
+                    Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
+                <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
+            </p>
+        </div>
+        <div>
+            <nav>
+                <ul>
+                    <li>
+                        <a class="u-email email" property="u-email" rel="me" href="mailto:{{ author.email }}">
+                            <svg width="16" height="16">
+                                <title>email</title>
+                                <use xlink:href="#icon-mail"></use>
+                            </svg>
+                            <span itemprop="email">{{ author.email }}</span>
+                        </a>
+                    </li>
+                    {% for name, value in author.contact.items() %}
+                    <li>
+                        <a class="url u-url x-{{name}}" property="u-url x-{{name}}" rel="me" href="{{ value }}" itemprop="sameAs">
+                            <svg width="16" height="16">
+                                <title>{{ name }}</title>
+                                <use xlink:href="#icon-{{ name }}"></use>
+                            </svg>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </nav>
             <nav>
                 <ul>
                     <li>
@@ -435,37 +448,8 @@
                     </li>
                 </ul>
             </nav>
-            <p>
-                <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
-                    Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
-                <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
-            </p>
-        </section>
-        <nav>
-            <dl>
-                <dt>email</dt>
-                <dd>
-                    <a class="u-email email" property="u-email" rel="me" href="mailto:{{ author.email }}">
-                        <svg width="16" height="16">
-                            <use xlink:href="#icon-mail"></use>
-                        </svg>
-                        <span itemprop="email">{{ author.email }}</span>
-                    </a>
-                </dd>
-                {% for name, value in author.contact.items() %}
-                <dt>{{ name }}</dt>
-                <dd>
-                    <a class="url u-url x-{{name}}" property="u-url x-{{name}}" rel="me" href="{{ value }}" itemprop="sameAs">
-                        <svg width="16" height="16">
-                            <use xlink:href="#icon-{{ name }}"></use>
-                        </svg>
-                        <span>{{ value }}</span>
-                    </a>
-                </dd>
-                {% endfor %}
-            </dl>
-        </nav>
-    </div>
+        </div>
+    </section>
 </footer>
 
 <script>

@@ -63,7 +63,6 @@ author = {
 
 paths = {
     'content': os.path.join(base, 'content'),
-    #'webmentions': os.path.join(base, 'content', 'webmentions'),
     'tmpl': os.path.join(base, 'nasg', 'templates'),
     'watermark': os.path.join(base, 'nasg', 'templates', 'watermark.png'),
     'build': os.path.join(base, 'www'),
