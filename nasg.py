@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 __author__ = "Peter Molnar"
-__copyright__ = "Copyright 2017-2018, Peter Molnar"
+__copyright__ = "Copyright 2017-2019, Peter Molnar"
 __license__ = "apache-2.0"
 __maintainer__ = "Peter Molnar"
 __email__ = "mail@petermolnar.net"
@@ -24,7 +24,7 @@ import arrow
 import langdetect
 import wand.image
 import jinja2
-import frontmatter
+import yaml
 from feedgen.feed import FeedGenerator
 from bleach import clean
 from emoji import UNICODE_EMOJI
@@ -67,6 +67,13 @@ RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
 
+def utfyamldump(data):
+    return yaml.dump(
+        data,
+        default_flow_style=False,
+        indent=4,
+        allow_unicode=True
+    )
 
 def url2slug(url, limit=200):
     return slugify(
@@ -180,12 +187,24 @@ class Webmention(object):
 
 
 class MarkdownDoc(object):
+    mdregex = re.compile(
+        r'^---\s?[\r\n](?P<meta>.+?)[\r\n]---(?:\s?[\r\n](?P<content>.+))?',
+        flags=re.MULTILINE|re.DOTALL
+    )
+
     @cached_property
     def _parsed(self):
-        with open(self.fpath, mode='rt') as f:
-            logger.debug('parsing YAML+MD file %s', self.fpath)
-            meta, txt = frontmatter.parse(f.read())
-        return(meta, txt)
+        logger.debug('parsing file %s', self.fpath)
+        with open(self.fpath, mode='r') as f:
+            txt = f.read()
+        txt = self.mdregex.match(txt)
+        if not txt:
+            logger.error('failed to match YAML + MD doc: %s', self.fpath)
+        if txt.group('content'):
+            t = txt.group('content').strip()
+        else:
+            t = ''
+        return (yaml.load(txt.group('meta')), t)
 
     @property
     def meta(self):
@@ -227,7 +246,7 @@ class Comment(MarkdownDoc):
     @property
     def dt(self):
         maybe = self.meta.get('date')
-        if maybe:
+        if maybe and 'null' != maybe:
             dt = arrow.get(maybe)
         else:
             dt = arrow.get(os.path.getmtime(self.fpath))
@@ -1688,20 +1707,23 @@ class WebmentionIO(object):
             )
         )
 
-        fm = frontmatter.loads('')
-        fm.metadata = {
-            'author': webmention.get('data').get('author'),
+        meta = {
+            'author': {
+                'name': webmention.get('data').get('author').get('name', ''),
+                'url': webmention.get('data').get('author').get('url', ''),
+                'photo': webmention.get('data').get('author').get('photo', '')
+            },
             'date': dt.format(settings.dateformat.get('iso')),
             'source': webmention.get('source'),
             'target': webmention.get('target'),
             'type': webmention.get('activity').get('type', 'webmention')
         }
-        c = webmention.get('data').get('content')
-        if not c:
-            fm.content = ''
-        else:
-            fm.content = c
-        writepath(fpath, frontmatter.dumps(fm))
+
+        r = "---\n%s\n---\n\n%s\n" % (
+            utfyamldump(meta),
+            webmention.get('data').get('content', '').strip()
+        )
+        writepath(fpath, r)
 
     def run(self):
         webmentions = requests.get(self.url, params=self.params)
@@ -1715,7 +1737,6 @@ class WebmentionIO(object):
         except ValueError as e:
             logger.error('failed to query webmention.io: %s', e)
             pass
-
 
 def make():
     start = int(round(time.time() * 1000))
