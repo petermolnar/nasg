@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+html {
+  background-color: #111;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -214,8 +218,6 @@ body > footer {
   padding: 0.6em 0.6em;
   background-color: #111;
   text-align: center;
-/*background-color: #424747;
-  text-shadow: 1px 1px #222;*/
 }
 
 body > header nav {
@@ -316,6 +318,7 @@ body > footer nav {
   margin: 1em 0;
 }
 
+.replies .u-url,
 .footnotes a {
   display: inline-block;
   overflow: hidden;
@@ -357,7 +360,8 @@ body > footer h2,
 }
 @media all and (min-width: 58em) {
   body > header > section,
-  body > footer > section {
+  body > footer > section,
+  .grid {
     text-align: left;
     display: flex;
     justify-content:space-between;
@@ -372,6 +376,11 @@ body > footer h2,
     display: inline-block;
     vertical-align: top;
   }
+  
+  .grid iframe {
+    width: 32%;
+    height: 30em;
+  }
 }
 
 body > img {
@@ -380,4 +389,5 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}            
+}
+        

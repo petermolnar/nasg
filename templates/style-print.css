@@ -4,7 +4,7 @@
 }
 
 html, body {
-  font-size: 11pt !important;
+  font-size: 10pt !important;
   font-family: Helvetica, sans-serif !important;
 }
 
@@ -24,7 +24,7 @@ h1, h2, h3, h4, h5, h6 {
 
 h3,
 a,
-.footnotes ol li a,
+.footnotes a,
 .h-feed .h-entry,
 code,
 pre {
@@ -43,10 +43,16 @@ td, th {
   border: 1pt solid #666;
 }
 
-.footnote ol li a {
+.footnotes a {
   display: block;
   overflow: visible;
   white-space: normal;
+  overflow:visible !important;
+  text-overflow:initial !important;
+}
+
+.footnote-back {
+  display: none;
 }
 
 body > header,
@@ -55,7 +61,7 @@ video,
 audio,
 .footnote-backref,
 .footnote-back,
-.donation,
+.encourage,
 .noprint {
   display:none !important;
 }
@@ -80,4 +86,4 @@ pre {
 
 .h-feed .h-entry {
   page-break-after: always;
-}
+}    
