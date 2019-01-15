@@ -12,7 +12,7 @@
     {% endfor %}
     {% block meta %}{% endblock %}
     <style media="all">
-        {% include 'style.css' %}
+        {% include 'style-experiment.css' %}
     </style>
     <style id="css_alt" media="speech">
         {% include 'style-alt.css' %}
@@ -30,7 +30,7 @@
         <nav>
             <ul>
                 <li>
-                    <a title="home" href="{{ site.url }}/" class="{{ activemenu('') }}">
+                    <a title="home" href="{{ site.url }}/" class="{{ activemenu('home') }}">
                         <svg width="16" height="16"><use xlink:href="#icon-home" /></svg>
                         home
                     </a>
@@ -126,7 +126,6 @@
         </header>
 
         {% if post.review %}
-        <hr/>
         <div class="h-review hreview" property="h-review" itemprop="review" itemscope="" itemtype="http://schema.org/Review">
             <strong>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product" property="p-name u-url p-item h-product">{{ post.review.title }}</a></strong>
             <p>
@@ -146,7 +145,6 @@
             </p>
             <p class="p-summary summary" property="p-summary" itemprop="reviewBody">{{ post.review.summary }}</p>
         </div>
-        <hr/>
         {% endif %}
 
         {% if post.summary %}
@@ -159,7 +157,6 @@
             {{ post.html_content }}
         </div>
 
-        <hr/>
         <footer>
             <dl>
                 {% if post.event %}
@@ -180,8 +177,7 @@
                 {% endif %}
 
                 <dt>Author</dt>
-                <dd>
-                    <p class="p-author h-card vcard" property="p-author h-card" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+                <dd class="p-author h-card vcard" property="p-author h-card" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
                         <img class="photo avatar u-photo u-avatar"
                             property="p-author h-card"
                             src="{{ author.avatar }}"
@@ -194,10 +190,16 @@
                             itemprop="url">
                             <span itemprop="name">{{ author.name }}</span>
                         </a>
-                        &lt;<a class="u-email email" property="u-email" href="mailto:{{ author.email }}">
+                        <a class="u-email email" property="u-email" href="mailto:{{ author.email }}">
                             <span itemprop="email">{{ author.email }}</span>
-                        </a>&gt;
-                    </p>
+                        </a>
+                        <p aria-hidden="true" hidden="hidden" class="hidden" itemprop="publisher" itemscope="" itemtype="https://schema.org/Organization">
+                            <span itemprop="name">{{ site.domain }}</span>
+                            <a href="{{ site.url }}" itemprop="url">{{ site.url }}</a>
+                            <span itemprop="logo" itemscope="" itemtype="https://schema.org/ImageObject">
+                                <img src="{{ author.avatar }}" alt="" itemprop="url" />
+                            </span>
+                        </p>
                 </dd>
 
                 <dt>Published</dt>
@@ -247,7 +249,7 @@
                 <dt>Entry URL</dt>
                 <dd>
                     {% if not post.has_mainimg %}
-                    <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image"  hidden="hidden" />
+                    <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image"  hidden="hidden" class="hidden" />
                     {% endif %}
                     <a class="u-url u-uuid" property="u-url u-uuid" rel="bookmark" href="{{ post.url }}" itemprop="url mainEntityOfPage">
                         {{ post.url }}
@@ -255,13 +257,6 @@
                 </dd>
 
             </dl>
-            <p aria-hidden="true" hidden="hidden" itemprop="publisher" itemscope="" itemtype="https://schema.org/Organization">
-                <span itemprop="name">{{ site.domain }}</span>
-                <a href="{{ site.url }}" itemprop="url">{{ site.url }}</a>
-                <span itemprop="logo" itemscope="" itemtype="https://schema.org/ImageObject">
-                    <img src="{{ author.avatar }}" alt="" itemprop="url" />
-                </span>
-            </p>
         </footer>
 
     {% if not post.is_page %}
@@ -274,25 +269,22 @@
         {% endif %}
 
         <section class="encourage">
-            <hr />
             <h2>Encourage creation!</h2>
             <p>If this entry helped you, or you simply liked it, leave a tip.</p>
-            <nav>
-                <ul>
-                    <li>
-                        <a rel="payment" href="https://paypal.me/petermolnar/3GBP">
-                        <svg width="16" height="16">
-                            <use xlink:href="#icon-paypal"></use>
-                        </svg> Paypal</a>
-                    </li>
-                    <li>
-                        <a rel="payment" href="https://monzo.me/petermolnar/3">
-                        <svg width="16" height="16">
-                            <use xlink:href="#icon-monzo"></use>
-                        </svg> Monzo (UK or Google Pay)</a>
-                    </li>
-                </ul>
-            </nav>
+            <ul>
+                <li>
+                    <a rel="payment" href="https://paypal.me/petermolnar/3GBP">
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-paypal"></use>
+                    </svg> Paypal</a>
+                </li>
+                <li>
+                    <a rel="payment" href="https://monzo.me/petermolnar/3">
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-monzo"></use>
+                    </svg> Monzo (UK or Google Pay)</a>
+                </li>
+            </ul>
         </section>
 
         {% if post.replies|length %}
@@ -454,6 +446,7 @@
 
 <script>
 {% include 'themeswitcher.js' %}
+{% include 'konami.js' %}
 </script>
 
 {% include 'symbols.svg' %}

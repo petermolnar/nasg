@@ -2,62 +2,136 @@
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-}
-
-html {
-  background-color: #111;
+  font-family: "Courier New", "Courier", monospace;
+  font-size: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: 1.5em;
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
   color: #ccc;
   background-color: #26272A;
-  line-height: 1.4em;
-  position: relative;
+}
+
+body > header,
+body > footer {
+  background-color: #111;
+  text-align: center;
+  padding: 0.6em 0;
+}
+
+body > main,
+body > nav,
+body > header > section,
+body > footer > section {
+  max-width: 88ch;
+  margin: 0 auto;
+  padding: 0 1em;
+}
+
+hr {
+  border: none;
+}
+
+dt {
+  font-weight: bold;
+}
+
+h1, h2, h3, h4, h5, h6, hr,
+dt {
+  margin: 2em 0 0.6em 0;
+}
+
+main p {
+  margin: 1em 0;
+}
+
+h1 {
+  border-bottom: 4px double #999;
+}
+
+article > footer > dl > dt,
+h2 {
+  border-bottom: 1px solid #999;
+}
+
+article > footer > dl > dt,
+h3,
+hr {
+  border-bottom: 1px dotted #999;
+}
+
+h4 {
+  border-bottom: 1px dashed #999;
 }
 
 svg {
   transform: rotate(0deg);
   fill: currentColor;
-  vertical-align: middle;
+  vertical-align: text-top;
+}
+
+body > svg {
+  display: none;
 }
 
 a {
   color: #f90;
-  /*color: #5193D4;*/
   text-decoration: none;
   border-bottom: 1px solid transparent;
-  
 }
 
 a:hover {
-  color: #fff;
-  border-bottom: 1px solid #fff;
+  color: #eee;
+  border-bottom: 1px solid #eee;
 }
 
-h1 {
-  font-size: 1.6em;
+sup {
+  vertical-align: unset;
 }
 
-h1, h2 {
-  line-height: 1.2em;
+sup:before {
+  content: '[';
 }
 
-h2 {
-  font-size: 1.2em;
+sup:after {
+  content: ']';
 }
 
-h2, h3 {
-  margin-top: 2em;
+input, button, label {
+  -webkit-appearance:none;
 }
 
-hr {
-  border: none;
-  border-top: 1px solid #777;
-  margin: 1em 0;
-  clear:both;
+nav > ul {
+  list-style-type: none;
+}
+
+nav > ul > li {
+ display: inline-block;
+}
+
+body > header form {
+  display: inline-block;
+  padding-left: 0.6em;
+  margin-top: 1em;
+}
+
+body > header a {
+  font-weight: bold;
+  border-bottom: 3px solid transparent;
+  padding-bottom: 0.1em;
+}
+
+body > header a:hover,
+body > header a.active {
+  border-bottom: 3px solid  #eee;
+  color: #eee;
+}
+
+body > header a svg {
+  display: block;
+  margin: 0.1em auto;
 }
 
 blockquote {
@@ -67,27 +141,42 @@ blockquote {
   color: #aaa;
 }
 
-dt {
-  font-weight: bold;
-  margin: 1em 0 0.6em 0;
-}
-
-dd img {
-  width: 1em;
-  height: auto;
-}
-
-figure {
-  margin: 2em 0;
-}
-
-figure > a {
+input {
+  width: 8em;
+  padding: 0 0.3em;
   border: none;
+  background-color: #333;
+  color: #ccc;
 }
 
-figcaption {
-  padding: 0.3em 0;
-  text-align: center;
+.hidden, .theme,
+.theme input, input[type=submit] {
+  display: none;
+}
+
+.theme input + label {
+  color: #f90;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  padding-bottom: 0.1em;
+}
+
+.theme input:hover + label,
+.theme input:checked + label {
+  border-bottom: 3px solid #eee;
+  color: #eee;
+}
+
+body > footer {
+  margin-top: 2em;
+}
+
+body > footer > section > div > * {
+  margin: 0.6em 0;
+}
+
+body > footer .email span {
+  display: none;
 }
 
 video,
@@ -101,63 +190,33 @@ figure img {
   border: 1px solid #000;
 }
 
-figcaption dd, label {
-  display: inline-block;
-  margin:0.3em 0.3em;
+figure {
+  margin: 2em 0;
 }
 
-label {
-  cursor: pointer;
+figcaption {
+  margin-top: 1em;
 }
 
-ul {
-  padding-left: 1.3em;
+figcaption > dl {
+  margin-top: 1em;
+  color: #666;
 }
 
-li {
-  padding: 0.1em 0;
-}
-
-li p {
-  margin: 0;
-}
-
-input, button, label {
-  border: none;
-  color: #ccc;
-  background-color: transparent;
-  vertical-align: middle;
-  -webkit-appearance:none;
-}
-
-input {
-  border-bottom: 3px solid #ccc;
-  margin: 0 0 0 0.3em;
-}
-
-figcaption > ul,
-nav ul {
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-}
-
-figcaption > ul {
-  display:none;
-  text-align: right;
-}
-
-figcaption ul li {
+figcaption > dl * {
   display: inline-block;
 }
 
-nav li {
-  display: inline-block;
-  padding: 0 0.6em 0 0;
+figcaption > dl dt {
+  display: none;
 }
 
-code, pre, q, figcaption {
-  font-family: monospace;
+figcaption > dl dd {
+  margin: 0 0.3em;
+}
+
+footer img {
+  height: 1em;
 }
 
 code, pre {
@@ -173,10 +232,11 @@ code, pre {
 pre {
   padding: 0.6em;
   position: relative;
+  margin: 1em 0;
 }
 
 code {
-  padding: 0.1em 0.2em;
+  padding: 0.05em 0.2em;
 }
 
 pre > code {
@@ -189,17 +249,16 @@ pre > code::before {
   color: #999;
   border-left: 1px solid #666;
   border-bottom: 1px solid #666;
-  padding-left: 0.3em;
+  padding: 0 0.3em;
+  margin: -0.6em -0.6em 0 0;
 }
 
 table {
   border-collapse: collapse;
-  border-spacing: 0;
   width: 100%;
 }
 
-td,
-th {
+td, th {
   padding: 0.3em;
   border: 1px solid #777;
   text-align:left;
@@ -213,105 +272,30 @@ th, tr:nth-child(even) {
   background-color: rgba(255, 255, 255, .1);
 }
 
-body > header,
-body > footer {
-  padding: 0.6em 0.6em;
-  background-color: #111;
-  text-align: center;
+main ul {
+  margin-left: 2em;
 }
 
-body > header nav {
-  margin: 0.3em 0;
+main ol {
+  margin-left: 3em;
 }
 
-body > header form {
+li p {
+ margin: 0;
+}
+
+.encourage {
+  color: #090;
+}
+
+.encourage h2 {
+  border-color: #090;
+}
+
+.footnotes hr:before {
+  content: 'Links';
   color: #ccc;
-  display: inline-block;
-  margin: 0.6em 0 0 0;
-  padding-left: 0.6em;
-}
-
-body > header a {
   font-weight: bold;
-  color: #ccc;
-  border-bottom: 3px solid transparent;
-  text-decoration: none;
-  padding-bottom: 0.3em;
-}
-
-body > header a:hover,
-body > header a.active,
-input:active,
-input:hover {
-  border-bottom: 3px solid #fefefe;
-  color: #fefefe;
-}
-
-body > header a svg {
-  display: block;
-  margin: 0.1em auto;
-}
-
-.theme input + label {
-  border-bottom: 3px solid transparent;
-}
-
-.theme input:checked + label {
-  border-bottom: 3px solid #ccc;
-}
-
-input[type=submit] {
-  display: none;
-}
-
-footer img {
-  width: 1em;
-}
-
-body > main,
-body > nav,
-body > header > section,
-body > footer > section {
-  max-width: 86ch;
-  margin: 0 auto;
-  padding: 0 0.6em;
-}
-
-body > header > section > * {
-  font-size: 0.9em;
-}
-
-body > nav {
-  padding: 0.6em;
-}
-
-body > nav ul {
-  text-align: center;
-}
-
-body > nav li {
-  margin: 1em 0.6em;
-}
-
-body > nav .current {
-  color: #999;
-}
-
-body > footer {
-  color: #ccc;
-}
-
-body > footer li span {
-  display: none;
-}
-
-body > footer > section > * {
-  font-family: monospace;
-  font-size: 1.1em;
-}
-
-body > footer nav {
-  margin: 1em 0;
 }
 
 .replies .u-url,
@@ -321,46 +305,11 @@ body > footer nav {
   white-space: nowrap;
   text-overflow: ellipsis;
   vertical-align: top;
-  max-width: 80%;
+  max-width: 96%;
 }
 
 .footnote-back {
-  margin: 0 0 0 0.1em;
-}
-
-.encourage {
-  text-align: center;
-  padding-bottom: 2em;
-}
-
-.encourage h2 {
-  color: #080;
-}
-
-.encourage li {
-  margin: 0 0.6em;
-}
-
-.h-feed > article > footer {
-  display: none;
-}
-
-figcaption dt,
-body > svg,
-body > script,
-body > footer h2,
-.h-feed > header > h1,
-.theme,
-.theme input {
-  display: none;
-}
-
-body main h1 {
-  text-align: center;
-}
-
-body main > aside {
-  margin-bottom: 4em;
+  margin: 0 0 0 0.6em;
 }
 
 @media all and (min-width: 58em) {
@@ -371,19 +320,13 @@ body main > aside {
     justify-content:space-between;
   }
 
-  body > header form,
-  body > footer > section > nav {
-    margin: 0;
-  }
-
   body > header a svg {
     display: inline-block;
   }
-  
-  body main section {
-    /*! padding-top: 1em; */
-  }
 
+  body > header form {
+    margin-top: 0;
+  }
 }
 
 body > img {
@@ -392,4 +335,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}
+}                

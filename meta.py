@@ -92,8 +92,8 @@ class GoogleClassifyText(CachedMeta):
             "calling Google classifyText for %s",
             self.fpath
         )
-        r = requests.post(url, json=params)
         try:
+            r = requests.post(url, json=params)
             resp = r.json()
             for cat in resp.get('categories', []):
                 self[cat.get('name')] = cat.get('confidence')
@@ -181,8 +181,9 @@ class GoogleVision(CachedMeta):
             "calling Google Vision for %s",
             self.fpath
         )
-        r = requests.post(url, json=params)
+
         try:
+            r = requests.post(url, json=params)
             resp = r.json()
             for k, v in resp.items():
                 self[k] = v

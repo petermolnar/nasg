@@ -1,3 +1,4 @@
+
 body {
   color: #222;
   background-color: #eee;
@@ -34,20 +35,31 @@ th, tr:nth-child(even) {
   background-color: rgba(0, 0, 0, .1);
 }
 
-pre> code::before {
+pre > code::before {
   color: #444;
 }    
 
-body > header,
-body > footer {
-  background-color: #333
+.footnotes hr::before {
+  color: #222;
 }
 
-body > footer a {
+body > header,
+body > footer{
+  background-color: #333;
+  color: #ccc;
+}
+
+body > header a,
+body > footer a,
+.theme input + label {
   color: #71B3F4;
+}
+
+input {
+  background-color: #222;
 }
 
 body > footer a:hover {
   color: #fff;
   border-bottom: 1px solid #fff;
-}
+}            

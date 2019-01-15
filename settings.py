@@ -71,6 +71,7 @@ paths = {
     'remotequeue': 'queue',
     'micropub': os.path.join(base, 'content', 'note'),
     'tmp': os.path.join(base, 'tmp'),
+    'home': os.path.join(base, 'content', 'home', 'index.md'),
 }
 
 photo = {
@@ -95,19 +96,13 @@ dateformat = {
     'fname': 'YYYYMMDDHHmmssZ',
 }
 
-loglevels = {
-    'critical': 50,
-    'error': 40,
-    'warning': 30,
-    'info': 20,
-    'debug': 10
-}
-
 _parser = argparse.ArgumentParser(description='Parameters for NASG')
 _booleanparams = {
     'regenerate': 'force downsizing images',
     'force': 'force rendering HTML',
     'nosync': 'skip sync to live server',
+    'debug': 'set logging to debug level',
+    'quiet': 'show only errors'
 }
 
 for k, v in _booleanparams.items():
@@ -118,20 +113,21 @@ for k, v in _booleanparams.items():
         help=v
     )
 
-_parser.add_argument(
-    '--loglevel',
-    default='info',
-    help='change loglevel'
-)
-
 args = vars(_parser.parse_args())
 
-loglevel = loglevels.get(args.get('loglevel'))
+if args.get('debug', False):
+    loglevel = 10
+elif args.get('quiet', False):
+    loglevel = 40
+else:
+    loglevel = 20
 
 logger = logging.getLogger('NASG')
 logger.setLevel(loglevel)
+
 console_handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+
 logging.getLogger('asyncio').setLevel(loglevel)

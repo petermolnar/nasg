@@ -9,6 +9,7 @@
 {% block meta %}
     <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />
     <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}atom.xml" />
+    <link rel="feed" title="{{ category.title}} feed" href="{{ category.url }}" />
 {% endblock %}
 {% block content %}
 <main class="content-body h-feed hfeed {{ category.name }}" property="h-feed">

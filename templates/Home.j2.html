@@ -1,0 +1,98 @@
+{% extends "base.j2.html" %}
+{% block meta %}
+    <meta name="author" content="{{ author.name }} <{{ author.email }}>" />
+    <meta name="description" content="{{ post.summary|e }}" />
+    <link rel="canonical" href="{{ post.url }}" />
+    {% for category, latest in elements %}
+    <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />
+    <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}atom.xml" />
+    <link rel="feed" title="{{ category.title}} feed" href="{{ category.url }}" />
+    {% endfor %}
+{% endblock %}
+{% block licence %}
+    <link rel="license" href="https://spdx.org/licenses/{{ post.licence }}.html" type="{{ post.licence }}" />
+{% endblock %}
+
+{% block content %}
+<main class="content-body h-feed hfeed" property="h-feed">
+    <aside>
+        <div>
+            {{ post.html_content }}
+        </div>
+    </aside>
+
+    {% for category, latest in elements %}
+    <section>
+        <article class="h-entry hentry singular" property="h-entry" lang="{{ latest.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
+            <header>
+                <h2 class="p-name entry-title" property="p-name" itemprop="name headline" >
+                Latest in
+                    <a href="{{ category.url }}/">
+                        <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>
+                        {{ category.name }}
+                    </a><br />
+                {% if latest.is_reply %}
+                    <svg class="icon" width="16" height="16">
+                        <use xlink:href="#icon-reply" />
+                    </svg>
+                    <a href="{{ latest.url }}/" class="u-url bookmark" property="u-url" itemprop="url mainEntityOfPage">
+                        RE:
+                    </a>
+                    <a href="{{ latest.is_reply }}" class="u-in-reply-to" property="u-in-reply-to">
+                        {{ latest.is_reply }}
+                    </a>
+                {% else %}
+                    <a href="{{ latest.url }}" title="{{ latest.title }}" class="u-url bookmark" property="u-url" itemprop="url mainEntityOfPage">
+                        <span class="entry-title p-name" property="p-name">{{ latest.title }}</span>
+                    </a>
+                {% endif %}
+                </h2>
+            </header>
+
+            {% if latest.summary %}
+            <div class="e-summary entry-summary" property="e-summary" itemprop="description">
+                {{ latest.html_summary }}
+                <span class="more">
+                    <a href="{{ latest.url }}" title="{{ latest.title }}">
+                    {% if latest.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
+                    </a>
+                </span>
+            </div>
+            {% else %}
+            <div class="e-content entry-content" property="e-content" itemprop="articleBody">
+                {{ latest.html_content }}
+            </div>
+            {% endif %}
+
+            <footer aria-hidden="true" hidden="hidden">
+                <span class="published updated">
+                <time class="dt-published dt-updated" property="dt-published dt-updated" datetime="{{ latest.pubtime }}" itemprop="dateModified datePublished">{{ latest.pubdate }}</time>
+                </span>
+            {% if not latest.has_mainimg %}
+                <img src="{{ author.avatar }}"
+                    itemprop="image"
+                    width="0"
+                    height="0"
+                    alt="Photo of {{ author.name }}" />
+            {% endif %}
+                <p class="p-author h-card vcard" property="p-author h-card">
+                    <img class="photo avatar u-photo u-avatar"
+                        property="u-photo u-avatar"
+                        src="{{ author.avatar }}"
+                        alt="Photo of {{ author.name }}" />
+                    <a class="fn p-name url u-url u-uid"
+                        property="p-name u-url u-uid"
+                        href="{{ author.url }}"
+                        rel="author">
+                            {{ author.name }}
+                    </a>
+                    <a class="u-email email" property="u-email" href="mailto:{{ author.email }}">
+                        {{ author.email }}
+                    </a>
+                </p>
+            </footer>
+        </article>
+    </section>
+{% endfor %}
+</main>
+{% endblock %}

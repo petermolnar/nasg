@@ -25,12 +25,13 @@ import langdetect
 import wand.image
 import jinja2
 import yaml
+import frontmatter
 from feedgen.feed import FeedGenerator
 from bleach import clean
 from emoji import UNICODE_EMOJI
 from slugify import slugify
 import requests
-from pandoc import Pandoc
+from pandoc import PandocMarkdown
 from meta import Exif, GoogleVision, GoogleClassifyText
 import settings
 import keys
@@ -187,13 +188,46 @@ class Webmention(object):
 
 
 class MarkdownDoc(object):
-    mdregex = re.compile(
-        r'^---\s?[\r\n](?P<meta>.+?)[\r\n]---(?:\s?[\r\n](?P<content>.+))?',
-        flags=re.MULTILINE|re.DOTALL
-    )
+
+    @property
+    def regex(self):
+        return re.compile(
+            r'^---\s?[\r\n](?P<meta>.+?)[\r\n]---(?:\s?[\r\n](?P<content>.+))?',
+            flags=re.MULTILINE|re.DOTALL
+        )
+
+    @property
+    def mtime(self):
+        return os.path.getmtime(self.fpath)
+
+    @property
+    def dt(self):
+        maybe = self.mtime
+        for key in ['published', 'date']:
+            t = self.meta.get(key, None)
+            if t and 'null' != t:
+                try:
+                    t = arrow.get(t)
+                    if t.timestamp > maybe:
+                        maybe = t.timestamp
+                except Exception as e:
+                    logger.error(
+                        'failed to parse date: %s for key %s in %s',
+                        t,
+                        key,
+                        self.fpath
+                    )
+        return maybe
 
     @cached_property
     def _parsed(self):
+        with open(self.fpath, mode='rt') as f:
+            logger.debug('parsing YAML+MD file %s', self.fpath)
+            meta, txt = frontmatter.parse(f.read())
+        return(meta, txt)
+
+    @cached_property
+    def _reparsed(self):
         logger.debug('parsing file %s', self.fpath)
         with open(self.fpath, mode='r') as f:
             txt = f.read()
@@ -204,7 +238,7 @@ class MarkdownDoc(object):
             t = txt.group('content').strip()
         else:
             t = ''
-        return (yaml.load(txt.group('meta')), t)
+        return (yaml.safe_load(txt.group('meta')), t)
 
     @property
     def meta(self):
@@ -216,7 +250,7 @@ class MarkdownDoc(object):
 
     def __pandoc(self, c):
         if c and len(c):
-            c = Pandoc(c)
+            c = PandocMarkdown(c)
             c = RE_PRECODE.sub(
                 '<pre><code lang="\g<1>" class="language-\g<1>">', c)
         return c
@@ -241,7 +275,6 @@ class MarkdownDoc(object):
 class Comment(MarkdownDoc):
     def __init__(self, fpath):
         self.fpath = fpath
-        self.mtime = os.path.getmtime(fpath)
 
     @property
     def dt(self):
@@ -339,16 +372,6 @@ class Singular(MarkdownDoc):
         n = os.path.dirname(fpath)
         self.name = os.path.basename(n)
         self.category = os.path.basename(os.path.dirname(n))
-        self.mtime = os.path.getmtime(self.fpath)
-
-    @property
-    def ctime(self):
-        ret = self.mtime
-        if len(self.comments):
-            for mtime, c in self.comments.items():
-                if c.mtime > ret:
-                    ret = c.mtime
-        return ret
 
     @cached_property
     def files(self):
@@ -367,6 +390,16 @@ class Singular(MarkdownDoc):
                 and not k.endswith('.url')
                 and not k.endswith('.del')
         ]
+
+    @property
+    def updated(self):
+        maybe = self.dt
+        if len(self.comments):
+            for c in self.comments.values():
+
+                if c.dt > maybe:
+                    maybe = c.dt
+        return maybe
 
     @cached_property
     def comments(self):
@@ -460,7 +493,7 @@ class Singular(MarkdownDoc):
     def html_summary(self):
         c = self.summary
         if c and len(c):
-            c = Pandoc(self.summary)
+            c = PandocMarkdown(self.summary)
         return c
 
     @property
@@ -667,12 +700,16 @@ class Singular(MarkdownDoc):
     @property
     def exists(self):
         if settings.args.get('force'):
+            logger.debug('rendering required: force mode on')
             return False
         elif not os.path.exists(self.renderfile):
+            logger.debug('rendering required: no html yet')
             return False
-        elif self.ctime > os.path.getmtime(self.renderfile):
+        elif self.dt > os.path.getmtime(self.renderfile):
+            logger.debug('rendering required: self.dt > html mtime')
             return False
         else:
+            logger.debug('rendering not required')
             return True
 
     @property
@@ -719,6 +756,42 @@ class Singular(MarkdownDoc):
             'tips': settings.tips,
         })
         writepath(self.renderfile, r)
+
+
+class Home(Singular):
+    def __init__(self, fpath):
+        super().__init__(fpath)
+        self.elements = []
+
+    def add(self, category, post):
+        self.elements.append((category.ctmplvars, post.tmplvars))
+
+    @property
+    def renderdir(self):
+        return settings.paths.get('build')
+
+    @property
+    def renderfile(self):
+        return os.path.join(
+            settings.paths.get('build'),
+            'index.html'
+        )
+
+    async def render(self):
+        if self.exists:
+            return
+        logger.info("rendering %s", self.name)
+        r = J2.get_template(self.template).render({
+            'post': self.tmplvars,
+            'site': settings.site,
+            'author': settings.author,
+            'meta': settings.meta,
+            'licence': settings.licence,
+            'tips': settings.tips,
+            'elements': self.elements
+        })
+        writepath(self.renderfile, r)
+
 
 
 class WebImage(object):
@@ -1228,7 +1301,7 @@ class IndexPHP(PHPFile):
 
     @property
     def templatefile(self):
-        return 'Index.j2.php'
+        return '404.j2.php'
 
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
@@ -1379,7 +1452,7 @@ class Category(dict):
         if start == end:
             end = -1
         s = sorted(
-            [self[k].mtime for k in self.sortedkeys[start:end]],
+            [self[k].dt for k in self.sortedkeys[start:end]],
             reverse=True
         )
         return s[0]
@@ -1393,6 +1466,16 @@ class Category(dict):
         return {
             'url': url,
             'label': label
+        }
+
+    @property
+    def ctmplvars(self):
+        return {
+            'name': self.name,
+            'display': self.display,
+            'url': self.url,
+            'feed': self.feedurl,
+            'title': self.title,
         }
 
     def tmplvars(self, posts=[], c=False, p=False, n=False):
@@ -1576,9 +1659,8 @@ class Category(dict):
                 )
                 writepath(fpath, r)
 
-    async def render(self):
-        newest = self.newest()
-        if not self.is_uptodate(self.rssfeedfpath, newest):
+    async def render_feeds(self):
+        if not self.is_uptodate(self.rssfeedfpath, self.newest()):
             logger.info(
                 '%s RSS feed outdated, generating new',
                 self.name
@@ -1590,7 +1672,7 @@ class Category(dict):
                 self.name
             )
 
-        if not self.is_uptodate(self.atomfeedfpath, newest):
+        if not self.is_uptodate(self.atomfeedfpath, self.newest()):
             logger.info(
                 '%s ATOM feed outdated, generating new',
                 self.name
@@ -1602,8 +1684,11 @@ class Category(dict):
                 self.name
             )
 
+
+    async def render(self):
+        await self.render_feeds()
         if self.display == 'flat':
-            if not self.is_uptodate(self.indexfpath(), newest):
+            if not self.is_uptodate(self.indexfpath(), self.newest()):
                 logger.info(
                     '%s flat index outdated, generating new',
                     self.name
@@ -1707,11 +1792,15 @@ class WebmentionIO(object):
             )
         )
 
+        author = webmention.get('data', {}).get('author', None)
+        if not author:
+            logger.error('missing author info on webmention; skipping')
+            return
         meta = {
             'author': {
-                'name': webmention.get('data').get('author').get('name', ''),
-                'url': webmention.get('data').get('author').get('url', ''),
-                'photo': webmention.get('data').get('author').get('photo', '')
+                'name': author.get('name', ''),
+                'url': author.get('url', ''),
+                'photo': author.get('photo', '')
             },
             'date': dt.format(settings.dateformat.get('iso')),
             'source': webmention.get('source'),
@@ -1763,7 +1852,7 @@ def make():
     search = Search()
     categories = {}
     frontposts = Category()
-    categories['/'] = frontposts
+    home = Home(settings.paths.get('home'))
 
     for e in sorted(glob.glob(os.path.join(content, '*', '*', 'index.md'))):
         post = Singular(e)
@@ -1779,6 +1868,7 @@ def make():
 
         # skip draft posts from anything further
         if post.is_future:
+            logger.info('%s is for the future', post.name)
             continue
 
         # add post to search database
@@ -1823,13 +1913,18 @@ def make():
 
     # render categories
     for category in categories.values():
+        home.add(category, category.get(category.sortedkeys[0]))
         queue.put(category.render())
 
+    queue.put(frontposts.render_feeds())
+    queue.put(home.render())
     # actually run all the render & copy tasks
     queue.run()
 
     # copy static files
     for e in glob.glob(os.path.join(content, '*.*')):
+        if e.endswith('.md'):
+            continue
         t = os.path.join(settings.paths.get('build'),os.path.basename(e))
         if os.path.exists(t) and os.path.getmtime(e) <= os.path.getmtime(t):
             continue

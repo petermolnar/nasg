@@ -29,14 +29,20 @@ function setTheme(e) {
         localStorage.removeItem(STORAGE_KEY);
     }
     else {
-        localStorage.setItem(STORAGE_KEY, mode);
+        if(confirm("I\'ll need to store your theme of choice in your browser, in a place called localStorage.\n\nAre you OK with this?")) {
+            localStorage.setItem(STORAGE_KEY, mode);
+        }
     }
     autoTheme(mql);
 }
 
 function autoTheme(e) {
     var mode = DEFAULT_THEME;
-    var current = localStorage.getItem(STORAGE_KEY);
+    try {
+        var current = localStorage.getItem(STORAGE_KEY);
+    } catch(e) {
+        var current = DEFAULT_THEME;
+    }
     if ( current != null) {
         mode = current;
     }
@@ -51,30 +57,17 @@ var mql = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
 autoTheme(mql);
 mql.addListener(autoTheme);
 
-for(var i = colorscheme.length; i--; ) {
-    colorscheme[i].onclick = setTheme;
-}
-
-var themeforms = document.getElementsByClassName(STORAGE_KEY);
-for(var i = themeforms.length; i--; ) {
-    themeforms[i].style.display = 'inline-block';
-}
-
-function kcl(cb) {
-  var input = '';
-  var key = '38384040373937396665';
-  document.addEventListener('keydown', function (e) {
-    input += ("" + e.keyCode);
-    if (input === key) {
-      return cb();
+var test = 'ping';
+try {
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    for(var i = colorscheme.length; i--; ) {
+        colorscheme[i].onclick = setTheme;
     }
-    if (!key.indexOf(input)) return;
-    input = ("" + e.keyCode);
-  });
+    var themeforms = document.getElementsByClassName(STORAGE_KEY);
+    for(var i = themeforms.length; i--; ) {
+        themeforms[i].style.display = 'inline-block';
+    }
+} catch(e) {
+    console.log('localStorage is not available, manual theme switching is disabled');
 }
-
-kcl(function () {
-    var e = document.createElement('img');
-    e.src = '/iddqd.gif';
-    document.body.appendChild(e);
-})
