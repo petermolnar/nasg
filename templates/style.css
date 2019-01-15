@@ -14,14 +14,14 @@ body {
   font-family: sans-serif;
   color: #ccc;
   background-color: #26272A;
-  line-height: 1.3em;
+  line-height: 1.4em;
   position: relative;
 }
 
 svg {
   transform: rotate(0deg);
   fill: currentColor;
-  vertical-align:text-bottom;
+  vertical-align: middle;
 }
 
 a {
@@ -293,10 +293,6 @@ body > nav li {
   margin: 1em 0.6em;
 }
 
-body > nav i {
-  font-style:normal;
-}
-
 body > nav .current {
   color: #999;
 }
@@ -353,15 +349,23 @@ figcaption dt,
 body > svg,
 body > script,
 body > footer h2,
-.h-feed h1,
+.h-feed > header > h1,
 .theme,
 .theme input {
   display: none;
 }
+
+body main h1 {
+  text-align: center;
+}
+
+body main > aside {
+  margin-bottom: 4em;
+}
+
 @media all and (min-width: 58em) {
   body > header > section,
-  body > footer > section,
-  .grid {
+  body > footer > section {
     text-align: left;
     display: flex;
     justify-content:space-between;
@@ -374,13 +378,12 @@ body > footer h2,
 
   body > header a svg {
     display: inline-block;
-    vertical-align: top;
   }
   
-  .grid iframe {
-    width: 32%;
-    height: 30em;
+  body main section {
+    /*! padding-top: 1em; */
   }
+
 }
 
 body > img {
@@ -390,4 +393,3 @@ body > img {
   width: 10em;
   height: auto;
 }
-        
