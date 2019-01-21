@@ -23,6 +23,35 @@ site = {
         'journal'
     ],
     'licence': 'CC-BY-NC-ND-4.0',
+    'search': 'https://petermolnar.net/search.php',
+    'favicon': 'https://petermolnar.net/favicon.ico'
+}
+
+menu = {
+    'home': {
+        'url': '%s/' % site['url'],
+        'text': 'home',
+    },
+    'photo': {
+        'url': '%s/category/photo/' % site['url'],
+        'text': 'photos',
+    },
+    'journal': {
+        'url': '%s/category/journal/' % site['url'],
+        'text': 'journal',
+    },
+    'article': {
+        'url': '%s/category/article/' % site['url'],
+        'text': 'IT',
+    },
+    'note': {
+        'url': '%s/category/note/' % site['url'],
+        'text': 'notes'
+    },
+    'follow': {
+        'url': '%s/follow/' % site['url'],
+        'text': 'follow'
+    }
 }
 
 categorydisplay = {
@@ -51,13 +80,19 @@ author = {
     'url': 'https://petermolnar.net/',
     'avatar': 'https://petermolnar.net/molnar_peter_avatar.jpg',
     'gpg': 'https://petermolnar.net/pgp.asc',
-    'cv': 'https://petermolnar.net/about.html',
-    'contact': {
-        'xmpp': 'xmpp:mail@petermolnar.net?message',
-        'flickr': 'https://flickr.com/people/petermolnareu',
-        'github': 'https://github.com/petermolnar',
-        'whatsapp': 'https://wa.me/447592011721',
-        'telegram': 'https://t.me/petermolnar',
+    'cv': 'https://petermolnar.net/cv.html',
+    'github': 'https://github.com/petermolnar',
+    'about': 'https://petermolnar.net/about/',
+    'following': 'https://petermolnar.net/following.opml',
+    'tips': {
+        'monzo': {
+            'text': 'Monzo (only in the UK or via Google Pay)',
+            'url': 'https://monzo.me/petermolnar/3'
+        },
+        'paypal': {
+            'text': 'Paypal',
+            'url': 'https://paypal.me/petermolnar/3GBP'
+        }
     }
 }
 

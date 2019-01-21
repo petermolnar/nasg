@@ -68,6 +68,15 @@ RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
 
+#def relurl(url, base=settings.site.get('url')):
+    #return url
+    ##out = os.path.relpath(url, base)
+    ##if not re.match(r'.*\.[a-z]{2,4}', out):
+        ##out = "%s/index.html" % out
+    ##return out
+
+#J2.filters['relurl'] = relurl
+
 def utfyamldump(data):
     return yaml.dump(
         data,
@@ -648,7 +657,7 @@ class Singular(MarkdownDoc):
             'summary': self.summary,
             'html_summary': self.html_summary,
             'html_content': self.html_content,
-            'mtime': self.mtime,
+            'mtime': self.dt,
             'pubtime': self.published.format(settings.dateformat.get('iso')),
             'pubdate': self.published.format(settings.dateformat.get('display')),
             'year': int(self.published.format('YYYY')),
@@ -748,8 +757,10 @@ class Singular(MarkdownDoc):
             return
         logger.info("rendering %s", self.name)
         r = J2.get_template(self.template).render({
+            #'baseurl': self.url,
             'post': self.tmplvars,
             'site': settings.site,
+            'menu': settings.menu,
             'author': settings.author,
             'meta': settings.meta,
             'licence': settings.licence,
@@ -777,13 +788,23 @@ class Home(Singular):
             'index.html'
         )
 
+    @property
+    def dt(self):
+        maybe = super().dt
+        for cat, post in self.elements:
+            if post['mtime'] > maybe:
+                maybe = post['mtime']
+        return maybe
+
     async def render(self):
         if self.exists:
             return
         logger.info("rendering %s", self.name)
         r = J2.get_template(self.template).render({
+            #'baseurl': settings.site.get('url'),
             'post': self.tmplvars,
             'site': settings.site,
+            'menu': settings.menu,
             'author': settings.author,
             'meta': settings.meta,
             'licence': settings.licence,
@@ -1266,8 +1287,10 @@ class Search(PHPFile):
 
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
+            #'baseurl': settings.site.get('search'),
             'post': {},
             'site': settings.site,
+            'menu': settings.menu,
             'author': settings.author,
             'meta': settings.meta,
             'licence': settings.licence,
@@ -1307,6 +1330,7 @@ class IndexPHP(PHPFile):
         r = J2.get_template(self.templatefile).render({
             'post': {},
             'site': settings.site,
+            'menu': settings.menu,
             'gones': self.gone,
             'redirects': self.redirect
         })
@@ -1349,6 +1373,7 @@ class MicropubPHP(PHPFile):
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
             'site': settings.site,
+            'menu': settings.menu,
             'paths': settings.paths
         })
         writepath(self.renderfile, r)
@@ -1490,7 +1515,9 @@ class Category(dict):
             c = post.published.format(self.trange)
 
         return {
+            #'baseurl': self.url,
             'site': settings.site,
+            'menu': settings.menu,
             'author': settings.author,
             'meta': settings.meta,
             'licence': settings.licence,
@@ -1506,7 +1533,7 @@ class Category(dict):
                 'next': n,
                 'currentyear': arrow.utcnow().format('YYYY')
             },
-            'posts': posts,
+            'posts': posts
         }
 
     def indexfpath(self, subpath=None):
@@ -1619,7 +1646,7 @@ class Category(dict):
         keys = list(by_time.keys())
         for p, c, n in zip([None] + keys[:-1], keys, keys[1:] + [None]):
             form = c.format(self.trange)
-            if arrow.utcnow().format(self.trange) == form:
+            if max(keys) == form:
                 fpath = self.indexfpath()
             else:
                 fpath = self.indexfpath(form)

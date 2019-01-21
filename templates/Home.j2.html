@@ -1,4 +1,5 @@
 {% extends "base.j2.html" %}
+
 {% block meta %}
     <meta name="author" content="{{ author.name }} <{{ author.email }}>" />
     <meta name="description" content="{{ post.summary|e }}" />
@@ -9,6 +10,7 @@
     <link rel="feed" title="{{ category.title}} feed" href="{{ category.url }}" />
     {% endfor %}
 {% endblock %}
+
 {% block licence %}
     <link rel="license" href="https://spdx.org/licenses/{{ post.licence }}.html" type="{{ post.licence }}" />
 {% endblock %}
@@ -23,14 +25,15 @@
 
     {% for category, latest in elements %}
     <section>
+        <h2>Latest in
+            <a href="{{ category.url }}/">
+                <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>
+                {{ category.name }}
+            </a>
+        </h2>
         <article class="h-entry hentry singular" property="h-entry" lang="{{ latest.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
             <header>
-                <h2 class="p-name entry-title" property="p-name" itemprop="name headline" >
-                Latest in
-                    <a href="{{ category.url }}/">
-                        <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>
-                        {{ category.name }}
-                    </a><br />
+                <h3 class="p-name entry-title" property="p-name" itemprop="name headline" >
                 {% if latest.is_reply %}
                     <svg class="icon" width="16" height="16">
                         <use xlink:href="#icon-reply" />
@@ -46,7 +49,7 @@
                         <span class="entry-title p-name" property="p-name">{{ latest.title }}</span>
                     </a>
                 {% endif %}
-                </h2>
+                </h3>
             </header>
 
             {% if latest.summary %}

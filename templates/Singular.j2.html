@@ -1,4 +1,5 @@
 {% extends "base.j2.html" %}
+
 {% block meta %}
     <meta name="author" content="{{ author.name }} <{{ author.email }}>" />
     <meta name="description" content="{{ post.summary|e }}" />
@@ -9,6 +10,7 @@
     </style>
     {% endif %}
 {% endblock %}
+
 {% block prism %}
     {% if post.has_code %}
     <script>
@@ -16,6 +18,276 @@
     </script>
     {% endif %}
 {% endblock %}
+
 {% block licence %}
     <link rel="license" href="https://spdx.org/licenses/{{ post.licence }}.html" type="{{ post.licence }}" />
+{% endblock %}
+
+{% block content %}
+{% if post.event %}
+    {% set mftype = 'h-entry h-event' %}
+{% else %}
+    {% set mftype = 'h-entry' %}
+{% endif %}
+<main role="main">
+    <article class="{{ mftype }} hentry singular" lang="{{ post.lang }}" property="{{ mftype }}" itemscope="" itemprop="blogPost" itemtype="http://schema.org/BlogPosting" itemref="author">
+        <header>
+            <h1 class="entry-title p-name" itemprop="name headline" property="p-name">
+                {% if post.is_reply %}
+                <span>
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-reply" />
+                    </svg>
+                    <a href="{{ post.url }}">
+                        RE:
+                    </a>
+                    <a href="{{ post.is_reply }}" class="u-in-reply-to" property="u-in-reply-to">
+                        {{ post.is_reply }}
+                    </a>
+                </span>
+                {% else %}
+                <a href="{{ post.url }}" title="{{ post.title }}">
+                    <span>{{ post.title }}</span>
+                </a>
+                {% endif %}
+            </h1>
+        </header>
+
+        {% if post.review %}
+        <div class="h-review hreview" property="h-review" itemprop="review" itemscope="" itemtype="http://schema.org/Review">
+            <strong>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product" property="p-name u-url p-item h-product">{{ post.review.title }}</a></strong>
+            <p>
+                By
+                <span class="p-author h-card vcard reviewer" property="p-author" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+                 <a class="fn p-name url u-url u-uid" property="p-name u-url u-uid" href="{{ author.url }}" itemprop="url">
+                    <span itemprop="name">{{ author.name }}</span>
+                </a></span> at <time class="dt-published dtreviewed" property="dt-published" datetime="{{ post.pubtime }}" itemprop="datePublished">{{ post.pubdate }}</time>
+            </p>
+            <p>
+                <span class="rating" itemprop="reviewRating" itemscope itemtype="http://schema.org/Rating">
+                    <meta itemprop="worstRating" content = "1">
+                    <span class="value" itemprop="ratingValue">{{ post.review.rated }}</span>
+                    out of
+                    <span class="best" itemprop="bestRating">{{ post.review.outof }}</span>
+                </span>
+            </p>
+            <p class="p-summary summary" property="p-summary" itemprop="reviewBody">{{ post.review.summary }}</p>
+        </div>
+        {% endif %}
+
+        {% if post.summary %}
+        <div class="e-summary entry-summary" property="e-summary" itemprop="description">
+            {{ post.html_summary }}
+        </div>
+        {% endif %}
+
+        <div class="e-content entry-content" property="e-content" itemprop="articleBody">
+            {{ post.html_content }}
+        </div>
+
+        <footer>
+            <dl>
+                {% if post.event %}
+                <dt>Trip details</dt>
+                <dd>
+                    From
+                    <time class="dt-start dtstart" property="dt-end" datetime="{{ post.event.starttime }}">
+                        {{ post.event.startdate }}
+                    </time>
+                    to
+                    <time class="dt-end dtend" property="dt-end" datetime="{{ post.event.endtime }}">
+                        {{ post.event.enddate }}
+                    </time>, in
+                    <span class="p-location location" property="p-location">
+                        {{ post.event.location }}
+                    </span>
+                </dd>
+                {% endif %}
+
+                <dt>Author</dt>
+                <dd class="p-author h-card vcard" property="p-author h-card" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+                    <img class="photo avatar u-photo u-avatar"
+                        property="p-author h-card"
+                        src="{{ author.avatar }}"
+                        alt="Photo of {{ author.name }}"
+                        itemprop="image" />
+                    <a class="fn p-name url u-url u-uid"
+                        property="p-name u-url u-uid"
+                        href="{{ author.url }}"
+                        rel="author"
+                        itemprop="url">
+                        <span itemprop="name">{{ author.name }}</span>
+                    </a>
+                    <a class="u-email email" property="u-email" href="mailto:{{ author.email }}">
+                        <span itemprop="email">{{ author.email }}</span>
+                    </a>
+                    <p aria-hidden="true" hidden="hidden" class="hidden" itemprop="publisher" itemscope="" itemtype="https://schema.org/Organization">
+                        <span itemprop="name">{{ site.domain }}</span>
+                        <a href="{{ site.url }}" itemprop="url">{{ site.url }}</a>
+                        <span itemprop="logo" itemscope="" itemtype="https://schema.org/ImageObject">
+                            <img src="{{ author.avatar }}" alt="" itemprop="url" />
+                        </span>
+                    </p>
+                </dd>
+
+                <dt>Published</dt>
+                <dd class="published updated">
+                    <time class="dt-published dt-updated"
+                        property="dt-published dt-updated"
+                        datetime="{{ post.pubtime }}"
+                        itemprop="dateModified datePublished"
+                    >{{ post.pubdate }}</time>
+                </dd>
+
+
+                <dt>License</dt>
+                <dd class="license">
+                {% if post.licence == 'CC-BY-4.0' %}
+                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license" property="u-licence" itemprop="license">{{ post.licence }}</a>
+                    <ul>
+                        <li>you can share it</li>
+                        <li>you can republish it</li>
+                        <li>you can modify it, but you need to indicate the modifications</li>
+                        <li>you can use it for commercial purposes</li>
+                        <li>you always need to make a link back here</li>
+                    </ul>
+                {% elif post.licence == 'CC-BY-NC-4.0' %}
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license" property="u-licence" itemprop="license">{{ post.licence }}</a>
+                    <ul>
+                        <li>you can share it</li>
+                        <li>you can republish it</li>
+                        <li>you can modify it, but you need to indicate the modifications</li>
+                        <li>you can't use it for commercial purposes</li>
+                        <li>you always need to make a link back here</li>
+                    </ul>
+                    For commercial use, please contact me.
+                {% elif post.licence == 'CC-BY-NC-ND-4.0' %}
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license" property="u-licence" itemprop="license">{{ post.licence }}</a>
+                    <ul>
+                        <li>you can share it</li>
+                        <li>you can't modify it</li>
+                        <li>you can't republish it</li>
+                        <li>you can't use it for commercial purposes</li>
+                        <li>you always need to make a link back here</li>
+                    </ul>
+                    For commercial use, please contact me.
+                {% endif %}
+                </dd>
+
+                <dt>Entry URL</dt>
+                <dd>
+                    {% if not post.has_mainimg %}
+                    <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image"  hidden="hidden" class="hidden" />
+                    {% endif %}
+                    <a class="u-url u-uuid" property="u-url u-uuid" rel="bookmark" href="{{ post.url }}" itemprop="url mainEntityOfPage">
+                        {{ post.url }}
+                    </a>
+                </dd>
+
+            </dl>
+        </footer>
+
+    {% if not post.is_page %}
+        {% if post.syndicate|length %}
+        <section class="syndication">
+            {% for url in post.syndicate %}
+                <a href="{{ url }}" class="u-syndication" itemprop="u-syndication"></a>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        <section class="encourage">
+            <h2>Encourage creation!</h2>
+            <p>
+                If this entry helped you, or you simply liked it, leave a tip via <br>
+                {% for provider, info in author.tips.items() %}
+                    {% if loop.last and not loop.first %} or {% endif %}
+                    <a rel="payment" href="{{ info.url }}">
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-{{ provider }}"></use>
+                    </svg> {{ info.text }}</a>
+                    {% if not loop.last and not loop.first %}, {% endif %}
+                {% endfor %}
+            </p>
+        </section>
+
+        {% if post.replies|length %}
+        <section class="replies">
+            <h2><a id="replies"></a>Replies</h2>
+            <ol>
+                {% for mtime, comment in post.replies.items() %}
+                <li class="h-entry p-comment" property="h-entry p-comment">
+                    <time class="dt-published" property="dt-published" datetime="{{ comment.pubtime }}">
+                        {{ comment.pubdate }}
+                    </time> from
+                    <span class="p-author h-card" property="p-author h-card">
+                        {% if comment.author.url %}
+                        <a class="url u-url" property="u-url" href="{{ comment.author.url }}">
+                            <span class="p-name fn" property="p-name">
+                                {{ comment.author.name }}
+                            </span>
+                        </a>
+                        {% else %}
+                        <span class="p-name fn" property="p-name">
+                            {{ comment.author.name }}
+                        </span>
+                        {% endif %}
+                    </span><br />
+                    <span class="source">
+                        <svg width="16" height="16">
+                            <use xlink:href="#icon-link"></use>
+                        </svg>
+                        <a class="u-url" property="u-url" href="{{ comment.source }}">
+                            {{ comment.source }}
+                        </a>
+                    </span>
+                </li>
+                {% endfor %}
+            </ol>
+        </section>
+        {% endif %}
+
+        {% if post.reactions|length %}
+        <section class="reactions">
+            <h2><a id="reactions"></a>Reactions</h2>
+            <dl>
+                {% for character, comments in post.reactions.items() %}
+                <dt>{{ character }}</dt>
+                <dd>
+                    <ul>
+                        {% for mtime, comment in comments.items() %}
+                        <li class="h-entry p-comment" property="h-entry p-comment">
+                            <span class="reaction">
+                                <a class="u-url" property="u-url" href="{{ comment.source }}">
+                                    {{ comment.type }}
+                                </a>
+                            </span>
+                            <time class="dt-published" property="dt-published" datetime="{{ comment.pubtime }}">
+                                {{ comment.pubdate }}
+                            </time> from
+                            <span class="p-author h-card" property="p-author h-card">
+                                {% if comment.author.url %}
+                                <a class="url u-url" property="u-url" href="{{ comment.author.url }}">
+                                    <span class="p-name fn" property="p-name">
+                                        {{ comment.author.name }}
+                                    </span>
+                                </a>
+                                {% else %}
+                                <span class="p-name fn" property="p-name">
+                                    {{ comment.author.name }}
+                                </span>
+                                {% endif %}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </dd>
+                {% endfor %}
+            </dl>
+        </section>
+        {% endif %}
+
+    {% endif %}
+    </article>
+</main>
 {% endblock %}

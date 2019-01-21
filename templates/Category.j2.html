@@ -11,10 +11,53 @@
     <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}atom.xml" />
     <link rel="feed" title="{{ category.title}} feed" href="{{ category.url }}" />
 {% endblock %}
+
+{% block pagination %}
+{% if category.display != 'flat' %}
+<nav>
+    <ul>
+        {% if category.previous %}
+        <li>
+            <a rel="prev" href="{{ category.previous.url }}">
+                <i>«</i>
+                <strong>{{ category.previous.label }}</strong>
+                {% if category.currentyear != category.previous.label %}
+                Jan - Dec
+                {% endif %}
+            </a>
+        </li>
+        {% endif %}
+
+        <li>
+            <span class="current">
+                {{ category.current }}
+                {% if category.currentyear != category.current %}
+                Jan - Dec
+                {% endif %}
+            </span>
+        </li>
+
+        {% if category.next %}
+        <li>
+            <a rel="next" href="{{ category.next.url }}">
+                <strong>{{ category.next.label }}</strong>
+                Jan - Dec
+                <i>»</i>
+            </a>
+        </li>
+        {% endif %}
+
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <main class="content-body h-feed hfeed {{ category.name }}" property="h-feed">
     <header>
-        <h1 class="p-name" property="p-name">{{ category.name }}</h1>
+        <p>
+        <svg width="128" height="128"><use xlink:href="#icon-{{ category.name }}" /></svg>
+        </p>
     </header>
 
 
@@ -22,6 +65,10 @@
 {% for post in posts %}
     {% set _year = year.pop() %}
     {% if category.display == 'flat' and _year != post.year %}
+        {% if not loop.first %}
+        </section>
+        {% endif %}
+        <section>
         <h2>{{ post.year }}</h2>
     {% endif %}
     {% set _ = year.append(post.year)%}
@@ -98,45 +145,9 @@
             </p>
         </footer>
     </article>
+    {% if loop.last %}
+    </section>
+    {% endif %}
 {% endfor %}
 </main>
-{% endblock %}
-{% block pagination %}
-{% if category.display != 'flat' %}
-<nav>
-    <ul>
-        {% if category.previous %}
-        <li>
-            <a rel="prev" href="{{ category.previous.url }}">
-                <i>«</i>
-                <strong>{{ category.previous.label }}</strong>
-                {% if category.currentyear != category.previous.label %}
-                Jan - Dec
-                {% endif %}
-            </a>
-        </li>
-        {% endif %}
-
-        <li>
-            <span class="current">
-                {{ category.current }}
-                {% if category.currentyear != category.current %}
-                Jan - Dec
-                {% endif %}
-            </span>
-        </li>
-
-        {% if category.next %}
-        <li>
-            <a rel="next" href="{{ category.next.url }}">
-                <strong>{{ category.next.label }}</strong>
-                Jan - Dec
-                <i>»</i>
-            </a>
-        </li>
-        {% endif %}
-
-    </ul>
-</nav>
-{% endif %}
 {% endblock %}

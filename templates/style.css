@@ -1,17 +1,18 @@
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  font-family: "Courier New", "Courier", monospace;
-  font-size: 100%;
+  font-family: "Courier", monospace;
+  font-size: 11.5pt;
   margin: 0;
   padding: 0;
   line-height: 1.5em;
 }
 
 body {
-  color: #ccc;
-  background-color: #26272A;
+  color: #eee;
+  background-color: #222;
 }
 
 body > header,
@@ -49,6 +50,7 @@ main p {
 
 h1 {
   border-bottom: 4px double #999;
+  text-transform:uppercase;
 }
 
 article > footer > dl > dt,
@@ -121,6 +123,7 @@ body > header a {
   font-weight: bold;
   border-bottom: 3px solid transparent;
   padding-bottom: 0.1em;
+  text-transform:uppercase;
 }
 
 body > header a:hover,
@@ -171,8 +174,8 @@ body > footer {
   margin-top: 2em;
 }
 
-body > footer > section > div > * {
-  margin: 0.6em 0;
+body > footer > * {
+  margin-bottom: 0.6em;
 }
 
 body > footer .email span {
@@ -220,7 +223,7 @@ footer img {
 }
 
 code, pre {
-  color: #32CD32;
+  color: #3c3;
   border: 1px solid #666;
   direction: ltr;
   word-break: break-all;
@@ -272,6 +275,10 @@ th, tr:nth-child(even) {
   background-color: rgba(255, 255, 255, .1);
 }
 
+main > header > p {
+  text-align: center;
+}
+
 main ul {
   margin-left: 2em;
 }
@@ -284,8 +291,13 @@ li p {
  margin: 0;
 }
 
-.encourage {
+.encourage, .encourage a  {
   color: #090;
+}
+
+.encourage a {
+  color: #0a0;
+  font-weight: bold;
 }
 
 .encourage h2 {
@@ -312,6 +324,19 @@ li p {
   margin: 0 0 0 0.6em;
 }
 
+main > section > article {
+  padding-left: 1em;
+}
+
+body > nav {
+  text-align: center;
+  margin-top: 2em;
+}
+
+body > nav > ul > li {
+  margin: 0 0.6em;
+}
+
 @media all and (min-width: 58em) {
   body > header > section,
   body > footer > section {
@@ -335,4 +360,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}                
+}    
