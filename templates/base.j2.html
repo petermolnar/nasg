@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html {% block lang %}lang="{{ post.lang }}"{% endblock %}>
+<html{% block lang %}{% endblock %}>
 <head>
-    <title>{% block title %}{{ post.title }} - {{ site.domain }}{% endblock %}</title>
+    <title>{% block title %}{% endblock %}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
-    <meta name="supported-color-schemes" content="dark light">
     <link rel="icon" href="{{ site.favicon }}" />
-    {% block licence %}{% endblock %}
+    {% block licence %}
+    <link rel="license" href="https://spdx.org/licenses/{{ site.licence }}.html" type="{{ site.licence }}" />
+    {% endblock %}
     {% for key, value in meta.items() %}
     <link rel="{{ key }}" href="{{ value }}" />
     {% endfor %}
@@ -24,7 +25,11 @@
 
 <body itemscope="" itemtype="http://schema.org/Blog http://schema.org/WebPage">
 
-{% macro activemenu(name) %}{% if (post is defined and post.slug ==  name ) or (post is defined and post.category ==  name ) or ( category is defined and category.name == name ) %}active{% endif %}{% endmacro %}
+{% macro activemenu(name) %}
+{% if (post is defined and post.slug ==  name )
+    or (post is defined and post.category ==  name )
+    or ( category is defined and category.name == name )%}active{% endif %}
+{% endmacro %}
 
 <header>
     <section>
@@ -57,14 +62,15 @@
                     <label for="lightscheme">light</label>
                 </span>
             </form>
-            <form role="search" method="get" action="{{ site.search }}">
+            <form role="search" method="get" action="{{ site.search }}" itemprop="potentialAction" itemscope="" itemtype="https://schema.org/SearchAction">
+                <meta itemprop="target" content="{{ site.search }}?q={q}"/>
                 <label for="qsub">
                     <input type="submit" value="search" id="qsub" name="qsub" />
                     <svg width="16" height="16">
                         <use xlink:href="#icon-search"></use>
                     </svg>
                 </label>
-                <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
+                <input itemprop="query-input" type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" required="required" />
             </form>
         </div>
     </section>
@@ -76,21 +82,20 @@
 {% block pagination %}
 {% endblock %}
 
-<footer class="p-author h-card vcard" property="p-author h-card" id="author" itemprop="author publisher" itemscope="" itemtype="https://schema.org/Person https://schema.org/Organization">
+<footer class="p-author h-card vcard" id="author" itemprop="author publisher" itemscope="" itemtype="https://schema.org/Person https://schema.org/Organization">
     <p>
         <a href="https://creativecommons.org/">CC</a>,
         1999-2019,
         <span itemprop="logo" itemscope="" itemtype="https://schema.org/ImageObject">
         <img class="photo avatar u-photo u-avatar"
-            property="u-photo u-avatar"
             src="{{ author.avatar }}"
             alt="Photo of {{ author.name }}"
             itemprop="image url" />
         </span>
-        <a class="fn p-name url u-url u-uid" property="p-name u-url u-uid" rel="me" href="{{ site.url }}">
+        <a class="fn p-name url u-url u-uid" rel="me" href="{{ site.url }}">
             <span itemprop="name">{{ author.name }}</span>
         </a>
-        <a class="u-email email" property="u-email" rel="me" href="mailto:{{ author.email }}">
+        <a class="u-email email" rel="me" href="mailto:{{ author.email }}">
             <svg width="16" height="16">
                 <title>email</title>
                 <use xlink:href="#icon-mail"></use>

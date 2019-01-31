@@ -68,14 +68,23 @@ RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
 
-#def relurl(url, base=settings.site.get('url')):
-    #return url
-    ##out = os.path.relpath(url, base)
-    ##if not re.match(r'.*\.[a-z]{2,4}', out):
-        ##out = "%s/index.html" % out
-    ##return out
+RE_MYURL= re.compile(
+    r'"?(?P<url>%s/?[^\"]+)"?' % (settings.site.get('url'))
+)
 
-#J2.filters['relurl'] = relurl
+def relurl(txt, baseurl):
+    for url in RE_MYURL.findall(txt):
+        logger.debug('found URL candidate %s', url)
+        logger.debug('baseurl is %s', baseurl)
+        out = os.path.relpath(url, baseurl)
+        logger.debug('result is %s', out)
+        if not re.match(r'.*\.[a-z]{2,4}', out):
+            out = "%s/index.html" % out
+        #logger.debug('replacing %s with %s', url, out)
+        txt = txt.replace(url, out)
+    return txt
+
+J2.filters['relurl'] = relurl
 
 def utfyamldump(data):
     return yaml.dump(
@@ -586,15 +595,15 @@ class Singular(MarkdownDoc):
             pass
         return lang
 
-    @property
-    def classification(self):
-        c = GoogleClassifyText(self.fpath, self.content, self.lang)
-        k = '/Arts & Entertainment/Visual Art & Design/Photographic & Digital Arts'
-        if self.is_photo and k not in c.keys():
-            c.update({
-                k : '1.0'
-            })
-        return c
+    # @property
+    # def classification(self):
+        # c = GoogleClassifyText(self.fpath, self.content, self.lang)
+        # k = '/Arts & Entertainment/Visual Art & Design/Photographic & Digital Arts'
+        # if self.is_photo and k not in c.keys():
+            # c.update({
+                # k : '1.0'
+            # })
+        # return c
 
     @property
     def url(self):
@@ -669,7 +678,6 @@ class Singular(MarkdownDoc):
             'review': self.review,
             'has_code': self.has_code,
             'event': self.event,
-            'classification': self.classification.keys()
         }
         if (self.is_photo):
             v.update({
@@ -757,7 +765,7 @@ class Singular(MarkdownDoc):
             return
         logger.info("rendering %s", self.name)
         r = J2.get_template(self.template).render({
-            #'baseurl': self.url,
+            'baseurl': self.url,
             'post': self.tmplvars,
             'site': settings.site,
             'menu': settings.menu,
@@ -801,7 +809,7 @@ class Home(Singular):
             return
         logger.info("rendering %s", self.name)
         r = J2.get_template(self.template).render({
-            #'baseurl': settings.site.get('url'),
+            'baseurl': settings.site.get('url'),
             'post': self.tmplvars,
             'site': settings.site,
             'menu': settings.menu,
@@ -852,7 +860,6 @@ class WebImage(object):
             'exif': self.exif,
             'is_photo': self.is_photo,
             'is_mainimg': self.is_mainimg,
-            'onlinecopies': self.onlinecopies
         }
 
     def __str__(self):
@@ -861,17 +868,17 @@ class WebImage(object):
         tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
         return tmpl.render(self.tmplvars)
 
-    @cached_property
-    def visionapi(self):
-        return GoogleVision(self.fpath, self.src)
+    # @cached_property
+    # def visionapi(self):
+        # return GoogleVision(self.fpath, self.src)
 
-    @property
-    def onlinecopies(self):
-        copies = {}
-        for m in self.visionapi.onlinecopies:
-            if settings.site.get('domain') not in m:
-                copies[m] = True
-        return copies.keys()
+    # @property
+    # def onlinecopies(self):
+        # copies = {}
+        # for m in self.visionapi.onlinecopies:
+            # if settings.site.get('domain') not in m:
+                # copies[m] = True
+        # return copies.keys()
 
     @cached_property
     def meta(self):
@@ -1007,12 +1014,12 @@ class WebImage(object):
 
         with wand.image.Image(filename=wmarkfile) as wmark:
             if self.width > self.height:
-                w = self.width * 0.2
+                w = self.width * 0.3
                 h = wmark.height * (w / wmark.width)
                 x = self.width - w - (self.width * 0.01)
                 y = self.height - h - (self.height * 0.01)
             else:
-                w = self.height * 0.16
+                w = self.height * 0.24
                 h = wmark.height * (w / wmark.width)
                 x = self.width - h - (self.width * 0.01)
                 y = self.height - w - (self.height * 0.01)
@@ -1287,7 +1294,7 @@ class Search(PHPFile):
 
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
-            #'baseurl': settings.site.get('search'),
+            'baseurl': settings.site.get('search'),
             'post': {},
             'site': settings.site,
             'menu': settings.menu,
@@ -1382,7 +1389,7 @@ class MicropubPHP(PHPFile):
 class Category(dict):
     def __init__(self, name=''):
         self.name = name
-        self.page = 1
+        #self.page = 1
         self.trange = 'YYYY'
 
     def __setitem__(self, key, value):
@@ -1439,8 +1446,27 @@ class Category(dict):
             return settings.paths.get('build')
 
     @property
+    def newest_year(self):
+        return int(self[self.sortedkeys[0]].published.format(self.trange))
+
+    @property
+    def years(self):
+        years = {}
+        for k in self.sortedkeys:
+            y = int(self[k].published.format(self.trange))
+            if y not in years:
+                if y == self.newest_year:
+                    url = self.url
+                else:
+                    url = "%s%d/" % (self.url, y)
+                years.update({
+                    y: url
+                })
+        return years
+
+    @property
     def mtime(self):
-        return arrow.get(self[self.sortedkeys[0]].published).timestamp
+        return self[self.sortedkeys[0]].published.timestamp
 
     @property
     def rssfeedfpath(self):
@@ -1482,17 +1508,6 @@ class Category(dict):
         )
         return s[0]
 
-    def navlink(self, ts):
-        label = ts.format(self.trange)
-        if arrow.utcnow().format(self.trange) == label:
-            url = self.url
-        else:
-            url = "%s%s/" % (self.url, label)
-        return {
-            'url': url,
-            'label': label
-        }
-
     @property
     def ctmplvars(self):
         return {
@@ -1503,19 +1518,12 @@ class Category(dict):
             'title': self.title,
         }
 
-    def tmplvars(self, posts=[], c=False, p=False, n=False):
-        if p:
-            p = self.navlink(p)
-
-        if n:
-            n = self.navlink(n)
-
-        if not c:
-            post = self[list(self.keys()).pop()]
-            c = post.published.format(self.trange)
-
+    def tmplvars(self, posts=[], year=False):
+        baseurl = self.url
+        if year:
+            baseurl = '%s/%s/' % (baseurl, year)
         return {
-            #'baseurl': self.url,
+            'baseurl': baseurl,
             'site': settings.site,
             'menu': settings.menu,
             'author': settings.author,
@@ -1528,12 +1536,10 @@ class Category(dict):
                 'url': self.url,
                 'feed': self.feedurl,
                 'title': self.title,
-                'current': c,
-                'previous': p,
-                'next': n,
-                'currentyear': arrow.utcnow().format('YYYY')
+                'year': year,
+                'years': self.years,
             },
-            'posts': posts
+            'posts': posts,
         }
 
     def indexfpath(self, subpath=None):
@@ -1634,57 +1640,91 @@ class Category(dict):
         writepath(self.indexfpath(), r)
 
     async def render_archives(self):
-        by_time = {}
-        for key in self.sortedkeys:
-            trange = arrow.get(key).format(self.trange)
-            if trange not in by_time:
-                by_time.update({
-                    trange: []
-                })
-            by_time[trange].append(key)
-
-        keys = list(by_time.keys())
-        for p, c, n in zip([None] + keys[:-1], keys, keys[1:] + [None]):
-            form = c.format(self.trange)
-            if max(keys) == form:
+        for year in self.years.keys():
+            if year == self.newest_year:
                 fpath = self.indexfpath()
             else:
-                fpath = self.indexfpath(form)
+                fpath = self.indexfpath("%d" % (year))
+            y = arrow.get("%d" % year, self.trange).to('utc')
+            tsmin = y.floor('year').timestamp
+            tsmax = y.ceil('year').timestamp
+            start = len(self.sortedkeys)
+            end = 0
 
-            try:
-                findex = self.sortedkeys.index(by_time[c][0])
-                lindex = self.sortedkeys.index(by_time[c][-1])
-                newest = self.newest(findex, lindex)
-            except Exception as e:
-                logger.error(
-                    'calling newest failed with %s for %s',
-                    self.name,
-                    c
-                )
-                continue
+            for index, value in enumerate(self.sortedkeys):
+                if value <= tsmax and index < start:
+                    start = index
+                if value >= tsmin and index > end:
+                    end = index
 
-            if self.is_uptodate(fpath, newest):
-                logger.info(
-                    '%s/%s index is up to date',
-                    self.name,
-                    form
-                )
-                continue
+            if self.is_uptodate(fpath, self[self.sortedkeys[start]].dt):
+                    logger.info("%s / %d is up to date", self.name, year)
             else:
-                logger.info(
-                    '%s/%s index is outdated, generating new',
-                    self.name,
-                    form
-                )
+                logger.info("updating %s / %d", self.name, year)
+                logger.info("getting posts from %d to %d", start, end)
                 r = J2.get_template(self.template).render(
                     self.tmplvars(
-                        [self[k].tmplvars for k in by_time[c]],
-                        c=c,
-                        p=p,
-                        n=n
+                        # I don't know why end needs the +1, but without that
+                        # some posts disappear
+                        # TODO figure this out...
+                        self.get_posts(start, end+1),
+                        year
                     )
                 )
                 writepath(fpath, r)
+
+    #async def render_archives(self):
+        #by_time = {}
+        #for key in self.sortedkeys:
+            #trange = arrow.get(key).format(self.trange)
+            #if trange not in by_time:
+                #by_time.update({
+                    #trange: []
+                #})
+            #by_time[trange].append(key)
+
+        #keys = list(by_time.keys())
+        #for p, c, n in zip([None] + keys[:-1], keys, keys[1:] + [None]):
+            #form = c.format(self.trange)
+            #if max(keys) == form:
+                #fpath = self.indexfpath()
+            #else:
+                #fpath = self.indexfpath(form)
+
+            #try:
+                #findex = self.sortedkeys.index(by_time[c][0])
+                #lindex = self.sortedkeys.index(by_time[c][-1])
+                #newest = self.newest(findex, lindex)
+            #except Exception as e:
+                #logger.error(
+                    #'calling newest failed with %s for %s',
+                    #self.name,
+                    #c
+                #)
+                #continue
+
+            #if self.is_uptodate(fpath, newest):
+                #logger.info(
+                    #'%s/%s index is up to date',
+                    #self.name,
+                    #form
+                #)
+                #continue
+            #else:
+                #logger.info(
+                    #'%s/%s index is outdated, generating new',
+                    #self.name,
+                    #form
+                #)
+                #r = J2.get_template(self.template).render(
+                    #self.tmplvars(
+                        #[self[k].tmplvars for k in by_time[c]],
+                        #c=form,
+                        #p=p,
+                        #n=n
+                    #)
+                #)
+                #writepath(fpath, r)
 
     async def render_feeds(self):
         if not self.is_uptodate(self.rssfeedfpath, self.newest()):

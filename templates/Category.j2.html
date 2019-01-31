@@ -1,10 +1,6 @@
 {% extends "base.j2.html" %}
 {% block lang %}{% endblock %}
 
-{% block licence %}
-    <link rel="license" href="https://spdx.org/licenses/{{ site.licence }}.html" type="{{ site.licence }}" />
-{% endblock %}
-
 {% block title %}{{ category.title }}{% endblock %}
 {% block meta %}
     <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />
@@ -16,44 +12,28 @@
 {% if category.display != 'flat' %}
 <nav>
     <ul>
-        {% if category.previous %}
+        {% for y, url in category.years.items() %}
+        {% if y == category.year %}
         <li>
-            <a rel="prev" href="{{ category.previous.url }}">
-                <i>«</i>
-                <strong>{{ category.previous.label }}</strong>
-                {% if category.currentyear != category.previous.label %}
-                Jan - Dec
-                {% endif %}
-            </a>
-        </li>
-        {% endif %}
-
-        <li>
-            <span class="current">
-                {{ category.current }}
-                {% if category.currentyear != category.current %}
-                Jan - Dec
-                {% endif %}
+            <span>
+                {{ y }}
             </span>
         </li>
-
-        {% if category.next %}
+        {% else %}
         <li>
-            <a rel="next" href="{{ category.next.url }}">
-                <strong>{{ category.next.label }}</strong>
-                Jan - Dec
-                <i>»</i>
+            <a href="{{ url }}">
+                <strong>{{ y }}</strong>
             </a>
         </li>
         {% endif %}
-
+        {% endfor %}
     </ul>
 </nav>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<main class="content-body h-feed hfeed {{ category.name }}" property="h-feed">
+<main class="content-body h-feed hfeed {{ category.name }}">
     <header>
         <p>
         <svg width="128" height="128"><use xlink:href="#icon-{{ category.name }}" /></svg>
@@ -73,26 +53,26 @@
     {% endif %}
     {% set _ = year.append(post.year)%}
 
-    <article class="h-entry hentry singular" property="h-entry" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
+    <article class="h-entry hentry singular" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
         <header>
             {% if category.display == 'flat' %}
-            <h3 class="p-name entry-title" property="p-name" itemprop="name headline" >
+            <h3 class="p-name entry-title" itemprop="name headline" >
             {% else %}
-            <h2 class="p-name entry-title" property="p-name" itemprop="name headline" >
+            <h2 class="p-name entry-title" itemprop="name headline" >
             {% endif %}
             {% if post.is_reply %}
                 <svg class="icon" width="16" height="16">
                     <use xlink:href="#icon-reply" />
                 </svg>
-                <a href="{{ post.url }}/" class="u-url bookmark" property="u-url" itemprop="url mainEntityOfPage">
+                <a href="{{ post.url }}/">
                     RE:
                 </a>
-                <a href="{{ post.is_reply }}" class="u-in-reply-to" property="u-in-reply-to">
+                <a href="{{ post.is_reply }}" class="u-in-reply-to">
                     {{ post.is_reply }}
                 </a>
             {% else %}
-                <a href="{{ post.url }}" title="{{ post.title }}" class="u-url bookmark" property="u-url" itemprop="url mainEntityOfPage">
-                    <span class="entry-title p-name" property="p-name">{{ post.title }}</span>
+                <a href="{{ post.url }}">
+                    <span class="entry-title p-name">{{ post.title }}</span>
                 </a>
             {% endif %}
             {% if category.display == 'flat' %}
@@ -100,26 +80,27 @@
             {% else %}
             </h2>
             {% endif %}
+            <a href="{{ post.url }}" itemprop="url mainEntityOfPage" class="u-url bookmark"></a>
         </header>
 
         {% if post.summary %}
-        <div class="e-summary entry-summary" property="e-summary" itemprop="description">
+        <div class="e-summary entry-summary" itemprop="description">
             {{ post.html_summary }}
             <p class="more">
-                <a href="{{ post.url }}" title="{{ post.title }}">
+                <a href="{{ post.url }}">
                 {% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
                 </a>
             </p>
         </div>
         {% else %}
-        <div class="e-content entry-content" property="e-content" itemprop="articleBody">
+        <div class="e-content entry-content" itemprop="articleBody">
             {{ post.html_content }}
         </div>
         {% endif %}
 
         <footer aria-hidden="true" hidden="hidden">
             <span class="published updated">
-            <time class="dt-published dt-updated" property="dt-published dt-updated" datetime="{{ post.pubtime }}" itemprop="dateModified datePublished">{{ post.pubdate }}</time>
+            <time class="dt-published dt-updated" datetime="{{ post.pubtime }}" itemprop="dateModified datePublished">{{ post.pubdate }}</time>
             </span>
         {% if not post.has_mainimg %}
             <img src="{{ author.avatar }}"
@@ -128,18 +109,16 @@
                 height="0"
                 alt="Photo of {{ author.name }}" />
         {% endif %}
-            <p class="p-author h-card vcard" property="p-author h-card">
+            <p class="p-author h-card vcard">
                 <img class="photo avatar u-photo u-avatar"
-                    property="u-photo u-avatar"
                     src="{{ author.avatar }}"
                     alt="Photo of {{ author.name }}" />
                 <a class="fn p-name url u-url u-uid"
-                    property="p-name u-url u-uid"
                     href="{{ author.url }}"
                     rel="author">
                         {{ author.name }}
                 </a>
-                <a class="u-email email" property="u-email" href="mailto:{{ author.email }}">
+                <a class="u-email email" href="mailto:{{ author.email }}">
                     {{ author.email }}
                 </a>
             </p>

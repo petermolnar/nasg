@@ -1,10 +1,8 @@
-
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   font-family: "Courier", monospace;
-  font-size: 11.5pt;
   margin: 0;
   padding: 0;
   line-height: 1.5em;
@@ -71,7 +69,7 @@ h4 {
 svg {
   transform: rotate(0deg);
   fill: currentColor;
-  vertical-align: text-top;
+  vertical-align:middle;
 }
 
 body > svg {
@@ -123,7 +121,6 @@ body > header a {
   font-weight: bold;
   border-bottom: 3px solid transparent;
   padding-bottom: 0.1em;
-  text-transform:uppercase;
 }
 
 body > header a:hover,
