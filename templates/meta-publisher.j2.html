@@ -1,0 +1,31 @@
+<footer aria-hidden="true" hidden="hidden">
+    <span class="published updated">
+        <time datetime="{{ post.pubtime }}" class="dt-published dt-updated" property="dateModified datePublished">{{ post.pubdate }}</time>
+    </span>
+{% if not post.enclosure %}
+    <img aria-hidden="true" hidden="hidden" class="u-featured hidden" property="image" src="{{ author.avatar }}" />
+{% else %}
+    <img aria-hidden="true" hidden="hidden" class="u-featured hidden" property="image" src="{{ post.enclosure.url }}" />
+{% endif %}
+    <p class="p-author h-card vcard" property="author" typeof="Person">
+        <img class="photo avatar u-photo u-avatar"
+            src="{{ author.avatar }}"
+            alt="Photo of {{ author.name }}"
+            property="image" />
+        <a class="fn p-name url u-url u-uid org"
+            href="{{ author.url }}"
+            property="url">
+            <span property="name">{{ author.name }}</span>
+        </a>
+        <a class="u-email email" href="mailto:{{ author.email }}">
+            {{ author.email }}
+        </a>
+    </p>
+    <span property="publisher" typeof="Organization">
+        <span property="name">{{ site.domain }}</span>
+        <a href="{{ site.url }}" property="url">{{ site.url }}</a>
+        <span property="logo" typeof="ImageObject">
+            <img src="{{ author.avatar }}" alt="" property="url" />
+        </span>
+    </span>
+</footer>

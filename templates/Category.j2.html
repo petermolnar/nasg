@@ -33,7 +33,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="content-body h-feed hfeed {{ category.name }}">
+<main class="content-body h-feed hfeed {{ category.name }}" vocab="http://schema.org/" typeof="Blog WebPage">
     <header>
         <p>
         <svg width="128" height="128"><use xlink:href="#icon-{{ category.name }}" /></svg>
@@ -53,12 +53,12 @@
     {% endif %}
     {% set _ = year.append(post.year)%}
 
-    <article class="h-entry hentry singular" lang="{{ post.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
+    <article class="h-entry hentry singular" lang="{{ post.lang }}" property="blogPost" typeof="BlogPosting">
         <header>
             {% if category.display == 'flat' %}
-            <h3 class="p-name entry-title" itemprop="name headline" >
+            <h3 class="p-name entry-title" property="headline">
             {% else %}
-            <h2 class="p-name entry-title" itemprop="name headline" >
+            <h2 class="p-name entry-title" property="headline">
             {% endif %}
             {% if post.is_reply %}
                 <svg class="icon" width="16" height="16">
@@ -80,11 +80,11 @@
             {% else %}
             </h2>
             {% endif %}
-            <a href="{{ post.url }}" itemprop="url mainEntityOfPage" class="u-url bookmark"></a>
+            <a href="{{ post.url }}" property="url mainEntityOfPage" class="u-url bookmark"></a>
         </header>
 
         {% if post.summary %}
-        <div class="e-summary entry-summary" itemprop="description">
+        <div class="e-summary entry-summary" property="description">
             {{ post.html_summary }}
             <p class="more">
                 <a href="{{ post.url }}">
@@ -93,36 +93,12 @@
             </p>
         </div>
         {% else %}
-        <div class="e-content entry-content" itemprop="articleBody">
+        <div class="e-content entry-content" property="articleBody">
             {{ post.html_content }}
         </div>
         {% endif %}
 
-        <footer aria-hidden="true" hidden="hidden">
-            <span class="published updated">
-            <time class="dt-published dt-updated" datetime="{{ post.pubtime }}" itemprop="dateModified datePublished">{{ post.pubdate }}</time>
-            </span>
-        {% if not post.has_mainimg %}
-            <img src="{{ author.avatar }}"
-                itemprop="image"
-                width="0"
-                height="0"
-                alt="Photo of {{ author.name }}" />
-        {% endif %}
-            <p class="p-author h-card vcard">
-                <img class="photo avatar u-photo u-avatar"
-                    src="{{ author.avatar }}"
-                    alt="Photo of {{ author.name }}" />
-                <a class="fn p-name url u-url u-uid"
-                    href="{{ author.url }}"
-                    rel="author">
-                        {{ author.name }}
-                </a>
-                <a class="u-email email" href="mailto:{{ author.email }}">
-                    {{ author.email }}
-                </a>
-            </p>
-        </footer>
+        {% include 'meta-publisher.j2.html' %}
     </article>
     {% if loop.last %}
     </section>

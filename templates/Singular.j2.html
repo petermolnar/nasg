@@ -33,10 +33,10 @@
 {% else %}
     {% set mftype = 'h-entry' %}
 {% endif %}
-<main role="main">
-    <article class="{{ mftype }} hentry singular" lang="{{ post.lang }}" itemscope="" itemprop="blogPost" itemtype="http://schema.org/BlogPosting" itemref="author">
+<main role="main" vocab="http://schema.org/" typeof="Blog WebPage">
+    <article class="{{ mftype }} hentry singular" lang="{{ post.lang }}" property="blogPost" typeof="BlogPosting">
         <header>
-            <h1 class="entry-title p-name" itemprop="name headline">
+            <h1 class="entry-title p-name" property="headline">
                 {% if post.is_reply %}
                 <span>
                     <svg width="16" height="16">
@@ -50,7 +50,7 @@
                     </a>
                 </span>
                 {% else %}
-                <a href="{{ post.url }}" title="{{ post.title }}">
+                <a href="{{ post.url }}">
                     <span>{{ post.title }}</span>
                 </a>
                 {% endif %}
@@ -58,38 +58,43 @@
         </header>
 
         {% if post.review %}
-        <div class="h-review hreview" itemprop="review" itemscope="" itemtype="http://schema.org/Review">
+        <div class="h-review hreview" property="review" typeof="http://schema.org/Review">
             <strong>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product">{{ post.review.title }}</a></strong>
             <p>
                 By
-                <span class="p-author h-card vcard reviewer" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-                 <a class="fn p-name url u-url u-uid" href="{{ author.url }}" itemprop="url">
-                    <span itemprop="name">{{ author.name }}</span>
-                </a></span> at <time class="dt-published dtreviewed" datetime="{{ post.pubtime }}" itemprop="datePublished">{{ post.pubdate }}</time>
+                <span class="p-author h-card vcard reviewer" property="author" typeof="Person">
+                 <a class="fn p-name url u-url u-uid" href="{{ author.url }}" property="url">
+                    <span property="name">{{ author.name }}</span>
+                </a></span> at <time class="dt-published dtreviewed" datetime="{{ post.pubtime }}" property="datePublished">{{ post.pubdate }}</time>
             </p>
             <p>
-                <span class="rating" itemprop="reviewRating" itemscope itemtype="http://schema.org/Rating">
-                    <meta itemprop="worstRating" content = "1">
-                    <span class="value" itemprop="ratingValue">{{ post.review.rated }}</span>
+                <span class="rating" property="reviewRating" itemscope typeof="Rating">
+                    <meta property="worstRating" content = "1">
+                    <span class="value" property="ratingValue">{{ post.review.rated }}</span>
                     out of
-                    <span class="best" itemprop="bestRating">{{ post.review.outof }}</span>
+                    <span class="best" property="bestRating">{{ post.review.outof }}</span>
                 </span>
             </p>
-            <p class="p-summary summary" itemprop="reviewBody">{{ post.review.summary }}</p>
+            <p class="p-summary summary" property="reviewBody">{{ post.review.summary }}</p>
         </div>
         {% endif %}
 
         {% if post.summary %}
-        <div class="e-summary entry-summary" itemprop="description">
+        <div class="e-summary entry-summary" property="description">
             {{ post.html_summary }}
         </div>
         {% endif %}
 
-        <div class="e-content entry-content" itemprop="articleBody">
+        <div class="e-content entry-content" property="articleBody">
             {{ post.html_content }}
         </div>
 
         <footer>
+        {% if not post.enclosure %}
+            <img aria-hidden="true" hidden="hidden" class="u-featured hidden" property="image" src="{{ author.avatar }}" />
+        {% else %}
+            <img aria-hidden="true" hidden="hidden" class="u-featured hidden" property="image" src="{{ post.enclosure.url }}" />
+        {% endif %}
             <dl>
                 {% if post.event %}
                 <dt>Trip details</dt>
@@ -109,34 +114,35 @@
                 {% endif %}
 
                 <dt>Author</dt>
-                <dd class="p-author h-card vcard" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-                    <img class="photo avatar u-photo u-avatar"
-                        src="{{ author.avatar }}"
-                        alt="Photo of {{ author.name }}"
-                        itemprop="image" />
-                    <a class="fn p-name url u-url u-uid"
-                        href="{{ author.url }}"
-                        rel="author"
-                        itemprop="url">
-                        <span itemprop="name">{{ author.name }}</span>
-                    </a>
-                    <a class="u-email email" href="mailto:{{ author.email }}">
-                        <span itemprop="email">{{ author.email }}</span>
-                    </a>
-                    <p aria-hidden="true" hidden="hidden" class="hidden" itemprop="publisher" itemscope="" itemtype="https://schema.org/Organization">
-                        <span itemprop="name">{{ site.domain }}</span>
-                        <a href="{{ site.url }}" itemprop="url">{{ site.url }}</a>
-                        <span itemprop="logo" itemscope="" itemtype="https://schema.org/ImageObject">
-                            <img src="{{ author.avatar }}" alt="" itemprop="url" />
+                <dd>
+                    <span class="p-author h-card vcard" property="author" typeof="Person">
+                        <img class="photo avatar u-photo u-avatar"
+                            src="{{ author.avatar }}"
+                            alt="Photo of {{ author.name }}"
+                            property="image" />
+                        <a class="fn p-name url u-url u-uid org"
+                            href="{{ author.url }}"
+                            property="url">
+                            <span property="name">{{ author.name }}</span>
+                        </a>
+                        <a class="u-email email" href="mailto:{{ author.email }}">
+                            {{ author.email }}
+                        </a>
+                    </span>
+                    <span aria-hidden="true" hidden="hidden" property="publisher" typeof="Organization">
+                        <span property="name">{{ site.domain }}</span>
+                        <a href="{{ site.url }}" property="url">{{ site.url }}</a>
+                        <span property="logo" typeof="ImageObject">
+                            <img src="{{ author.avatar }}" alt="" property="url" />
                         </span>
-                    </p>
+                    </span>
                 </dd>
 
                 <dt>Published</dt>
                 <dd class="published updated">
                     <time class="dt-published dt-updated"
                         datetime="{{ post.pubtime }}"
-                        itemprop="dateModified datePublished"
+                        property="dateModified datePublished"
                     >{{ post.pubdate }}</time>
                 </dd>
 
@@ -144,7 +150,7 @@
                 <dt>License</dt>
                 <dd class="license">
                 {% if post.licence == 'CC-BY-4.0' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license" itemprop="license">
+                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license" property="license">
                         {{ post.licence }}
                     </a>
                     <ul>
@@ -155,7 +161,7 @@
                         <li>you always need to make a link back here</li>
                     </ul>
                 {% elif post.licence == 'CC-BY-NC-4.0' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license" itemprop="license">
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license" property="license">
                         {{ post.licence }}
                     </a>
                     <ul>
@@ -167,7 +173,7 @@
                     </ul>
                     For commercial use, please contact me.
                 {% elif post.licence == 'CC-BY-NC-ND-4.0' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license" itemprop="license">
+                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license" property="license">
                         {{ post.licence }}
                     </a>
                     <ul>
@@ -183,10 +189,7 @@
 
                 <dt>Entry URL</dt>
                 <dd>
-                    {% if not post.has_mainimg %}
-                    <img aria-hidden="true" src="{{ author.avatar }}" itemprop="image"  hidden="hidden" class="hidden" />
-                    {% endif %}
-                    <a class="u-url u-uuid" rel="bookmark" href="{{ post.url }}" itemprop="url mainEntityOfPage">
+                    <a class="u-url u-uuid" href="{{ post.url }}" property="url">
                         {{ post.url }}
                     </a>
                 </dd>
@@ -198,7 +201,7 @@
         {% if post.syndicate|length %}
         <section class="syndication">
             {% for url in post.syndicate %}
-                <a href="{{ url }}" class="u-syndication" itemprop="u-syndication"></a>
+                <a href="{{ url }}" class="u-syndication"></a>
             {% endfor %}
         </section>
         {% endif %}
@@ -206,14 +209,21 @@
         <section class="encourage">
             <h2>Encourage creation!</h2>
             <p>
-                If this entry helped you, or you simply liked it, leave a tip via <br>
+                If this entry helped you, or you simply liked it, leave a tip via <br />
                 {% for provider, info in author.tips.items() %}
+                <span typeof="DonateAction" property="potentialAction">
                     {% if loop.last and not loop.first %} or {% endif %}
-                    <a rel="payment" href="{{ info.url }}">
+                    <a property="url" href="{{ info.url }}">
                     <svg width="16" height="16">
                         <use xlink:href="#icon-{{ provider }}"></use>
                     </svg> {{ info.text }}</a>
                     {% if not loop.last and not loop.first %}, {% endif %}
+                <span aria-hidden="true" hidden="hidden" property="recipient" typeof="Person">
+                    for
+                    <span property="name">{{ author.name }}</span>
+                    (<span property="email">{{ author.email }}</span>)
+                </span>
+                </span>
                 {% endfor %}
             </p>
         </section>

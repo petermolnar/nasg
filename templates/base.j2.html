@@ -23,7 +23,7 @@
     </style>
 </head>
 
-<body itemscope="" itemtype="http://schema.org/Blog http://schema.org/WebPage">
+<body>
 
 {% macro activemenu(name) %}
 {% if (post is defined and post.slug ==  name )
@@ -62,15 +62,15 @@
                     <label for="lightscheme">light</label>
                 </span>
             </form>
-            <form role="search" method="get" action="{{ site.search }}" itemprop="potentialAction" itemscope="" itemtype="https://schema.org/SearchAction">
-                <meta itemprop="target" content="{{ site.search }}?q={q}"/>
+            <form role="search" method="get" action="{{ site.search }}" property="potentialAction" typeof="SearchAction" vocab="http://schema.org/">
+                <meta property="target" content="{{ site.search }}?q={q}"/>
                 <label for="qsub">
                     <input type="submit" value="search" id="qsub" name="qsub" />
                     <svg width="16" height="16">
                         <use xlink:href="#icon-search"></use>
                     </svg>
                 </label>
-                <input itemprop="query-input" type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" required="required" />
+                <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" required="required" property="query-input" />
             </form>
         </div>
     </section>
@@ -82,25 +82,22 @@
 {% block pagination %}
 {% endblock %}
 
-<footer class="p-author h-card vcard" id="author" itemprop="author publisher" itemscope="" itemtype="https://schema.org/Person https://schema.org/Organization">
+<footer class="p-author h-card vcard">
     <p>
         <a href="https://creativecommons.org/">CC</a>,
         1999-2019,
-        <span itemprop="logo" itemscope="" itemtype="https://schema.org/ImageObject">
         <img class="photo avatar u-photo u-avatar"
             src="{{ author.avatar }}"
-            alt="Photo of {{ author.name }}"
-            itemprop="image url" />
-        </span>
-        <a class="fn p-name url u-url u-uid" rel="me" href="{{ site.url }}">
-            <span itemprop="name">{{ author.name }}</span>
+            alt="Photo of {{ author.name }}" />
+        <a class="fn p-name url u-url u-uid org" rel="me" href="{{ site.url }}">
+            {{ author.name }}
         </a>
         <a class="u-email email" rel="me" href="mailto:{{ author.email }}">
             <svg width="16" height="16">
                 <title>email</title>
                 <use xlink:href="#icon-mail"></use>
             </svg>
-            <span itemprop="email">{{ author.email }}</span>
+            {{ author.email }}
         </a>
     </p>
     <nav>

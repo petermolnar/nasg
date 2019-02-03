@@ -14,83 +14,59 @@
 {% endblock %}
 
 {% block content %}
-<main class="content-body h-feed hfeed">
+<main class="content-body h-feed hfeed" vocab="http://schema.org/" typeof="Blog WebPage">
     <aside>
         <div>
             {{ post.html_content }}
         </div>
     </aside>
 
-    {% for category, latest in elements %}
+    {% for category, post in elements %}
     <section>
-        <h2>Latest in
+        <h2>post in
             <a href="{{ category.url }}/">
                 <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>
                 {{ category.name }}
             </a>
         </h2>
-        <article class="h-entry hentry singular" lang="{{ latest.lang }}" itemprop="blogPost" itemscope="" itemtype="http://schema.org/BlogPosting" itemref="author">
+        <article class="h-entry hentry singular" lang="{{ post.lang }}" property="blogPost" typeof="BlogPosting">
             <header>
-                <h3 class="p-name entry-title" itemprop="name headline" >
-                {% if latest.is_reply %}
+                <h3 class="p-name entry-title" property="name headline" >
+                {% if post.is_reply %}
                     <svg class="icon" width="16" height="16">
                         <use xlink:href="#icon-reply" />
                     </svg>
-                    <a href="{{ latest.url }}/">
+                    <a href="{{ post.url }}/">
                         RE:
                     </a>
-                    <a href="{{ latest.is_reply }}" class="u-in-reply-to">
-                        {{ latest.is_reply }}
+                    <a href="{{ post.is_reply }}" class="u-in-reply-to">
+                        {{ post.is_reply }}
                     </a>
                 {% else %}
-                    <a href="{{ latest.url }}">
-                        <span class="entry-title p-name">{{ latest.title }}</span>
+                    <a href="{{ post.url }}">
+                        <span class="entry-title p-name">{{ post.title }}</span>
                     </a>
                 {% endif %}
                 </h3>
-                <a href="{{ post.url }}" itemprop="url mainEntityOfPage" class="u-url bookmark"></a>
+                <a href="{{ post.url }}" property="url mainEntityOfPage" class="u-url bookmark"></a>
             </header>
 
-            {% if latest.summary %}
-            <div class="e-summary entry-summary" itemprop="description">
-                {{ latest.html_summary }}
+            {% if post.summary %}
+            <div class="e-summary entry-summary" property="description">
+                {{ post.html_summary }}
                 <span class="more">
-                    <a href="{{ latest.url }}">
-                    {% if latest.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
+                    <a href="{{ post.url }}">
+                    {% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
                     </a>
                 </span>
             </div>
             {% else %}
-            <div class="e-content entry-content" itemprop="articleBody">
-                {{ latest.html_content }}
+            <div class="e-content entry-content" property="articleBody">
+                {{ post.html_content }}
             </div>
             {% endif %}
 
-            <footer aria-hidden="true" hidden="hidden">
-                <span class="published updated">
-                <time class="dt-published dt-updated" datetime="{{ latest.pubtime }}" itemprop="dateModified datePublished">{{ latest.pubdate }}</time>
-                </span>
-            {% if not latest.has_mainimg %}
-                <img src="{{ author.avatar }}"
-                    itemprop="image"
-                    width="0"
-                    height="0"
-                    alt="Photo of {{ author.name }}" />
-            {% endif %}
-                <p class="p-author h-card vcard">
-                    <img class="photo avatar u-photo u-avatar"
-                        src="{{ author.avatar }}"
-                        alt="Photo of {{ author.name }}" />
-                    <a class="fn p-name url u-url u-uid"
-                        href="{{ author.url }}"
-                        rel="author">
-                            {{ author.name }}
-                    </a>
-                    <a class="u-email email" href="mailto:{{ author.email }}">
-                        {{ author.email }}
-                    </a>
-                </p>
-            </footer>
+            {% include 'meta-publisher.j2.html' %}
         </article>
     </section>
 {% endfor %}
