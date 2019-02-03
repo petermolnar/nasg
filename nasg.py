@@ -155,13 +155,14 @@ class AQ:
         consumer = asyncio.ensure_future(self.consume())
         self.loop.run_until_complete(consumer)
 
-
 class Webmention(object):
-    def __init__(self, parent):
-        self.dpath = os.path.dirname(parent.fpath)
-        self.source = parent.url
-        self.target = parent.is_reply
-        self.mtime = parent.mtime
+    def __init__(self, source, target, dpath, mtime=0):
+        self.dpath = dpath
+        self.source = source
+        self.target = target
+        if not mtime:
+            mtime = arrow.utcnow().timestamp
+        self.mtime = mtime
 
     @property
     def fpath(self):
@@ -572,8 +573,28 @@ class Singular(MarkdownDoc):
     @property
     def to_ping(self):
         urls = []
+        w = Webmention(
+            self.url,
+            'https://fed.brid.gy',
+            os.path.dirname(self.fpath),
+            self.dt
+        )
+        urls.append(w)
         if self.is_reply:
-            w = Webmention(self)
+            w = Webmention(
+                self.url,
+                self.is_reply,
+                os.path.dirname(self.fpath),
+                self.dt
+            )
+            urls.append(w)
+        elif self.is_photo:
+            w = Webmention(
+                self.url,
+                'https://brid.gy/publish/flickr',
+                os.path.dirname(self.fpath),
+                self.dt
+            )
             urls.append(w)
         return urls
 
@@ -655,6 +676,47 @@ class Singular(MarkdownDoc):
         return event
 
     @cached_property
+    def jsonld(self):
+        r = {
+            "@context": "http://schema.org",
+            "@type": "BlogPosting",
+            "headline": self.title,
+            "url": self.url,
+            "mainEntityOfPage": self.url,
+            "articleBody": self.html_content,
+            "description": self.html_summary,
+            "dateModified": self.published.format(settings.dateformat.get('iso')),
+            "datePublished": self.published.format(settings.dateformat.get('iso')),
+            "license": self.licence,
+            "image": settings.author.get('avatar'),
+            "author": {
+                "@context": "http://schema.org",
+                "@type": "Person",
+                "image": settings.author.get('avatar'),
+                "url": settings.author.get('url'),
+                "name": settings.author.get('name'),
+                "email": settings.author.get('url'),
+            },
+            "publisher": {
+                "@context": "http://schema.org",
+                "@type": "Organization",
+                "logo": {
+                    "@context": "http://schema.org",
+                    "@type": "ImageObject",
+                    "url": settings.author.get('avatar'),
+                },
+                "url": settings.author.get('url'),
+                "name": settings.author.get('name'),
+                "email": settings.author.get('url'),
+            },
+        }
+        if (self.is_photo):
+            r.update({
+                'image': self.enclosure.get('url'),
+            })
+        return json.dumps(r)
+
+    @cached_property
     def tmplvars(self):
         v = {
             'title': self.title,
@@ -678,6 +740,7 @@ class Singular(MarkdownDoc):
             'review': self.review,
             'has_code': self.has_code,
             'event': self.event,
+            'is_photo': self.is_photo,
         }
         if (self.is_photo):
             v.update({
@@ -775,6 +838,7 @@ class Singular(MarkdownDoc):
             'tips': settings.tips,
         })
         writepath(self.renderfile, r)
+        #writepath(self.renderfile.replace('.html', '.json'), self.jsonld)
 
 
 class Home(Singular):
@@ -859,7 +923,7 @@ class WebImage(object):
             'caption': self.caption,
             'exif': self.exif,
             'is_photo': self.is_photo,
-            'is_mainimg': self.is_mainimg,
+            #'is_mainimg': self.is_mainimg,
         }
 
     def __str__(self):
