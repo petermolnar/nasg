@@ -1,33 +1,36 @@
 <!DOCTYPE html>
-<html{% block lang %}{% endblock %}>
+<html{% block lang %}{% endblock %} prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#">
 <head>
     <title>{% block title %}{% endblock %}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
-    <link rel="icon" href="{{ site.favicon }}" />
-    {% block licence %}
-    <link rel="license" href="https://spdx.org/licenses/{{ site.licence }}.html" type="{{ site.licence }}" />
-    {% endblock %}
+    <link rel="icon" href="{{ site.image }}" />
     {% for key, value in meta.items() %}
     <link rel="{{ key }}" href="{{ value }}" />
     {% endfor %}
-    {% block meta %}{% endblock %}
+{% macro cssinclude(fname) %}
+{% include fname %}
+{% endmacro %}
     <style media="all">
-        {% include 'style.css' %}
+        {{ cssinclude('style.css')|indent(8)}}
     </style>
     <style id="css_alt" media="speech">
-        {% include 'style-alt.css' %}
+        {{ cssinclude('style-alt.css')|indent(8)}}
     </style>
     <style media="print">
-        {% include 'style-print.css' %}
+        {{ cssinclude('style-print.css')|indent(8)}}
     </style>
+    <script type="application/ld+json">
+    {{ site|tojson(indent=4) }}
+    </script>
+    {% block meta %}{% endblock %}
 </head>
 
 <body>
 
 {% macro activemenu(name) %}
-{% if (post is defined and post.slug ==  name )
-    or (post is defined and post.category ==  name )
+{% if (post is defined and post.name ==  name )
+    or (post is defined and post.genre ==  name )
     or ( category is defined and category.name == name )%}active{% endif %}
 {% endmacro %}
 
@@ -62,15 +65,14 @@
                     <label for="lightscheme">light</label>
                 </span>
             </form>
-            <form role="search" method="get" action="{{ site.search }}" property="potentialAction" typeof="SearchAction" vocab="http://schema.org/">
-                <meta property="target" content="{{ site.search }}?q={q}"/>
+            <form role="search" method="get" action="{{ site.potentialAction.url }}">
                 <label for="qsub">
                     <input type="submit" value="search" id="qsub" name="qsub" />
                     <svg width="16" height="16">
                         <use xlink:href="#icon-search"></use>
                     </svg>
                 </label>
-                <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" required="required" property="query-input" />
+                <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
             </form>
         </div>
     </section>
@@ -87,39 +89,41 @@
         <a href="https://creativecommons.org/">CC</a>,
         1999-2019,
         <img class="photo avatar u-photo u-avatar"
-            src="{{ author.avatar }}"
-            alt="Photo of {{ author.name }}" />
-        <a class="fn p-name url u-url u-uid org" rel="me" href="{{ site.url }}">
-            {{ author.name }}
+            src="{{ site.author.image }}"
+            alt="Photo of {{ site.author.name }}" />
+        <a class="fn p-name url u-url u-uid org" rel="me" href="{{ site.author.url }}">
+            {{ site.author.name }}
         </a>
-        <a class="u-email email" rel="me" href="mailto:{{ author.email }}">
+        <a class="u-email email" rel="me" href="mailto:{{ site.author.email }}">
             <svg width="16" height="16">
-                <title>email</title>
                 <use xlink:href="#icon-mail"></use>
             </svg>
-            {{ author.email }}
+            {{ site.author.email }}
         </a>
     </p>
     <nav>
         <ul>
             <li>
-                <a title="following" href="{{ author.following }}">
+                <a title="following" href="{{ site.author.follows }}">
                     <svg width="16" height="16"><use xlink:href="#icon-following" /></svg>
                     followings
                 </a>
             </li>
+            {% for url in site.author.sameAs %}
             <li>
-                <a title="CV" href="{{ author.cv }}">
+                {% if 'cv.html' in url %}
+                <a title="CV" href="{{ url }}">
                     <svg width="16" height="16"><use xlink:href="#icon-resume" /></svg>
                     resume
                 </a>
-            </li>
-            <li>
-                <a title="github" rel="me" href="{{ author.github }}">
+                {% elif 'github' in url %}
+                <a title="github" rel="me" href="{{ url }}">
                     <svg width="16" height="16"><use xlink:href="#icon-github" /></svg>
                     github
                 </a>
+                {% endif %}
             </li>
+            {% endfor %}
         </ul>
     </nav>
     <p>

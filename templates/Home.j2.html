@@ -1,10 +1,10 @@
 {% extends "base.j2.html" %}
 
-{% block title %}{{ post.title }} - {{ site.domain }}{% endblock %}
+{% block title %}{{ post.headline }} - {{ site.name }}{% endblock %}
 
 {% block meta %}
-    <meta name="author" content="{{ author.name }} <{{ author.email }}>" />
-    <meta name="description" content="{{ post.summary|e }}" />
+    <meta name="author" content="{{ site.author.name }} <{{ site.author.email }}>" />
+    <meta name="description" content="{{ post.description|e }}" />
     <link rel="canonical" href="{{ post.url }}" />
     {% for category, latest in elements %}
     <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />
@@ -14,60 +14,22 @@
 {% endblock %}
 
 {% block content %}
-<main class="content-body h-feed hfeed" vocab="http://schema.org/" typeof="Blog WebPage">
+<main class="h-feed hfeed">
     <aside>
         <div>
-            {{ post.html_content }}
+            {{ post.text }}
         </div>
     </aside>
 
-    {% for category, post in elements %}
+    {% for category, post in posts %}
     <section>
-        <h2>post in
+        <h2>in:
             <a href="{{ category.url }}/">
                 <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>
                 {{ category.name }}
             </a>
         </h2>
-        <article class="h-entry hentry singular" lang="{{ post.lang }}" property="blogPost" typeof="BlogPosting">
-            <header>
-                <h3 class="p-name entry-title" property="name headline" >
-                {% if post.is_reply %}
-                    <svg class="icon" width="16" height="16">
-                        <use xlink:href="#icon-reply" />
-                    </svg>
-                    <a href="{{ post.url }}/">
-                        RE:
-                    </a>
-                    <a href="{{ post.is_reply }}" class="u-in-reply-to">
-                        {{ post.is_reply }}
-                    </a>
-                {% else %}
-                    <a href="{{ post.url }}">
-                        <span class="entry-title p-name">{{ post.title }}</span>
-                    </a>
-                {% endif %}
-                </h3>
-                <a href="{{ post.url }}" property="url mainEntityOfPage" class="u-url bookmark"></a>
-            </header>
-
-            {% if post.summary %}
-            <div class="e-summary entry-summary" property="description">
-                {{ post.html_summary }}
-                <span class="more">
-                    <a href="{{ post.url }}">
-                    {% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
-                    </a>
-                </span>
-            </div>
-            {% else %}
-            <div class="e-content entry-content" property="articleBody">
-                {{ post.html_content }}
-            </div>
-            {% endif %}
-
-            {% include 'meta-publisher.j2.html' %}
-        </article>
+        {% include 'meta-article.j2.html' %}
     </section>
 {% endfor %}
 </main>

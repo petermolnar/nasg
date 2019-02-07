@@ -1,43 +1,62 @@
 {% extends "base.j2.html" %}
 
-{% block lang %} lang="{{ post.lang }}" {% endblock %}
+{% macro includefile(fname) %}
+{% include fname %}
+{% endmacro %}
 
-{% block title %}{{ post.title }} - {{ site.domain }}{% endblock %}
+{% block lang %} lang="{{ post.inLanguage }}" {% endblock %}
+
+{% block title %}{{ post.headline }} - {{ site.name }}{% endblock %}
 
 {% block meta %}
-    <meta name="author" content="{{ author.name }} <{{ author.email }}>" />
-    <meta name="description" content="{{ post.summary|e }}" />
+    <meta name="author" content="{{ post.author.name }} ({{ post.author.email }})" />
+    <meta name="description" content="{{ post.description|striptags|e }}" />
     <link rel="canonical" href="{{ post.url }}" />
-    {% if post.has_code %}
+    <script type="application/ld+json">
+    {{ post|tojson(indent=4) }}
+    </script>
+    {% if post['@type'] == 'TechArticle' %}
     <style media="all">
-        {% include 'prism.css' %}
+        {{ includefile('prism.css')|indent(8) }}
     </style>
+    {% endif %}
+
+    <meta property="og:title" content="{{ post.headline }}" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="{{ post.url }}" />
+    <meta property="og:description" content="{{ post.description|striptags|e }}" />
+    <meta property="article:published_time" content="{{ post.datePublished }}" />
+    <meta property="article:modified_time" content="{{ post.dateModified }}" />
+    <meta property="article:author" content="{{ post.author.name }} ({{ post.author.email}})" />
+    {% if post.image.url is defined %}
+    <meta property="og:image" content="{{ post.image.url }}" />
+    <meta property="og:image:type" content="{{ post.image.encodingFormat }}" />
+    <meta property="og:image:width" content="{{ post.image.width }}" />
+    <meta property="og:image:height" content="{{ post.image.height }}" />
+    {% else %}
+    <meta property="og:image" content="{{ post.image }}" />
     {% endif %}
 {% endblock %}
 
 {% block prism %}
-    {% if post.has_code %}
+    {% if post['@type'] == 'TechArticle' %}
     <script>
-        {% include 'prism.js' %}
+        {{ includefile('prism.js')|indent(8) }}
     </script>
     {% endif %}
 {% endblock %}
 
-{% block licence %}
-    <link rel="license" href="https://spdx.org/licenses/{{ post.licence }}.html" type="{{ post.licence }}" />
-{% endblock %}
-
 {% block content %}
 {% if post.event %}
-    {% set mftype = 'h-entry h-event' %}
+    {% set mftype = 'h-entry hentry h-event hevent' %}
 {% else %}
-    {% set mftype = 'h-entry' %}
+    {% set mftype = 'h-entry hentry' %}
 {% endif %}
-<main role="main" vocab="http://schema.org/" typeof="Blog WebPage">
-    <article class="{{ mftype }} hentry singular" lang="{{ post.lang }}" property="blogPost" typeof="BlogPosting">
+<main>
+    <article class="{{ mftype }}" lang="{{ post.inLanguage }}" id="article">
         <header>
-            <h1 class="entry-title p-name" property="headline">
-                {% if post.is_reply %}
+            <h1 class="entry-title p-name">
+                {% if post.mentions %}
                 <span>
                     <svg width="16" height="16">
                         <use xlink:href="#icon-reply" />
@@ -45,113 +64,93 @@
                     <a href="{{ post.url }}">
                         RE:
                     </a>
-                    <a href="{{ post.is_reply }}" class="u-in-reply-to">
-                        {{ post.is_reply }}
+                    <a href="{{ post.mentions.url }}" class="u-in-reply-to">
+                        {{ post.mentions.url }}
                     </a>
                 </span>
                 {% else %}
                 <a href="{{ post.url }}">
-                    <span>{{ post.title }}</span>
+                    {{ post.headline }}
                 </a>
                 {% endif %}
             </h1>
         </header>
 
         {% if post.review %}
-        <div class="h-review hreview" property="review" typeof="http://schema.org/Review">
-            <strong>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product">{{ post.review.title }}</a></strong>
+        <div class="h-review hreview">
+            <strong>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product">{{ post.review.name }}</a></strong>
             <p>
                 By
-                <span class="p-author h-card vcard reviewer" property="author" typeof="Person">
-                 <a class="fn p-name url u-url u-uid" href="{{ author.url }}" property="url">
-                    <span property="name">{{ author.name }}</span>
-                </a></span> at <time class="dt-published dtreviewed" datetime="{{ post.pubtime }}" property="datePublished">{{ post.pubdate }}</time>
+                <span class="p-author h-card vcard reviewer">
+                 <a class="fn p-name url u-url u-uid" href="{{ post.author.url }}">
+                    <span>{{ post.author.name }}</span>
+                </a></span> in <time class="dt-published dtreviewed" datetime="{{ post.datePublished }}">{{ post.copyrightYear }}</time>
             </p>
             <p>
-                <span class="rating" property="reviewRating" itemscope typeof="Rating">
-                    <meta property="worstRating" content = "1">
-                    <span class="value" property="ratingValue">{{ post.review.rated }}</span>
+                <span class="rating">
+                    <span class="value">{{ post.review.reviewRating.ratingValue }}</span>
                     out of
-                    <span class="best" property="bestRating">{{ post.review.outof }}</span>
+                    <span class="best">{{ post.review.reviewRating.bestRating }}</span>
                 </span>
             </p>
-            <p class="p-summary summary" property="reviewBody">{{ post.review.summary }}</p>
+            <p class="p-summary summary">{{ post.review.text }}</p>
         </div>
         {% endif %}
 
-        {% if post.summary %}
-        <div class="e-summary entry-summary" property="description">
-            {{ post.html_summary }}
+        {% if post.description|length %}
+        <div class="e-summary entry-summary">
+            {{ post.description }}
         </div>
         {% endif %}
 
-        <div class="e-content entry-content" property="articleBody">
-            {{ post.html_content }}
+        <div class="e-content entry-content">
+            {{ post.text }}
         </div>
 
         <footer>
-        {% if not post.enclosure %}
-            <img aria-hidden="true" hidden="hidden" class="u-featured hidden" property="image" src="{{ author.avatar }}" />
-        {% else %}
-            <img aria-hidden="true" hidden="hidden" class="u-featured hidden" property="image" src="{{ post.enclosure.url }}" />
-        {% endif %}
             <dl>
-                {% if post.event %}
+                {% if post.subjectOf %}
                 <dt>Trip details</dt>
                 <dd>
                     From
-                    <time class="dt-start dtstart" datetime="{{ post.event.starttime }}">
-                        {{ post.event.startdate }}
+                    <time class="dt-start dtstart" datetime="{{ post.subjectOf.startDate }}">
+                        {{ post.subjectOf.startDate }}
                     </time>
                     to
-                    <time class="dt-end dtend" datetime="{{ post.event.endtime }}">
-                        {{ post.event.enddate }}
+                    <time class="dt-end dtend" datetime="{{ post.subjectOf.endDate }}">
+                        {{ post.subjectOf.endDate }}
                     </time>, in
                     <span class="p-location location">
-                        {{ post.event.location }}
+                        {{ post.subjectOf.location.name }}
                     </span>
                 </dd>
                 {% endif %}
 
                 <dt>Author</dt>
                 <dd>
-                    <span class="p-author h-card vcard" property="author" typeof="Person">
+                    <span class="p-author h-card vcard">
                         <img class="photo avatar u-photo u-avatar"
-                            src="{{ author.avatar }}"
-                            alt="Photo of {{ author.name }}"
-                            property="image" />
-                        <a class="fn p-name url u-url u-uid org"
-                            href="{{ author.url }}"
-                            property="url">
-                            <span property="name">{{ author.name }}</span>
+                            src="{{ post.author.image }}"
+                            alt="Photo of {{ post.author.name }}" />
+                        <a class="fn p-name url u-url u-uid org" href="{{ post.author.url }}">
+                            {{ post.author.name }}
                         </a>
-                        <a class="u-email email" href="mailto:{{ author.email }}">
-                            {{ author.email }}
+                        <a class="u-email email" href="mailto:{{ post.author.email }}">
+                            {{ post.author.email }}
                         </a>
-                    </span>
-                    <span aria-hidden="true" hidden="hidden" property="publisher" typeof="Organization">
-                        <span property="name">{{ site.domain }}</span>
-                        <a href="{{ site.url }}" property="url">{{ site.url }}</a>
-                        <span property="logo" typeof="ImageObject">
-                            <img src="{{ author.avatar }}" alt="" property="url" />
-                        </span>
                     </span>
                 </dd>
 
                 <dt>Published</dt>
                 <dd class="published updated">
-                    <time class="dt-published dt-updated"
-                        datetime="{{ post.pubtime }}"
-                        property="dateModified datePublished"
-                    >{{ post.pubdate }}</time>
+                    <time class="dt-published dt-updated" datetime="{{ post.datePublished }}">{{ post.datePublished|printdate }}</time>
                 </dd>
-
 
                 <dt>License</dt>
                 <dd class="license">
-                {% if post.licence == 'CC-BY-4.0' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by/4.0/" class="u-license" property="license">
-                        {{ post.licence }}
+                {% if 'CC-BY-4.0' in post.license %}
+                    <a rel="license" href="{{ post.license }}" class="u-license">
+                        CC-BY-4.0
                     </a>
                     <ul>
                         <li>you can share it</li>
@@ -160,9 +159,9 @@
                         <li>you can use it for commercial purposes</li>
                         <li>you always need to make a link back here</li>
                     </ul>
-                {% elif post.licence == 'CC-BY-NC-4.0' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/" class="u-license" property="license">
-                        {{ post.licence }}
+                {% elif 'CC-BY-NC-4.0' in post.license %}
+                    <a rel="license" href="{{ post.license }}" class="u-license">
+                        CC-BY-NC-4.0
                     </a>
                     <ul>
                         <li>you can share it</li>
@@ -172,9 +171,9 @@
                         <li>you always need to make a link back here</li>
                     </ul>
                     For commercial use, please contact me.
-                {% elif post.licence == 'CC-BY-NC-ND-4.0' %}
-                    <a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="u-license" property="license">
-                        {{ post.licence }}
+                {% elif 'CC-BY-NC-ND-4.0' in post.license %}
+                    <a rel="license" href="{{ post.license }}" class="u-license">
+                        CC-BY-NC-ND-4.0
                     </a>
                     <ul>
                         <li>you can share it</li>
@@ -189,54 +188,68 @@
 
                 <dt>Entry URL</dt>
                 <dd>
-                    <a class="u-url u-uuid" href="{{ post.url }}" property="url">
+                    <a class="u-url u-uuid" href="{{ post.url }}">
                         {{ post.url }}
                     </a>
                 </dd>
 
+                {% if post.sameAs|length %}
+                <dt>Also on</dt>
+                <dd>
+                    <ul>
+                    {% for url in post.sameAs %}
+                    <li>
+                        <a class="u-syndication" href="{{ url }}">
+                            {{ url }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    </ul>
+                </dd>
+                {% endif %}
+
             </dl>
         </footer>
 
-    {% if not post.is_page %}
-        {% if post.syndicate|length %}
+    {% if 'WebPage' != post['@type'] %}
         <section class="syndication">
-            {% for url in post.syndicate %}
-                <a href="{{ url }}" class="u-syndication"></a>
-            {% endfor %}
+        {% for action in post.potentialAction %}
+            {% if  'InteractAction' == action['@type'] %}
+                <a href="{{ action.url }}"></a>
+            {% endif %}
+        {% endfor %}
         </section>
-        {% endif %}
 
         <section class="encourage">
             <h2>Encourage creation!</h2>
             <p>
                 If this entry helped you, or you simply liked it, leave a tip via <br />
-                {% for provider, info in author.tips.items() %}
-                <span typeof="DonateAction" property="potentialAction">
-                    {% if loop.last and not loop.first %} or {% endif %}
-                    <a property="url" href="{{ info.url }}">
+                {% set counters = {'donation': False} %}
+                {% for donate in post.potentialAction %}
+                    {% if 'DonateAction' == donate['@type'] %}
+                    {% if counters.donation %} or {% endif %}
+                    <a href="{{ donate.url }}">
                     <svg width="16" height="16">
-                        <use xlink:href="#icon-{{ provider }}"></use>
-                    </svg> {{ info.text }}</a>
-                    {% if not loop.last and not loop.first %}, {% endif %}
-                <span aria-hidden="true" hidden="hidden" property="recipient" typeof="Person">
-                    for
-                    <span property="name">{{ author.name }}</span>
-                    (<span property="email">{{ author.email }}</span>)
-                </span>
-                </span>
+                        <use xlink:href="#icon-{{ donate.name }}"></use>
+                    </svg> {{ donate.description }}</a>
+                    {% if counters.update({'donation': True}) %} {% endif %}
+                    {% endif %}
                 {% endfor %}
             </p>
         </section>
 
-        {% if post.replies|length %}
-        <section class="replies">
-            <h2><a id="replies"></a>Replies</h2>
+        {% if post.comment|length %}
+        <section class="comments">
+            <h2><a id="comments"></a>Responses</h2>
             <ol>
-                {% for mtime, comment in post.replies.items() %}
+                {% for comment in post.comment %}
                 <li class="h-entry p-comment">
-                    <time class="dt-published" datetime="{{ comment.pubtime }}">
-                        {{ comment.pubdate }}
-                    </time> from
+                    <span class="reaction">
+                        <a class="u-url" href="{{ comment.url }}">
+                            {{ comment.disambiguatingDescription }}
+                        </a>
+                    </span>
+                    from
                     <span class="p-author h-card">
                         {% if comment.author.url %}
                         <a class="url u-url" href="{{ comment.author.url }}">
@@ -249,58 +262,23 @@
                             {{ comment.author.name }}
                         </span>
                         {% endif %}
-                    </span><br />
+                    </span>
+                    at
+                    <time class="dt-published" datetime="{{ comment.datePublished }}">
+                        {{ comment.datePublished|printdate }}
+                    </time>
+                    <br />
                     <span class="source">
                         <svg width="16" height="16">
                             <use xlink:href="#icon-link"></use>
                         </svg>
-                        <a class="u-url" href="{{ comment.source }}">
-                            {{ comment.source }}
+                        <a class="u-url" href="{{ comment.url }}">
+                            {{ comment.url }}
                         </a>
                     </span>
                 </li>
                 {% endfor %}
             </ol>
-        </section>
-        {% endif %}
-
-        {% if post.reactions|length %}
-        <section class="reactions">
-            <h2><a id="reactions"></a>Reactions</h2>
-            <dl>
-                {% for character, comments in post.reactions.items() %}
-                <dt>{{ character }}</dt>
-                <dd>
-                    <ul>
-                        {% for mtime, comment in comments.items() %}
-                        <li class="h-entry p-comment">
-                            <span class="reaction">
-                                <a class="u-url" href="{{ comment.source }}">
-                                    {{ comment.type }}
-                                </a>
-                            </span>
-                            <time class="dt-published" datetime="{{ comment.pubtime }}">
-                                {{ comment.pubdate }}
-                            </time> from
-                            <span class="p-author h-card">
-                                {% if comment.author.url %}
-                                <a class="url u-url" href="{{ comment.author.url }}">
-                                    <span class="p-name fn">
-                                        {{ comment.author.name }}
-                                    </span>
-                                </a>
-                                {% else %}
-                                <span class="p-name fn">
-                                    {{ comment.author.name }}
-                                </span>
-                                {% endif %}
-                            </span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </dd>
-                {% endfor %}
-            </dl>
         </section>
         {% endif %}
 

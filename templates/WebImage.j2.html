@@ -1,56 +1,63 @@
 <figure class="photo">
-{% if href != src %}
-    <a href="{{ href }}">
+{% if url != thumbnail.url %}
+    <a href="{{ url }}"{% if representativeOfPage %} class="u-featured"{% endif %}>
 {% endif %}
-        <img src="{{ src }}" title="{{ title }}" alt="" width="{{ width }}" height="{{ height }}" />
-{% if href != src %}
+        <img src="{{ thumbnail.url }}" title="{{ headline }}" alt="" width="{{ thumbnail.width }}" height="{{ thumbnail.height }}" />
+{% if url != thumbnail.url %}
     </a>
 {% endif %}
     <figcaption>
         <span class="alt">{{ caption }}</span>
-{% if is_photo %}
+{% if creator is defined %}
+{% macro exifvalue(key) %}
+    {% for data in exifData: %}
+        {% if key == data['name'] %}
+            {{ data['value'] }}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
         <dl class="exif">
             <dt>Camera</dt>
             <dd>
                 <svg width="16" height="16">
                     <use xlink:href="#icon-camera" />
                 </svg>
-                {{ exif.camera }}
+                {{ exifvalue('Model')|trim }}
             </dd>
             <dt>Aperture</dt>
             <dd>
                 <svg width="16" height="16">
                     <use xlink:href="#icon-aperture" />
                 </svg>
-                f/{{ exif.aperture }}
+                f/{{ exifvalue('FNumber')|trim }}
             </dd>
             <dt>Shutter speed</dt>
             <dd>
                 <svg width="16" height="16">
                     <use xlink:href="#icon-clock" />
                 </svg>
-                {{ exif.shutter_speed }} sec
+                {{ exifvalue('ExposureTime')|trim }} sec
             </dd>
             <dt>Focal length (as set)</dt>
             <dd>
                 <svg width="16" height="16">
                     <use xlink:href="#icon-focallength" />
                 </svg>
-                {{ exif.focallength }}
+                {{ exifvalue('FocalLength')|trim }}
             </dd>
             <dt>Sensitivity</dt>
             <dd>
                 <svg width="16" height="16">
                     <use xlink:href="#icon-sensitivity" />
                 </svg>
-                ISO {{ exif.iso }}
+                ISO {{ exifvalue('ISO')|trim }}
             </dd>
             <dt>Lens</dt>
             <dd>
                 <svg width="16" height="16">
                     <use xlink:href="#icon-lens" />
                 </svg>
-                {{ exif.lens }}
+                {{ exifvalue('LensID')|trim }}
             </dd>
         </dl>
 {% endif %}

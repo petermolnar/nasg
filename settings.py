@@ -12,56 +12,108 @@ import logging
 base = os.path.abspath(os.path.expanduser('~/Projects/petermolnar.net'))
 syncserver = 'liveserver:/web/petermolnar.net'
 
-site = {
-    'title': 'Peter Molnar',
-    'url': 'https://petermolnar.net',
-    'domain': 'petermolnar.net',
-    'pagination': 42,
-    'on_front': [
-        'article',
-        'photo',
-        'journal'
+pagination = 42
+notinfeed = ['note']
+flat = ['article', 'journal']
+displaydate = 'YYYY-MM-DD HH:mm'
+
+author = {
+    "@context": "http://schema.org",
+    "@type": "Person",
+    "image": "https://petermolnar.net/molnar_peter_avatar.jpg",
+    "email": "mail@petermolnar.net",
+    "url": "https://petermolnar.net/",
+    "name": "Peter Molnar",
+    "sameAs": [
+        "https://github.com/petermolnar",
+        "https://petermolnar.net/cv.html",
     ],
-    'licence': 'CC-BY-NC-ND-4.0',
-    'search': 'https://petermolnar.net/search.php',
-    'favicon': 'https://petermolnar.net/favicon.ico'
+    "follows": "https://petermolnar.net/following.opml",
+    #"@id": "https://petermolnar.net/#me",
 }
 
-menu = {
-    'home': {
-        'url': '%s/' % site['url'],
-        'text': 'home',
+publisher = {
+    "@context": "http://schema.org",
+    "@type": "Organization",
+    "logo": {
+        "@context": "http://schema.org",
+        "@type": "ImageObject",
+        "url": "https://petermolnar.net/molnar_peter_avatar.jpg"
     },
-    'photo': {
-        'url': '%s/category/photo/' % site['url'],
-        'text': 'photos',
-    },
-    'journal': {
-        'url': '%s/category/journal/' % site['url'],
-        'text': 'journal',
-    },
-    'article': {
-        'url': '%s/category/article/' % site['url'],
-        'text': 'IT',
-    },
-    'note': {
-        'url': '%s/category/note/' % site['url'],
-        'text': 'notes'
-    },
-    'follow': {
-        'url': '%s/follow/' % site['url'],
-        'text': 'follow'
+    "url": "https://petermolnar.net/",
+    "name": "petermolnar.net",
+    "email": "webmaster@petermolnar.net"
+}
+
+site = {
+    "@context": "http://schema.org",
+    "@type": "WebSite",
+    "headline": "Peter Molnar",
+    "url": "https://petermolnar.net",
+    "name": "petermolnar.net",
+    "image": "https://petermolnar.net/favicon.ico",
+    "author": author,
+    "publisher": publisher,
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://petermolnar.net/search.php?q={q}",
+        "query-input": "required name=q",
+        "url": "https://petermolnar.net/search.php"
     }
 }
 
-categorydisplay = {
-    'article': 'flat',
-    'journal': 'flat',
+donateActions = [
+    {
+        "@context": "http://schema.org",
+        "@type": "DonateAction",
+        "description": "Monzo (only in the UK or via Google Pay)",
+        "name": "monzo",
+        "price": "3GBP",
+        "recipient": author,
+        "url": "https://monzo.me/petermolnar/3"
+    },
+    {
+        "@context": "http://schema.org",
+        "@type": "DonateAction",
+        "description": "Paypal",
+        "name": "paypal",
+        "price": "3GBP",
+        "recipient": author,
+        "url": "https://paypal.me/petermolnar/3GBP"
+    }
+]
+
+menu = {
+    'home': {
+        'url': '%s/' %  site['url'],
+        'text': 'home',
+    },
+    'photo': {
+        'url': '%s/category/photo/' %  site['url'],
+        'text': 'photos',
+    },
+    'journal': {
+        'url': '%s/category/journal/' %  site['url'],
+        'text': 'journal',
+    },
+    'article': {
+        'url': '%s/category/article/' %  site['url'],
+        'text': 'IT',
+    },
+    'note': {
+        'url': '%s/category/note/' %  site['url'],
+        'text': 'notes'
+    },
+    'follow': {
+        'url': '%s/follow/' %  site['url'],
+        'text': 'follow'
+    }
 }
 
 licence = {
     'article': 'CC-BY-4.0',
     'journal': 'CC-BY-NC-4.0',
+    '_default': 'CC-BY-NC-ND-4.0'
 }
 
 meta = {
@@ -71,29 +123,7 @@ meta = {
     'authorization_endpoint': 'https://indieauth.com/auth',
     'token_endpoint': 'https://tokens.indieauth.com/token',
     'micropub': 'https://petermolnar.net/micropub.php',
-    'microsub': 'https://aperture.p3k.io/microsub/83'
-}
-
-author = {
-    'name': 'Peter Molnar',
-    'email': 'mail@petermolnar.net',
-    'url': 'https://petermolnar.net/',
-    'avatar': 'https://petermolnar.net/molnar_peter_avatar.jpg',
-    'gpg': 'https://petermolnar.net/pgp.asc',
-    'cv': 'https://petermolnar.net/cv.html',
-    'github': 'https://github.com/petermolnar',
-    'about': 'https://petermolnar.net/about/',
-    'following': 'https://petermolnar.net/following.opml',
-    'tips': {
-        'monzo': {
-            'text': 'Monzo (only in the UK or via Google Pay)',
-            'url': 'https://monzo.me/petermolnar/3'
-        },
-        'paypal': {
-            'text': 'Paypal',
-            'url': 'https://paypal.me/petermolnar/3GBP'
-        }
-    }
+    #'microsub': 'https://aperture.p3k.io/microsub/83'
 }
 
 paths = {
@@ -118,17 +148,6 @@ photo = {
         720: '',
         1280: '_b',
     },
-}
-
-tips = {
-    'paypal': 'https://paypal.me/petermolnar/3GBP',
-    'monzo': 'https://monzo.me/petermolnar/3',
-}
-
-dateformat = {
-    'iso': 'YYYY-MM-DDTHH:mm:ssZZ',
-    'display': 'YYYY-MM-DD HH:mm',
-    'fname': 'YYYYMMDDHHmmssZ',
 }
 
 _parser = argparse.ArgumentParser(description='Parameters for NASG')

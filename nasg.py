@@ -15,6 +15,7 @@ import asyncio
 import sqlite3
 import json
 import queue
+from copy import deepcopy
 from shutil import copy2 as cp
 from math import ceil
 from urllib.parse import urlparse
@@ -68,24 +69,6 @@ RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
 
-RE_MYURL= re.compile(
-    r'"?(?P<url>%s/?[^\"]+)"?' % (settings.site.get('url'))
-)
-
-def relurl(txt, baseurl):
-    for url in RE_MYURL.findall(txt):
-        logger.debug('found URL candidate %s', url)
-        logger.debug('baseurl is %s', baseurl)
-        out = os.path.relpath(url, baseurl)
-        logger.debug('result is %s', out)
-        if not re.match(r'.*\.[a-z]{2,4}', out):
-            out = "%s/index.html" % out
-        #logger.debug('replacing %s with %s', url, out)
-        txt = txt.replace(url, out)
-    return txt
-
-J2.filters['relurl'] = relurl
-
 def utfyamldump(data):
     return yaml.dump(
         data,
@@ -101,6 +84,12 @@ def url2slug(url, limit=200):
         lower=True
     )[:limit]
 
+def rfc3339todt(rfc3339):
+    t = arrow.get(rfc3339).to('utc').format('YYYY-MM-DD HH:mm')
+    return "%s UTC" % (t)
+
+J2.filters['printdate'] = rfc3339todt
+J2.filters['url2slug'] = url2slug
 
 def writepath(fpath, content, mtime=0):
     d = os.path.dirname(fpath)
@@ -155,11 +144,12 @@ class AQ:
         consumer = asyncio.ensure_future(self.consume())
         self.loop.run_until_complete(consumer)
 
+
 class Webmention(object):
     def __init__(self, source, target, dpath, mtime=0):
-        self.dpath = dpath
         self.source = source
         self.target = target
+        self.dpath = dpath
         if not mtime:
             mtime = arrow.utcnow().timestamp
         self.mtime = mtime
@@ -207,14 +197,6 @@ class Webmention(object):
 
 
 class MarkdownDoc(object):
-
-    @property
-    def regex(self):
-        return re.compile(
-            r'^---\s?[\r\n](?P<meta>.+?)[\r\n]---(?:\s?[\r\n](?P<content>.+))?',
-            flags=re.MULTILINE|re.DOTALL
-        )
-
     @property
     def mtime(self):
         return os.path.getmtime(self.fpath)
@@ -245,20 +227,6 @@ class MarkdownDoc(object):
             meta, txt = frontmatter.parse(f.read())
         return(meta, txt)
 
-    @cached_property
-    def _reparsed(self):
-        logger.debug('parsing file %s', self.fpath)
-        with open(self.fpath, mode='r') as f:
-            txt = f.read()
-        txt = self.mdregex.match(txt)
-        if not txt:
-            logger.error('failed to match YAML + MD doc: %s', self.fpath)
-        if txt.group('content'):
-            t = txt.group('content').strip()
-        else:
-            t = ''
-        return (yaml.safe_load(txt.group('meta')), t)
-
     @property
     def meta(self):
         return self._parsed[0]
@@ -280,14 +248,6 @@ class MarkdownDoc(object):
         if hasattr(self, 'images') and len(self.images):
             for match, img in self.images.items():
                 c = c.replace(match, str(img))
-        return self.__pandoc(c)
-
-    @cached_property
-    def html_content_noimg(self):
-        c = "%s" % (self.content)
-        if hasattr(self, 'images') and len(self.images):
-            for match, img in self.images.items():
-                c = c.replace(match, '')
         return self.__pandoc(c)
 
 
@@ -340,16 +300,23 @@ class Comment(MarkdownDoc):
                 return maybe
         return self.meta.get('type', 'webmention')
 
-    @property
-    def tmplvars(self):
-        return {
-            'author': self.author,
-            'source': self.source,
-            'pubtime': self.dt.format(settings.dateformat.get('iso')),
-            'pubdate': self.dt.format(settings.dateformat.get('display')),
-            'html': self.html_content,
-            'type': self.type
+    @cached_property
+    def jsonld(self):
+        r = {
+            "@context": "http://schema.org",
+            "@type": "Comment",
+            "author": {
+                "@context": "http://schema.org",
+                "@type": "Person",
+                "url": self.author.get('url'),
+                "name": self.author.get('name'),
+            },
+            "url": self.source,
+            "discussionUrl": self.meta.get('target'),
+            "datePublished": str(self.dt),
+            "disambiguatingDescription": self.type
         }
+        return r
 
 
 class Gone(object):
@@ -402,12 +369,7 @@ class Singular(MarkdownDoc):
         return [
             k
             for k in glob.glob(os.path.join(os.path.dirname(self.fpath), '*.*'))
-            if
-                not k.startswith('.')
-                and not k.endswith('.md')
-                and not k.endswith('.ping')
-                and not k.endswith('.url')
-                and not k.endswith('.del')
+            if not k.startswith('.')
         ]
 
     @property
@@ -419,6 +381,14 @@ class Singular(MarkdownDoc):
                 if c.dt > maybe:
                     maybe = c.dt
         return maybe
+
+    @property
+    def sameas(self):
+        r = []
+        for k in glob.glob(os.path.join(os.path.dirname(self.fpath), '*.copy')):
+            with open(k, 'rt') as f:
+                r.append(f.read())
+        return r
 
     @cached_property
     def comments(self):
@@ -468,7 +438,7 @@ class Singular(MarkdownDoc):
         """
         Returns if the post should be displayed on the front
         """
-        if self.category in settings.site.get('on_front'):
+        if self.category not in settings.notinfeed:
             return True
         return False
 
@@ -521,9 +491,7 @@ class Singular(MarkdownDoc):
             return "RE: %s" % self.is_reply
         return self.meta.get(
             'title',
-            arrow.get(
-                self.published).format(
-                settings.dateformat.get('display'))
+            self.published.format(settings.displaydate)
         )
 
     @property
@@ -575,7 +543,7 @@ class Singular(MarkdownDoc):
         urls = []
         w = Webmention(
             self.url,
-            'https://fed.brid.gy',
+            'https://fed.brid.gy/',
             os.path.dirname(self.fpath),
             self.dt
         )
@@ -591,7 +559,7 @@ class Singular(MarkdownDoc):
         elif self.is_photo:
             w = Webmention(
                 self.url,
-                'https://brid.gy/publish/flickr',
+                'https://brid.gy/publish/flickr/',
                 os.path.dirname(self.fpath),
                 self.dt
             )
@@ -602,7 +570,7 @@ class Singular(MarkdownDoc):
     def licence(self):
         if self.category in settings.licence:
             return settings.licence[self.category]
-        return settings.site.get('licence')
+        return settings.licence['_default']
 
     @property
     def lang(self):
@@ -616,16 +584,6 @@ class Singular(MarkdownDoc):
             pass
         return lang
 
-    # @property
-    # def classification(self):
-        # c = GoogleClassifyText(self.fpath, self.content, self.lang)
-        # k = '/Arts & Entertainment/Visual Art & Design/Photographic & Digital Arts'
-        # if self.is_photo and k not in c.keys():
-            # c.update({
-                # k : '1.0'
-            # })
-        # return c
-
     @property
     def url(self):
         return "%s/%s/" % (
@@ -634,131 +592,136 @@ class Singular(MarkdownDoc):
         )
 
     @property
-    def replies(self):
-        r = OrderedDict()
-        for mtime, c in self.comments.items():
-            if c.type not in REPLY_TYPES:
-                continue
-            r[mtime] = c.tmplvars
-        return r
-
-    @property
-    def reactions(self):
-        r = OrderedDict()
-        for mtime, c in self.comments.items():
-            if c.type in REPLY_TYPES:
-                continue
-            t = "%s" % (c.type)
-            if t not in r:
-                r[t] = OrderedDict()
-            r[t][mtime] = c.tmplvars
-        return r
-
-    @property
     def has_code(self):
         if RE_CODE.search(self.content):
             return True
         else:
             return False
 
-    @property
+    @cached_property
+    def review(self):
+        if 'review' not in self.meta:
+            return False
+        review = self.meta.get('review')
+        rated, outof = review.get('rating').split('/')
+        r = {
+            "@context": "https://schema.org/",
+            "@type": "Review",
+            "reviewRating": {
+                "@type": "Rating",
+                "@context": "http://schema.org",
+                "ratingValue": rated,
+                "bestRating": outof,
+                "worstRating": 1
+            },
+            "name": review.get('title'),
+            "text": review.get('summary'),
+            "url": review.get('url'),
+            "author": settings.author,
+        }
+        return r
+
+    @cached_property
     def event(self):
         if 'event' not in self.meta:
             return False
 
         event = self.meta.get('event', {})
-        event.update({
-            'startdate': arrow.get(event.get('start')).format(settings.dateformat.get('display')),
-            'starttime': arrow.get(event.get('start')).format(settings.dateformat.get('iso')),
-            'enddate': arrow.get(event.get('end')).format(settings.dateformat.get('display')),
-            'endtime': arrow.get(event.get('end')).format(settings.dateformat.get('iso')),
-        })
-        return event
+        r = {
+            "@context": "http://schema.org",
+            "@type": "Event",
+            "endDate": str(arrow.get(event.get('end'))),
+            "startDate": str(arrow.get(event.get('start'))),
+            "location": {
+                "@context": "http://schema.org",
+                "@type": "Place",
+                "address": event.get('location'),
+                "name": event.get('location'),
+            },
+            "name": self.title
+        }
+        return r
+
 
     @cached_property
     def jsonld(self):
         r = {
             "@context": "http://schema.org",
-            "@type": "BlogPosting",
+            "@type": "Article",
+            "@id": self.url,
+            "inLanguage": self.lang,
             "headline": self.title,
             "url": self.url,
-            "mainEntityOfPage": self.url,
-            "articleBody": self.html_content,
+            "genre": self.category,
+            "mainEntityOfPage": "%s#article" % (self.url),
+            "dateModified": str(arrow.get(self.dt)),
+            "datePublished": str(self.published),
+            "copyrightYear": str(self.published.format('YYYY')),
+            "license": "https://spdx.org/licenses/%s.html" % (self.licence),
+            "image": settings.author.get('image'),
+            "author": settings.author,
+            "sameAs": self.sameas,
+            "publisher": settings.publisher,
+            "name": self.name,
+            "text": self.html_content,
             "description": self.html_summary,
-            "dateModified": self.published.format(settings.dateformat.get('iso')),
-            "datePublished": self.published.format(settings.dateformat.get('iso')),
-            "license": self.licence,
-            "image": settings.author.get('avatar'),
-            "author": {
-                "@context": "http://schema.org",
-                "@type": "Person",
-                "image": settings.author.get('avatar'),
-                "url": settings.author.get('url'),
-                "name": settings.author.get('name'),
-                "email": settings.author.get('url'),
-            },
-            "publisher": {
-                "@context": "http://schema.org",
-                "@type": "Organization",
-                "logo": {
-                    "@context": "http://schema.org",
-                    "@type": "ImageObject",
-                    "url": settings.author.get('avatar'),
-                },
-                "url": settings.author.get('url'),
-                "name": settings.author.get('name'),
-                "email": settings.author.get('url'),
-            },
+            "potentialAction": [],
+            "comment": [],
+            "commentCount": len(self.comments.keys()),
         }
-        if (self.is_photo):
+
+        if self.is_photo:
             r.update({
-                'image': self.enclosure.get('url'),
+                "@type": "Photograph",
+                "image": self.photo.jsonld,
             })
-        return json.dumps(r)
-
-    @cached_property
-    def tmplvars(self):
-        v = {
-            'title': self.title,
-            'category': self.category,
-            'lang': self.lang,
-            'slug': self.name,
-            'is_reply': self.is_reply,
-            'is_page': self.is_page,
-            'summary': self.summary,
-            'html_summary': self.html_summary,
-            'html_content': self.html_content,
-            'mtime': self.dt,
-            'pubtime': self.published.format(settings.dateformat.get('iso')),
-            'pubdate': self.published.format(settings.dateformat.get('display')),
-            'year': int(self.published.format('YYYY')),
-            'licence': self.licence,
-            'replies': self.replies,
-            'reactions': self.reactions,
-            'syndicate': self.syndicate,
-            'url': self.url,
-            'review': self.review,
-            'has_code': self.has_code,
-            'event': self.event,
-            'is_photo': self.is_photo,
-        }
-        if (self.is_photo):
-            v.update({
-                'enclosure': self.enclosure,
-                'photo': self.photo
+        elif not self.is_photo and len(self.images):
+            img = list(self.images.values())[0]
+            r.update({
+                "image": img.jsonld,
             })
-        return v
+        elif self.has_code:
+            r.update({
+                "@type": "TechArticle",
+            })
+        elif self.is_page:
+            r.update({
+                "@type": "WebPage",
+            })
 
-    @property
-    def review(self):
-        if 'review' not in self.meta:
-            return False
-        r = self.meta.get('review')
-        rated, outof = r.get('rating').split('/')
-        r.update({
-            'rated': rated,
-            'outof': outof
-        })
+
+        if self.is_reply:
+            r.update({
+                "mentions": {
+                    "@context": "http://schema.org",
+                    "@type": "Thing",
+                    "url": self.is_reply
+                }
+            })
+
+        if self.review:
+            r.update({"review": self.review})
+
+        if self.event:
+            r.update({"subjectOf": self.event})
+
+        for donation in settings.donateActions:
+            r["potentialAction"].append(donation)
+
+        syndicate = self.meta.get('syndicate', [])
+        syndicate.append("https://fed.brid.gy/")
+        if self.is_photo:
+            syndicate.append("https://brid.gy/publish/flickr/")
+        for url in list(set(syndicate)):
+            r["potentialAction"].append({
+                "@context": "http://schema.org",
+                "@type": "InteractAction",
+                "url": url
+            })
+
+        for mtime in sorted(self.comments.keys()):
+            r["comment"].append(self.comments[mtime].jsonld)
+
         return r
 
     @property
@@ -802,11 +765,13 @@ class Singular(MarkdownDoc):
         ])
 
     async def copyfiles(self):
-        exclude = ['.md', '.jpg', '.png', '.gif', '.ping']
-        files = glob.glob(os.path.join(
-            os.path.dirname(self.fpath),
-            '*.*'
-        ))
+        exclude = ['.md', '.jpg', '.png', '.gif', '.ping', '.url', '.del', '.copy']
+        files = glob.glob(
+            os.path.join(
+                os.path.dirname(self.fpath),
+                '*.*'
+            )
+        )
         for f in files:
             fname, fext = os.path.splitext(f)
             if fext.lower() in exclude:
@@ -827,27 +792,30 @@ class Singular(MarkdownDoc):
         if self.exists:
             return
         logger.info("rendering %s", self.name)
-        r = J2.get_template(self.template).render({
+        r    = J2.get_template(self.template).render({
             'baseurl': self.url,
-            'post': self.tmplvars,
+            'post': self.jsonld,
             'site': settings.site,
             'menu': settings.menu,
-            'author': settings.author,
             'meta': settings.meta,
-            'licence': settings.licence,
-            'tips': settings.tips,
         })
-        writepath(self.renderfile, r)
-        #writepath(self.renderfile.replace('.html', '.json'), self.jsonld)
+        writepath(
+            self.renderfile,
+            r
+        )
+        writepath(
+            self.renderfile.replace('.html', '.json'),
+            json.dumps(self.jsonld, indent=4, ensure_ascii=False)
+        )
 
 
 class Home(Singular):
     def __init__(self, fpath):
         super().__init__(fpath)
-        self.elements = []
+        self.posts = []
 
     def add(self, category, post):
-        self.elements.append((category.ctmplvars, post.tmplvars))
+        self.posts.append((category.ctmplvars, post.jsonld))
 
     @property
     def renderdir(self):
@@ -863,9 +831,10 @@ class Home(Singular):
     @property
     def dt(self):
         maybe = super().dt
-        for cat, post in self.elements:
-            if post['mtime'] > maybe:
-                maybe = post['mtime']
+        for cat, post in self.posts:
+            pts = arrow.get(post['dateModified']).timestamp
+            if pts > maybe:
+                maybe = pts
         return maybe
 
     async def render(self):
@@ -874,17 +843,13 @@ class Home(Singular):
         logger.info("rendering %s", self.name)
         r = J2.get_template(self.template).render({
             'baseurl': settings.site.get('url'),
-            'post': self.tmplvars,
+            'post': self.jsonld,
             'site': settings.site,
             'menu': settings.menu,
-            'author': settings.author,
             'meta': settings.meta,
-            'licence': settings.licence,
-            'tips': settings.tips,
-            'elements': self.elements
+            'posts': self.posts
         })
         writepath(self.renderfile, r)
-
 
 
 class WebImage(object):
@@ -913,36 +878,64 @@ class WebImage(object):
         return False
 
     @cached_property
-    def tmplvars(self):
-        return {
-            'src': self.src,
-            'href': self.href,
-            'width': self.displayed.width,
-            'height': self.displayed.height,
-            'title': self.title,
-            'caption': self.caption,
-            'exif': self.exif,
-            'is_photo': self.is_photo,
-            #'is_mainimg': self.is_mainimg,
+    def jsonld(self):
+        r = {
+            "@context": "http://schema.org",
+            "@type": "ImageObject",
+            "url": self.href,
+            "image": self.href,
+            "thumbnail": {
+                "@context": "http://schema.org",
+                "@type": "ImageObject",
+                "url": self.src,
+                "width": self.displayed.width,
+                "height": self.displayed.height,
+            },
+            "name": os.path.basename(self.fpath),
+            "encodingFormat": self.mime_type,
+            "contentSize": self.mime_size,
+            "width": self.linked.width,
+            "height": self.linked.height,
+            "dateCreated": self.exif.get('CreateDate'),
+            "exifData": [],
+            "caption": self.caption,
+            "headline": self.title,
+            "representativeOfPage": False
         }
+        for k, v in self.exif.items():
+            r["exifData"].append({
+                "@type": "PropertyValue",
+                "name": k,
+                "value": v
+            })
+        if self.is_photo:
+            r.update({
+                "creator": settings.author,
+                "copyrightHolder": settings.author
+            })
+        if self.is_mainimg:
+            r.update({"representativeOfPage": True})
+        return r
+
+    #@cached_property
+    #def tmplvars(self):
+        #return {
+            #'src': self.src,
+            #'href': self.href,
+            #'width': self.displayed.width,
+            #'height': self.displayed.height,
+            #'title': self.title,
+            #'caption': self.caption,
+            #'exif': self.exif,
+            #'is_photo': self.is_photo,
+            #'is_mainimg': self.is_mainimg
+        #}
 
     def __str__(self):
         if len(self.mdimg.css):
             return self.mdimg.match
         tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
-        return tmpl.render(self.tmplvars)
-
-    # @cached_property
-    # def visionapi(self):
-        # return GoogleVision(self.fpath, self.src)
-
-    # @property
-    # def onlinecopies(self):
-        # copies = {}
-        # for m in self.visionapi.onlinecopies:
-            # if settings.site.get('domain') not in m:
-                # copies[m] = True
-        # return copies.keys()
+        return tmpl.render(self.jsonld)
 
     @cached_property
     def meta(self):
@@ -1032,28 +1025,25 @@ class WebImage(object):
     @property
     def exif(self):
         exif = {
-            'camera': '',
-            'aperture': '',
-            'shutter_speed': '',
-            'focallength': '',
-            'iso': '',
-            'lens': '',
-            'geo_latitude': '',
-            'geo_longitude': '',
+            'Model': '',
+            'FNumber': '',
+            'ExposureTime': '',
+            'FocalLength': '',
+            'ISO': '',
+            'LensID': '',
+            'CreateDate': str(arrow.get(self.mtime))
         }
         if not self.is_photo:
             return exif
 
         mapping = {
-            'camera': ['Model'],
-            'aperture': ['FNumber', 'Aperture'],
-            'shutter_speed': ['ExposureTime'],
-            # 'focallength':      ['FocalLengthIn35mmFormat', 'FocalLength'],
-            'focallength': ['FocalLength'],
-            'iso': ['ISO'],
-            'lens': ['LensID', 'LensSpec', 'Lens'],
-            'geo_latitude': ['GPSLatitude'],
-            'geo_longitude': ['GPSLongitude'],
+            'Model': ['Model'],
+            'FNumber': ['FNumber', 'Aperture'],
+            'ExposureTime': ['ExposureTime'],
+            'FocalLength': ['FocalLength'], # ['FocalLengthIn35mmFormat'],
+            'ISO': ['ISO'],
+            'LensID': ['LensID', 'LensSpec', 'Lens'],
+            'CreateDate': ['CreateDate', 'DateTimeOriginal']
         }
 
         for ekey, candidates in mapping.items():
@@ -1061,8 +1051,6 @@ class WebImage(object):
                 maybe = self.meta.get(candidate, None)
                 if not maybe:
                     continue
-                elif 'geo_' in ekey:
-                    exif[ekey] = round(float(maybe), 5)
                 else:
                     exif[ekey] = maybe
                 break
@@ -1358,14 +1346,10 @@ class Search(PHPFile):
 
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
-            'baseurl': settings.site.get('search'),
             'post': {},
             'site': settings.site,
             'menu': settings.menu,
-            'author': settings.author,
             'meta': settings.meta,
-            'licence': settings.licence,
-            'tips': settings.tips,
         })
         writepath(self.renderfile, r)
 
@@ -1472,15 +1456,17 @@ class Category(dict):
         return list(sorted(self.keys(), reverse=True))
 
     @property
-    def display(self):
-        return settings.categorydisplay.get(self.name, '')
+    def is_paginated(self):
+        if self.name in settings.flat:
+            return False
+        return True
 
     @property
     def title(self):
         if len(self.name):
-            return "%s - %s" % (self.name, settings.site.get('domain'))
+            return "%s - %s" % (self.name, settings.site.get('name'))
         else:
-            return settings.site.get('title')
+            return settings.site.get('headline')
 
     @property
     def url(self):
@@ -1550,7 +1536,7 @@ class Category(dict):
 
     def get_posts(self, start=0, end=-1):
         return [
-            self[k].tmplvars
+            self[k].jsonld
             for k in self.sortedkeys[start:end]
         ]
 
@@ -1576,7 +1562,6 @@ class Category(dict):
     def ctmplvars(self):
         return {
             'name': self.name,
-            'display': self.display,
             'url': self.url,
             'feed': self.feedurl,
             'title': self.title,
@@ -1590,13 +1575,10 @@ class Category(dict):
             'baseurl': baseurl,
             'site': settings.site,
             'menu': settings.menu,
-            'author': settings.author,
             'meta': settings.meta,
-            'licence': settings.licence,
-            'tips': settings.tips,
             'category': {
                 'name': self.name,
-                'display': self.display,
+                'paginated': self.is_paginated,
                 'url': self.url,
                 'feed': self.feedurl,
                 'title': self.title,
@@ -1626,7 +1608,7 @@ class Category(dict):
             xmlformat
         )
         start = 0
-        end = int(settings.site.get('pagination'))
+        end = int(settings.pagination)
 
         fg = FeedGenerator()
         fg.id(self.feedurl)
@@ -1637,57 +1619,53 @@ class Category(dict):
         })
         fg.logo('%s/favicon.png' % settings.site.get('url'))
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
-        fg.description(settings.site.get('title'))
+        fg.description(settings.site.get('headline'))
 
-        for post in reversed(self.get_posts(start, end)):
-            dt = arrow.get(post.get('pubtime'))
-            mtime = arrow.get(post.get('mtime'))
+        for k in reversed(self.sortedkeys[start:end]):
+            post = self[k]
             fe = fg.add_entry()
 
-            fe.id(post.get('url'))
-            fe.title(post.get('title'))
-
+            fe.id(post.url)
+            fe.title(post.title)
             fe.author({
                 'name': settings.author.get('name'),
                 'email': settings.author.get('email')
             })
-
             fe.category({
-                'term': post.get('category'),
-                'label': post.get('category'),
+                'term': post.category,
+                'label': post.category,
                 'scheme': "%s/category/%s/" % (
                     settings.site.get('url'),
-                    post.get('category')
+                    post.category
                 )
             })
 
-            fe.published(dt.datetime)
-            fe.updated(mtime.datetime)
+            fe.published(post.published.datetime)
+            fe.updated(arrow.get(post.dt).datetime)
 
             fe.rights('%s %s %s' % (
-                post.get('licence').upper(),
+                post.licence.upper(),
                 settings.author.get('name'),
-                dt.format('YYYY')
+                post.published.format('YYYY')
             ))
 
             if xmlformat == 'rss':
-                fe.link(href=post.get('url'))
-                fe.content(post.get('html_content'), type='CDATA')
-                #fe.description(post.get('summary'), isSummary=True)
-                if 'enclosure' in post:
-                    enc = post.get('enclosure')
+                fe.link(href=post.url)
+                fe.content(post.html_content, type='CDATA')
+                if post.is_photo:
                     fe.enclosure(
-                        enc.get('url'),
-                        "%d" % enc.get('size'),
-                        enc.get('mime')
+                        post.photo.href,
+                        "%d" % post.photo.mime_size,
+                        post.photo.mime_type,
                     )
             elif xmlformat == 'atom':
                 fe.link(
-                    href=post.get('url'),
+                    href=post.url,
                     rel='alternate',
-                    type='text/html')
-                fe.content(src=post.get('url'), type='text/html')
-                fe.summary(post.get('summary'))
+                    type='text/html'
+                )
+                fe.content(src=post.url, type='text/html')
+                fe.summary(post.summary)
 
         if xmlformat == 'rss':
             fg.link(href=self.feedurl)
@@ -1737,59 +1715,6 @@ class Category(dict):
                 )
                 writepath(fpath, r)
 
-    #async def render_archives(self):
-        #by_time = {}
-        #for key in self.sortedkeys:
-            #trange = arrow.get(key).format(self.trange)
-            #if trange not in by_time:
-                #by_time.update({
-                    #trange: []
-                #})
-            #by_time[trange].append(key)
-
-        #keys = list(by_time.keys())
-        #for p, c, n in zip([None] + keys[:-1], keys, keys[1:] + [None]):
-            #form = c.format(self.trange)
-            #if max(keys) == form:
-                #fpath = self.indexfpath()
-            #else:
-                #fpath = self.indexfpath(form)
-
-            #try:
-                #findex = self.sortedkeys.index(by_time[c][0])
-                #lindex = self.sortedkeys.index(by_time[c][-1])
-                #newest = self.newest(findex, lindex)
-            #except Exception as e:
-                #logger.error(
-                    #'calling newest failed with %s for %s',
-                    #self.name,
-                    #c
-                #)
-                #continue
-
-            #if self.is_uptodate(fpath, newest):
-                #logger.info(
-                    #'%s/%s index is up to date',
-                    #self.name,
-                    #form
-                #)
-                #continue
-            #else:
-                #logger.info(
-                    #'%s/%s index is outdated, generating new',
-                    #self.name,
-                    #form
-                #)
-                #r = J2.get_template(self.template).render(
-                    #self.tmplvars(
-                        #[self[k].tmplvars for k in by_time[c]],
-                        #c=form,
-                        #p=p,
-                        #n=n
-                    #)
-                #)
-                #writepath(fpath, r)
-
     async def render_feeds(self):
         if not self.is_uptodate(self.rssfeedfpath, self.newest()):
             logger.info(
@@ -1818,7 +1743,7 @@ class Category(dict):
 
     async def render(self):
         await self.render_feeds()
-        if self.display == 'flat':
+        if not self.is_paginated:
             if not self.is_uptodate(self.indexfpath(), self.newest()):
                 logger.info(
                     '%s flat index outdated, generating new',
@@ -1861,7 +1786,7 @@ class WebmentionIO(object):
     def __init__(self):
         self.params = {
             'token': '%s' % (keys.webmentionio.get('token')),
-            'since': '%s' % self.since.format(settings.dateformat.get('iso')),
+            'since': '%s' % str(self.since),
             'domain': '%s' % (keys.webmentionio.get('domain'))
         }
         self.url = 'https://webmention.io/api/mentions'
@@ -1897,7 +1822,7 @@ class WebmentionIO(object):
 
         slug = webmention.get('target').strip('/').split('/')[-1]
         # ignore selfpings
-        if slug == settings.site.get('domain'):
+        if slug == settings.site.get('name'):
             return
 
         fdir = glob.glob(os.path.join(settings.paths.get('content'), '*', slug))
@@ -1933,7 +1858,7 @@ class WebmentionIO(object):
                 'url': author.get('url', ''),
                 'photo': author.get('photo', '')
             },
-            'date': dt.format(settings.dateformat.get('iso')),
+            'date': str(dt),
             'source': webmention.get('source'),
             'target': webmention.get('target'),
             'type': webmention.get('activity').get('type', 'webmention')

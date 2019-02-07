@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block pagination %}
-{% if category.display != 'flat' %}
+{% if category.paginated %}
 <nav>
     <ul>
         {% for y, url in category.years.items() %}
@@ -33,7 +33,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="content-body h-feed hfeed {{ category.name }}" vocab="http://schema.org/" typeof="Blog WebPage">
+<main class="h-feed hfeed">
     <header>
         <p>
         <svg width="128" height="128"><use xlink:href="#icon-{{ category.name }}" /></svg>
@@ -44,62 +44,15 @@
 {% set year = [0] %}
 {% for post in posts %}
     {% set _year = year.pop() %}
-    {% if category.display == 'flat' and _year != post.year %}
+    {% if not category.paginated and _year != post.copyrightYear %}
         {% if not loop.first %}
         </section>
         {% endif %}
         <section>
-        <h2>{{ post.year }}</h2>
+        <h2>{{ post.copyrightYear }}</h2>
     {% endif %}
-    {% set _ = year.append(post.year)%}
-
-    <article class="h-entry hentry singular" lang="{{ post.lang }}" property="blogPost" typeof="BlogPosting">
-        <header>
-            {% if category.display == 'flat' %}
-            <h3 class="p-name entry-title" property="headline">
-            {% else %}
-            <h2 class="p-name entry-title" property="headline">
-            {% endif %}
-            {% if post.is_reply %}
-                <svg class="icon" width="16" height="16">
-                    <use xlink:href="#icon-reply" />
-                </svg>
-                <a href="{{ post.url }}/">
-                    RE:
-                </a>
-                <a href="{{ post.is_reply }}" class="u-in-reply-to">
-                    {{ post.is_reply }}
-                </a>
-            {% else %}
-                <a href="{{ post.url }}">
-                    <span class="entry-title p-name">{{ post.title }}</span>
-                </a>
-            {% endif %}
-            {% if category.display == 'flat' %}
-            </h3>
-            {% else %}
-            </h2>
-            {% endif %}
-            <a href="{{ post.url }}" property="url mainEntityOfPage" class="u-url bookmark"></a>
-        </header>
-
-        {% if post.summary %}
-        <div class="e-summary entry-summary" property="description">
-            {{ post.html_summary }}
-            <p class="more">
-                <a href="{{ post.url }}">
-                {% if post.lang == 'hu' %}Tovább »{% else %}Continue »{% endif %}
-                </a>
-            </p>
-        </div>
-        {% else %}
-        <div class="e-content entry-content" property="articleBody">
-            {{ post.html_content }}
-        </div>
-        {% endif %}
-
-        {% include 'meta-publisher.j2.html' %}
-    </article>
+    {% set _ = year.append(post.copyrightYear)%}
+        {% include 'meta-article.j2.html' %}
     {% if loop.last %}
     </section>
     {% endif %}

@@ -307,7 +307,7 @@ li p {
   font-weight: bold;
 }
 
-.replies .u-url,
+.comments .u-url,
 .footnotes a {
   display: inline-block;
   overflow: hidden;
@@ -357,4 +357,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}    
+}        
