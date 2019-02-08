@@ -2,7 +2,7 @@
 {% if url != thumbnail.url %}
     <a href="{{ url }}"{% if representativeOfPage %} class="u-featured"{% endif %}>
 {% endif %}
-        <img src="{{ thumbnail.url }}" title="{{ headline }}" alt="" width="{{ thumbnail.width }}" height="{{ thumbnail.height }}" />
+        <img src="{{ thumbnail.url }}" title="{{ headline }}" alt="{{ headline }}" width="{{ thumbnail.width }}" height="{{ thumbnail.height }}" />
 {% if url != thumbnail.url %}
     </a>
 {% endif %}

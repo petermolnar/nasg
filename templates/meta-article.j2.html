@@ -20,7 +20,7 @@
         {% endif %}
 
         </h3>
-        <a href="{{ post.url }}" class="u-url"></a>
+        <a href="{{ post.url }}" class="u-url bookmark"></a>
     </header>
 
     {% if post.description|length %}
@@ -39,41 +39,14 @@
     {% endif %}
 
     <footer aria-hidden="true" hidden="hidden">
-        <time datetime="{{ post.datePublished }}" class="published dt-published"></time>
-        <time datetime="{{ post.dateModified }}" class="updated dt-updated"></time>
+        Published at
+        <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
+        <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
+        by
         <span class="p-author h-card vcard">
-            <img class="photo avatar u-photo u-avatar"
-                src="{{ post.author.image }}"
-                alt="Photo of {{ post.author.name }}" />
-            <a class="fn p-name url u-url u-uid org" href="{{ post.author.url }}">
-                {{ post.author.name }}
-            </a>
-            <a class="u-email email" href="mailto:{{ post.author.email }}">
-                {{ post.author.email }}
-            </a>
+            <img class="u-photo photo" src="{{ post.author.image }}" alt="" />
+            <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
+            <a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>
         </span>
     </footer>
-    <script type="application/ld+json">
-    {%
-        set basedata = {
-            "@context": post['@context'],
-            "@type": post['@type'],
-            "inLanguage": post.inLanguage,
-            "headline": post.headline,
-            "url": post.url,
-            "mainEntityOfPage": post.mainEntityOfPage,
-            "dateModified": post.dateModified,
-            "datePublished": post.datePublished,
-            "copyrightYear": post.copyrightYear,
-            "license": post.license,
-            "image": post.image,
-            "author": post.author,
-            "sameAs": post.sameAs,
-            "publisher": post.publisher,
-            "name": post.name,
-            "description": post.description
-        }
-    %}
-    {{ basedata|tojson(indent=4) }}
-    </script>
 </article>

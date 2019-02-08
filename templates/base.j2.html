@@ -4,26 +4,21 @@
     <title>{% block title %}{% endblock %}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
+    <meta name="author" content="{{ site.author.name }} ({{ site.author.email }})" />
     <link rel="icon" href="{{ site.image }}" />
     {% for key, value in meta.items() %}
     <link rel="{{ key }}" href="{{ value }}" />
     {% endfor %}
-{% macro cssinclude(fname) %}
-{% include fname %}
-{% endmacro %}
+    {% block meta %}{% endblock %}
     <style media="all">
-        {{ cssinclude('style.css')|indent(8)}}
+        {% include('style.css') %}
     </style>
     <style id="css_alt" media="speech">
-        {{ cssinclude('style-alt.css')|indent(8)}}
+        {% include('style-alt.css') %}
     </style>
     <style media="print">
-        {{ cssinclude('style-print.css')|indent(8)}}
+        {% include('style-print.css') %}
     </style>
-    <script type="application/ld+json">
-    {{ site|tojson(indent=4) }}
-    </script>
-    {% block meta %}{% endblock %}
 </head>
 
 <body>
@@ -31,7 +26,7 @@
 {% macro activemenu(name) %}
 {% if (post is defined and post.name ==  name )
     or (post is defined and post.genre ==  name )
-    or ( category is defined and category.name == name )%}active{% endif %}
+    or ( category is defined and category.name == name )%}class="active"{% endif %}
 {% endmacro %}
 
 <header>
@@ -40,7 +35,7 @@
             <ul>
             {% for key, data in menu.items() %}
                 <li>
-                    <a title="{{ data.text }}" href="{{ data.url }}" class="{{ activemenu(key) }}">
+                    <a title="{{ data.text }}" href="{{ data.url }}" {{ activemenu(key) }} >
                         <svg width="16" height="16">
                             <use xlink:href="#icon-{{ key }}" />
                         </svg>
@@ -65,7 +60,9 @@
                     <label for="lightscheme">light</label>
                 </span>
             </form>
-            <form role="search" method="get" action="{{ site.potentialAction.url }}">
+            {% for action in site.potentialAction %}
+            {% if 'SearchAction' == action['@type'] %}
+            <form role="search" method="get" action="{{ action.url }}">
                 <label for="qsub">
                     <input type="submit" value="search" id="qsub" name="qsub" />
                     <svg width="16" height="16">
@@ -74,6 +71,8 @@
                 </label>
                 <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
             </form>
+            {% endif %}
+            {% endfor %}
         </div>
     </section>
 </header>
@@ -85,52 +84,60 @@
 {% endblock %}
 
 <footer class="p-author h-card vcard">
-    <p>
-        <a href="https://creativecommons.org/">CC</a>,
-        1999-2019,
-        <img class="photo avatar u-photo u-avatar"
-            src="{{ site.author.image }}"
-            alt="Photo of {{ site.author.name }}" />
-        <a class="fn p-name url u-url u-uid org" rel="me" href="{{ site.author.url }}">
-            {{ site.author.name }}
-        </a>
-        <a class="u-email email" rel="me" href="mailto:{{ site.author.email }}">
-            <svg width="16" height="16">
-                <use xlink:href="#icon-mail"></use>
-            </svg>
-            {{ site.author.email }}
-        </a>
-    </p>
-    <nav>
-        <ul>
-            <li>
-                <a title="following" href="{{ site.author.follows }}">
-                    <svg width="16" height="16"><use xlink:href="#icon-following" /></svg>
-                    followings
-                </a>
-            </li>
-            {% for url in site.author.sameAs %}
-            <li>
-                {% if 'cv.html' in url %}
-                <a title="CV" href="{{ url }}">
-                    <svg width="16" height="16"><use xlink:href="#icon-resume" /></svg>
-                    resume
-                </a>
-                {% elif 'github' in url %}
-                <a title="github" rel="me" href="{{ url }}">
-                    <svg width="16" height="16"><use xlink:href="#icon-github" /></svg>
-                    github
-                </a>
+    <section>
+        <p>
+            <a href="https://creativecommons.org/">CC</a>,
+            1999-2019,
+            <img class="u-photo photo" src="{{ site.author.image }}" alt="Photo of {{ site.author.name }}" />
+            <a class="p-name u-url fn url" href="{{ site.author.url }}" rel="me"> {{ site.author.name }}</a>
+            <a class="u-email email" rel="me" href="mailto:{{ site.author.email }}">
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-mail"></use>
+                </svg>
+                {{ site.author.email }}
+            </a>
+        </p>
+        <nav>
+            <ul>
+                {% for action in site.potentialAction %}
+                {% if 'FollowAction' == action['@type'] %}
+                <li>
+                    <a href="{{ action.url }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-{{ action['@type'] }}" /></svg>
+                        {{ action.name }}
+                    </a>
+                </li>
                 {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-    </nav>
-    <p>
-        <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
-            Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
-        <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
-    </p>
+                {% endfor %}
+                <li>
+                    <a href="{{ site.author.follows }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-following" /></svg>
+                        followings
+                    </a>
+                </li>
+                {% for url in site.author.sameAs %}
+                <li>
+                    {% if 'cv.html' in url %}
+                    <a href="{{ url }}" class="u-url">
+                        <svg width="16" height="16"><use xlink:href="#icon-resume" /></svg>
+                        resume
+                    </a>
+                    {% elif 'github' in url %}
+                    <a rel="me" href="{{ url }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-github" /></svg>
+                        github
+                    </a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        <nav>
+            <a href="https://xn--sr8hvo.ws/🇻🇮📢/previous">←</a>
+                Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
+            <a href="https://xn--sr8hvo.ws/🇻🇮📢/next">→</a>
+        </nav>
+    </section>
 </footer>
 
 <script>

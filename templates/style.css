@@ -1,3 +1,5 @@
+
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -171,7 +173,7 @@ body > footer {
   margin-top: 2em;
 }
 
-body > footer > * {
+body > footer > section > * {
   margin-bottom: 0.6em;
 }
 
@@ -335,8 +337,7 @@ body > nav > ul > li {
 }
 
 @media all and (min-width: 58em) {
-  body > header > section,
-  body > footer > section {
+  body > header > section {
     text-align: left;
     display: flex;
     justify-content:space-between;
@@ -357,4 +358,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}        
+}                

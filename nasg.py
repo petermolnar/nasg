@@ -15,7 +15,6 @@ import asyncio
 import sqlite3
 import json
 import queue
-from copy import deepcopy
 from shutil import copy2 as cp
 from math import ceil
 from urllib.parse import urlparse
@@ -33,7 +32,7 @@ from emoji import UNICODE_EMOJI
 from slugify import slugify
 import requests
 from pandoc import PandocMarkdown
-from meta import Exif, GoogleVision, GoogleClassifyText
+from meta import Exif
 import settings
 import keys
 
@@ -85,8 +84,8 @@ def url2slug(url, limit=200):
     )[:limit]
 
 def rfc3339todt(rfc3339):
-    t = arrow.get(rfc3339).to('utc').format('YYYY-MM-DD HH:mm')
-    return "%s UTC" % (t)
+    t = arrow.get(rfc3339).format('YYYY-MM-DD HH:mm ZZZ')
+    return "%s" % (t)
 
 J2.filters['printdate'] = rfc3339todt
 J2.filters['url2slug'] = url2slug
@@ -265,7 +264,7 @@ class Comment(MarkdownDoc):
         return dt
 
     @property
-    def target(self):
+    def targetname(self):
         t = urlparse(self.meta.get('target'))
         return t.path.rstrip('/').strip('/').split('/')[-1]
 
@@ -276,6 +275,8 @@ class Comment(MarkdownDoc):
     @property
     def author(self):
         r = {
+            "@context": "http://schema.org",
+            "@type": "Person",
             'name': urlparse(self.source).hostname,
             'url': self.source
         }
@@ -305,12 +306,7 @@ class Comment(MarkdownDoc):
         r = {
             "@context": "http://schema.org",
             "@type": "Comment",
-            "author": {
-                "@context": "http://schema.org",
-                "@type": "Person",
-                "url": self.author.get('url'),
-                "name": self.author.get('name'),
-            },
+            "author": self.author,
             "url": self.source,
             "discussionUrl": self.meta.get('target'),
             "datePublished": str(self.dt),
@@ -425,6 +421,11 @@ class Singular(MarkdownDoc):
             if imgpath in self.files:
                 if imghdr.what(imgpath):
                     images.update({match: WebImage(imgpath, mdimg, self)})
+            else:
+                logger.error("Missing image: %s, referenced in %s",
+                    imgpath,
+                    self.fpath
+                )
         return images
 
     @property
@@ -438,9 +439,9 @@ class Singular(MarkdownDoc):
         """
         Returns if the post should be displayed on the front
         """
-        if self.category not in settings.notinfeed:
-            return True
-        return False
+        if self.category in settings.notinfeed:
+            return False
+        return True
 
     @property
     def is_photo(self):
@@ -462,17 +463,6 @@ class Singular(MarkdownDoc):
         if not self.is_photo:
             return None
         return next(iter(self.images.values()))
-
-    @property
-    def enclosure(self):
-        if not self.is_photo:
-            return None
-        else:
-            return {
-                'mime': self.photo.mime_type,
-                'size': self.photo.mime_size,
-                'url': self.photo.href
-            }
 
     @property
     def summary(self):
@@ -501,9 +491,9 @@ class Singular(MarkdownDoc):
     @property
     def syndicate(self):
         urls = self.meta.get('syndicate', [])
+        urls.append("https://fed.brid.gy/")
         if self.is_photo:
             urls.append("https://brid.gy/publish/flickr")
-        urls.append("https://fed.brid.gy/")
         return urls
 
     def baseN(self, num, b=36,
@@ -568,9 +558,10 @@ class Singular(MarkdownDoc):
 
     @property
     def licence(self):
+        k = '_default'
         if self.category in settings.licence:
-            return settings.licence[self.category]
-        return settings.licence['_default']
+            k = self.category
+        return settings.licence[k]
 
     @property
     def lang(self):
@@ -625,7 +616,6 @@ class Singular(MarkdownDoc):
     def event(self):
         if 'event' not in self.meta:
             return False
-
         event = self.meta.get('event', {})
         r = {
             "@context": "http://schema.org",
@@ -658,10 +648,10 @@ class Singular(MarkdownDoc):
             "datePublished": str(self.published),
             "copyrightYear": str(self.published.format('YYYY')),
             "license": "https://spdx.org/licenses/%s.html" % (self.licence),
-            "image": settings.author.get('image'),
+            "image": settings.site.image,
             "author": settings.author,
             "sameAs": self.sameas,
-            "publisher": settings.publisher,
+            "publisher": settings.site.publisher,
             "name": self.name,
             "text": self.html_content,
             "description": self.html_summary,
@@ -708,11 +698,7 @@ class Singular(MarkdownDoc):
         for donation in settings.donateActions:
             r["potentialAction"].append(donation)
 
-        syndicate = self.meta.get('syndicate', [])
-        syndicate.append("https://fed.brid.gy/")
-        if self.is_photo:
-            syndicate.append("https://brid.gy/publish/flickr/")
-        for url in list(set(syndicate)):
+        for url in list(set(self.syndicate)):
             r["potentialAction"].append({
                 "@context": "http://schema.org",
                 "@type": "InteractAction",
@@ -911,7 +897,8 @@ class WebImage(object):
         if self.is_photo:
             r.update({
                 "creator": settings.author,
-                "copyrightHolder": settings.author
+                "copyrightHolder": settings.author,
+                "license": settings.licence['_default']
             })
         if self.is_mainimg:
             r.update({"representativeOfPage": True})
@@ -1614,8 +1601,8 @@ class Category(dict):
         fg.id(self.feedurl)
         fg.title(self.title)
         fg.author({
-            'name': settings.author.get('name'),
-            'email': settings.author.get('email')
+            'name': settings.author.name,
+            'email': settings.author.email
         })
         fg.logo('%s/favicon.png' % settings.site.get('url'))
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
@@ -1628,8 +1615,8 @@ class Category(dict):
             fe.id(post.url)
             fe.title(post.title)
             fe.author({
-                'name': settings.author.get('name'),
-                'email': settings.author.get('email')
+                'name': settings.author.name,
+                'email': settings.author.email
             })
             fe.category({
                 'term': post.category,
@@ -1645,7 +1632,7 @@ class Category(dict):
 
             fe.rights('%s %s %s' % (
                 post.licence.upper(),
-                settings.author.get('name'),
+                settings.author.name,
                 post.published.format('YYYY')
             ))
 

@@ -5,7 +5,7 @@
 {% block meta %}
     <meta name="author" content="{{ site.author.name }} <{{ site.author.email }}>" />
     <meta name="description" content="{{ post.description|e }}" />
-    <link rel="canonical" href="{{ post.url }}" />
+    <link rel="canonical" href="{{ site.url }}" />
     {% for category, latest in elements %}
     <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />
     <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}atom.xml" />
@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="h-feed hfeed">
+<main class="h-feed hatom">
     <aside>
         <div>
             {{ post.text }}

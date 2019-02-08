@@ -17,50 +17,72 @@ notinfeed = ['note']
 flat = ['article', 'journal']
 displaydate = 'YYYY-MM-DD HH:mm'
 
-author = {
+class struct(dict):
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+# full author, only for h-card generation
+author = struct({
     "@context": "http://schema.org",
     "@type": "Person",
-    "image": "https://petermolnar.net/molnar_peter_avatar.jpg",
+    "image": "https://petermolnar.net/favicon.jpg",
     "email": "mail@petermolnar.net",
     "url": "https://petermolnar.net/",
-    "name": "Peter Molnar",
-    "sameAs": [
-        "https://github.com/petermolnar",
-        "https://petermolnar.net/cv.html",
-    ],
-    "follows": "https://petermolnar.net/following.opml",
-    #"@id": "https://petermolnar.net/#me",
-}
+    "name": "Peter Molnar"
+})
 
-publisher = {
-    "@context": "http://schema.org",
-    "@type": "Organization",
-    "logo": {
-        "@context": "http://schema.org",
-        "@type": "ImageObject",
-        "url": "https://petermolnar.net/molnar_peter_avatar.jpg"
-    },
-    "url": "https://petermolnar.net/",
-    "name": "petermolnar.net",
-    "email": "webmaster@petermolnar.net"
-}
-
-site = {
+site = struct({
     "@context": "http://schema.org",
     "@type": "WebSite",
     "headline": "Peter Molnar",
     "url": "https://petermolnar.net",
     "name": "petermolnar.net",
     "image": "https://petermolnar.net/favicon.ico",
-    "author": author,
-    "publisher": publisher,
-    "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://petermolnar.net/search.php?q={q}",
-        "query-input": "required name=q",
-        "url": "https://petermolnar.net/search.php"
-    }
-}
+    "author": {
+        "@context": "http://schema.org",
+        "@type": "Person",
+        "image": "https://petermolnar.net/favicon.jpg",
+        "email": "mail@petermolnar.net",
+        "url": "https://petermolnar.net/",
+        "name": "Peter Molnar",
+        "sameAs": [
+            "https://github.com/petermolnar",
+            "https://petermolnar.net/cv.html",
+            "xmpp:mail@petermolnar.net",
+            "https://wa.me/447592011721",
+            "https://t.me/petermolnar",
+        ],
+        "follows": "https://petermolnar.net/following.opml"
+    },
+    "publisher": {
+        "@context": "http://schema.org",
+        "@type": "Organization",
+        "logo": {
+            "@context": "http://schema.org",
+            "@type": "ImageObject",
+            "url": "https://petermolnar.net/favicon.jpg"
+        },
+        "url": "https://petermolnar.net/",
+        "name": "petermolnar.net",
+        "email": "webmaster@petermolnar.net"
+    },
+    "potentialAction": [
+        {
+            "@context": "http://schema.org",
+            "@type": "SearchAction",
+            "target": "https://petermolnar.net/search.php?q={q}",
+            "query-input": "required name=q",
+            "url": "https://petermolnar.net/search.php"
+        },
+        {
+            "@context": "http://schema.org",
+            "@type": "FollowAction",
+            "url": "https://petermolnar.net/follow/",
+            "name": "follow"
+        }
+    ]
+})
 
 donateActions = [
     {
@@ -69,8 +91,8 @@ donateActions = [
         "description": "Monzo (only in the UK or via Google Pay)",
         "name": "monzo",
         "price": "3GBP",
-        "recipient": author,
-        "url": "https://monzo.me/petermolnar/3"
+        "url": "https://monzo.me/petermolnar/3",
+        "recipient": author
     },
     {
         "@context": "http://schema.org",
@@ -78,8 +100,8 @@ donateActions = [
         "description": "Paypal",
         "name": "paypal",
         "price": "3GBP",
-        "recipient": author,
-        "url": "https://paypal.me/petermolnar/3GBP"
+        "url": "https://paypal.me/petermolnar/3GBP",
+        "recipient": author
     }
 ]
 
@@ -103,20 +125,16 @@ menu = {
     'note': {
         'url': '%s/category/note/' %  site['url'],
         'text': 'notes'
-    },
-    'follow': {
-        'url': '%s/follow/' %  site['url'],
-        'text': 'follow'
     }
 }
 
-licence = {
+licence = struct({
     'article': 'CC-BY-4.0',
     'journal': 'CC-BY-NC-4.0',
     '_default': 'CC-BY-NC-ND-4.0'
-}
+})
 
-meta = {
+meta = struct({
     'webmention': 'https://webmention.io/petermolnar.net/webmention',
     'pingback': 'https://webmention.io/petermolnar.net/xmlrpc',
     'hub': 'https://petermolnar.superfeedr.com/',
@@ -124,9 +142,9 @@ meta = {
     'token_endpoint': 'https://tokens.indieauth.com/token',
     'micropub': 'https://petermolnar.net/micropub.php',
     #'microsub': 'https://aperture.p3k.io/microsub/83'
-}
+})
 
-paths = {
+paths = struct({
     'content': os.path.join(base, 'content'),
     'tmpl': os.path.join(base, 'nasg', 'templates'),
     'watermark': os.path.join(base, 'nasg', 'templates', 'watermark.png'),
@@ -137,9 +155,9 @@ paths = {
     'micropub': os.path.join(base, 'content', 'note'),
     'tmp': os.path.join(base, 'tmp'),
     'home': os.path.join(base, 'content', 'home', 'index.md'),
-}
+})
 
-photo = {
+photo = struct({
     're_author': re.compile(r'(?:P[eé]ter Moln[aá]r)|(?:Moln[aá]r P[eé]ter)|(?:petermolnar\.(?:eu|net))'),
     'default': 720,
     'sizes': {
@@ -148,7 +166,7 @@ photo = {
         720: '',
         1280: '_b',
     },
-}
+})
 
 _parser = argparse.ArgumentParser(description='Parameters for NASG')
 _booleanparams = {

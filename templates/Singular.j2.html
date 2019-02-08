@@ -1,26 +1,12 @@
 {% extends "base.j2.html" %}
 
-{% macro includefile(fname) %}
-{% include fname %}
-{% endmacro %}
-
 {% block lang %} lang="{{ post.inLanguage }}" {% endblock %}
 
 {% block title %}{{ post.headline }} - {{ site.name }}{% endblock %}
 
 {% block meta %}
-    <meta name="author" content="{{ post.author.name }} ({{ post.author.email }})" />
     <meta name="description" content="{{ post.description|striptags|e }}" />
     <link rel="canonical" href="{{ post.url }}" />
-    <script type="application/ld+json">
-    {{ post|tojson(indent=4) }}
-    </script>
-    {% if post['@type'] == 'TechArticle' %}
-    <style media="all">
-        {{ includefile('prism.css')|indent(8) }}
-    </style>
-    {% endif %}
-
     <meta property="og:title" content="{{ post.headline }}" />
     <meta property="og:type" content="article" />
     <meta property="og:url" content="{{ post.url }}" />
@@ -36,26 +22,27 @@
     {% else %}
     <meta property="og:image" content="{{ post.image }}" />
     {% endif %}
+
+    {% if post['@type'] == 'TechArticle' %}
+    <style media="all">
+        {% include('prism.css') %}
+    </style>
+    {% endif %}
 {% endblock %}
 
 {% block prism %}
     {% if post['@type'] == 'TechArticle' %}
     <script>
-        {{ includefile('prism.js')|indent(8) }}
+        {% include('prism.js') %}
     </script>
     {% endif %}
 {% endblock %}
 
 {% block content %}
-{% if post.event %}
-    {% set mftype = 'h-entry hentry h-event hevent' %}
-{% else %}
-    {% set mftype = 'h-entry hentry' %}
-{% endif %}
 <main>
-    <article class="{{ mftype }}" lang="{{ post.inLanguage }}" id="article">
+    <article class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
         <header>
-            <h1 class="entry-title p-name">
+            <h1 class="p-name entry-title">
                 {% if post.mentions %}
                 <span>
                     <svg width="16" height="16">
@@ -78,17 +65,17 @@
 
         {% if post.review %}
         <div class="h-review hreview">
-            <strong>Review summary of: <a href="{{ post.review.url }}" class="item fn p-name u-url p-item h-product">{{ post.review.name }}</a></strong>
+            <strong>Review summary of: <a href="{{ post.review.url }}" class="p-name u-url p-item h-product item fn">{{ post.review.name }}</a></strong>
             <p>
                 By
-                <span class="p-author h-card vcard reviewer">
-                 <a class="fn p-name url u-url u-uid" href="{{ post.author.url }}">
+                <span class="p-author h-card reviewer vcard">
+                 <a class="p-name u-url fn" href="{{ post.author.url }}">
                     <span>{{ post.author.name }}</span>
-                </a></span> in <time class="dt-published dtreviewed" datetime="{{ post.datePublished }}">{{ post.copyrightYear }}</time>
+                </a></span> in <time class="dt-published dtreviewed" datetime="{{ post.datePublished }}" title="{{ post.datePublished }}">{{ post.datePublished|printdate }}</time>
             </p>
             <p>
                 <span class="rating">
-                    <span class="value">{{ post.review.reviewRating.ratingValue }}</span>
+                    <span class="value p-rating">{{ post.review.reviewRating.ratingValue }}</span>
                     out of
                     <span class="best">{{ post.review.reviewRating.bestRating }}</span>
                 </span>
@@ -111,39 +98,28 @@
             <dl>
                 {% if post.subjectOf %}
                 <dt>Trip details</dt>
-                <dd>
-                    From
-                    <time class="dt-start dtstart" datetime="{{ post.subjectOf.startDate }}">
-                        {{ post.subjectOf.startDate }}
-                    </time>
-                    to
-                    <time class="dt-end dtend" datetime="{{ post.subjectOf.endDate }}">
-                        {{ post.subjectOf.endDate }}
-                    </time>, in
-                    <span class="p-location location">
-                        {{ post.subjectOf.location.name }}
+                <dd class="h-event vevent">
+                    <span class="summary">
+                        From
+                        <time class="dt-start dtstart" datetime="{{ post.subjectOf.startDate }}">
+                            {{ post.subjectOf.startDate|printdate }}
+                        </time>
+                        to
+                        <time class="dt-end dtend" datetime="{{ post.subjectOf.endDate }}">
+                            {{ post.subjectOf.endDate|printdate }}
+                        </time>, in
+                        <span class="p-location location">
+                            {{ post.subjectOf.location.name }}
+                        </span>
                     </span>
+                    <a class="u-url url" href="{{ post.url }}"></a>
                 </dd>
                 {% endif %}
 
-                <dt>Author</dt>
-                <dd>
-                    <span class="p-author h-card vcard">
-                        <img class="photo avatar u-photo u-avatar"
-                            src="{{ post.author.image }}"
-                            alt="Photo of {{ post.author.name }}" />
-                        <a class="fn p-name url u-url u-uid org" href="{{ post.author.url }}">
-                            {{ post.author.name }}
-                        </a>
-                        <a class="u-email email" href="mailto:{{ post.author.email }}">
-                            {{ post.author.email }}
-                        </a>
-                    </span>
-                </dd>
-
                 <dt>Published</dt>
-                <dd class="published updated">
-                    <time class="dt-published dt-updated" datetime="{{ post.datePublished }}">{{ post.datePublished|printdate }}</time>
+                <dd>
+                    <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
+                    <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
                 </dd>
 
                 <dt>License</dt>
@@ -186,9 +162,16 @@
                 {% endif %}
                 </dd>
 
+                <dt>Author</dt>
+                <dd class="p-author h-card vcard">
+                    <img class="u-photo photo" src="{{ post.author.image }}" alt="" />
+                    <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
+                    <a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>
+                </dd>
+
                 <dt>Entry URL</dt>
                 <dd>
-                    <a class="u-url u-uuid" href="{{ post.url }}">
+                    <a class="u-url u-uuid bookmark" href="{{ post.url }}">
                         {{ post.url }}
                     </a>
                 </dd>
@@ -243,19 +226,15 @@
             <h2><a id="comments"></a>Responses</h2>
             <ol>
                 {% for comment in post.comment %}
-                <li class="h-entry p-comment">
-                    <span class="reaction">
-                        <a class="u-url" href="{{ comment.url }}">
-                            {{ comment.disambiguatingDescription }}
-                        </a>
-                    </span>
+                <li class="h-entry p-comment hentry">
+                    <a href="{{ comment.url }}">
+                        {{ comment.disambiguatingDescription }}
+                    </a>
                     from
-                    <span class="p-author h-card">
+                    <span class="p-author h-card vcard">
                         {% if comment.author.url %}
-                        <a class="url u-url" href="{{ comment.author.url }}">
-                            <span class="p-name fn">
-                                {{ comment.author.name }}
-                            </span>
+                        <a class="u-url p-name fn" href="{{ comment.author.url }}">
+                            {{ comment.author.name }}
                         </a>
                         {% else %}
                         <span class="p-name fn">
@@ -264,18 +243,17 @@
                         {% endif %}
                     </span>
                     at
-                    <time class="dt-published" datetime="{{ comment.datePublished }}">
+                    <time class="dt-published published" datetime="{{ comment.datePublished }}">
                         {{ comment.datePublished|printdate }}
                     </time>
                     <br />
-                    <span class="source">
-                        <svg width="16" height="16">
-                            <use xlink:href="#icon-link"></use>
-                        </svg>
-                        <a class="u-url" href="{{ comment.url }}">
-                            {{ comment.url }}
-                        </a>
-                    </span>
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-link"></use>
+                    </svg>
+                    <a class="u-url" href="{{ comment.url }}">
+                        {{ comment.url }}
+                    </a>
+                    <a href="{{ post.url }}" class="u-in-reply-to"></a>
                 </li>
                 {% endfor %}
             </ol>
