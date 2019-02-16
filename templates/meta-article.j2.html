@@ -6,7 +6,7 @@
                 <svg width="16" height="16">
                     <use xlink:href="#icon-reply" />
                 </svg>
-                <a href="{{ post.url }}">
+                <a href="{{ post.url|relurl(baseurl) }}">
                     RE:
                 </a>
                 <a href="{{ post.mentions.url }}" class="u-in-reply-to">
@@ -14,7 +14,7 @@
                 </a>
             </span>
         {% else %}
-            <a href="{{ post.url }}">
+            <a href="{{ post.url|relurl(baseurl) }}">
                 {{ post.headline }}
             </a>
         {% endif %}
@@ -25,16 +25,16 @@
 
     {% if post.description|length %}
     <div class="e-summary entry-summary">
-        {{ post.description }}
+        {{ post.description|relurl(baseurl) }}
         <span class="more">
-            <a href="{{ post.url }}">
+            <a href="{{ post.url|relurl(baseurl) }}">
             {% if post.inLanguage == 'hu' %}Tovább »{% else %}Continue »{% endif %}
             </a>
         </span>
     </div>
     {% else %}
     <div class="e-content entry-content">
-        {{ post.text }}
+        {{ post.text|relurl(baseurl) }}
     </div>
     {% endif %}
 
@@ -44,8 +44,8 @@
         <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
         by
         <span class="p-author h-card vcard">
-            <img class="u-photo photo" src="{{ post.author.image }}" alt="" />
-            <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
+            <img class="u-photo photo" src="{{ post.author.image|relurl(baseurl) }}" alt="" />
+            <a class="p-name u-url fn url org" href="{{ post.author.url }}">{{ post.author.name }}</a>
             <a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>
         </span>
     </footer>

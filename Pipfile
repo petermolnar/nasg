@@ -1,22 +1,19 @@
 [[source]]
-name = "pypi"
-url = "https://pypi.org/simple"
+url = "https://pypi.python.org/simple"
 verify_ssl = true
-
-[dev-packages]
+name = "pypi"
 
 [packages]
+wand = "*"
 arrow = "*"
-bleach = "*"
-emoji = "*"
-feedgen = "*"
-langdetect = "*"
-requests = "*"
 unicode-slugify = "*"
-Jinja2 = "*"
-Wand = "*"
-pyyaml = "*"
+requests = "*"
 python-frontmatter = "*"
+langdetect = "*"
+jinja2 = "*"
+feedgen = "*"
+
+[dev-packages]
 
 [requires]
 python_version = "3.7"

@@ -23,6 +23,8 @@ $gone = array(
 
 $gone_re = array(
     '^cache\/.*$',
+    '^tag\/.*$',
+    '^comment\/.*$',
     '^files\/.*$',
     '^wp-content\/.*$',
     '^broadcast\/wp-ffpc\.message$',
@@ -50,12 +52,12 @@ function gone($uri) {
  <body>
 <h1><center>This content was deleted.</center></h1>
 <hr>
-<p><center>{{ site.domain }}</center></p>
+<p><center>'.$uri.'</center></p>
  </body>
 </html>');
 }
 
-function notfound() {
+function notfound($uri) {
     header('HTTP/1.0 404 Not Found');
     die('<!DOCTYPE html>
 <html lang="en">
@@ -70,13 +72,15 @@ function notfound() {
 <h2><center>Please search for it instead.</center></h2>
 <p>
     <center>
-<form action="/search.php" class="search-form" method="get" role="search">
-  <label for="search">Search</label>
-  <input id="q" name="q" placeholder="search..." title="Search for:" type="search" value=""/>
-  <input type="submit" value="OK"/>
-</form>
+        <form action="/search.php" class="search-form" method="get" role="search">
+            <label for="search">Search</label>
+            <input id="q" name="q" placeholder="search..." title="Search for:" type="search" value=""/>
+            <input type="submit" value="OK"/>
+        </form>
     </center>
 </p>
+<hr>
+<p><center>'.$uri.'</center></p>
  </body>
 </html>');
 }
@@ -120,5 +124,5 @@ elseif (strstr($uri, '_')) {
     maybe_redirect(str_replace('_', '-', $uri));
 }
 else {
-    notfound();
+    notfound($uri);
 }

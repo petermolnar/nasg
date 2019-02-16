@@ -9,6 +9,13 @@ import re
 import argparse
 import logging
 
+
+class struct(dict):
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
 base = os.path.abspath(os.path.expanduser('~/Projects/petermolnar.net'))
 syncserver = 'liveserver:/web/petermolnar.net'
 
@@ -17,12 +24,12 @@ notinfeed = ['note']
 flat = ['article', 'journal']
 displaydate = 'YYYY-MM-DD HH:mm'
 
-class struct(dict):
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+licence = struct({
+    'article': 'CC-BY-4.0',
+    'journal': 'CC-BY-NC-4.0',
+    '_default': 'CC-BY-NC-ND-4.0'
+})
 
-# full author, only for h-card generation
 author = struct({
     "@context": "http://schema.org",
     "@type": "Person",
@@ -39,6 +46,7 @@ site = struct({
     "url": "https://petermolnar.net",
     "name": "petermolnar.net",
     "image": "https://petermolnar.net/favicon.ico",
+    "license": "https://spdx.org/licenses/%s.html" % (licence['_default']),
     "author": {
         "@context": "http://schema.org",
         "@type": "Person",
@@ -127,12 +135,6 @@ menu = {
         'text': 'notes'
     }
 }
-
-licence = struct({
-    'article': 'CC-BY-4.0',
-    'journal': 'CC-BY-NC-4.0',
-    '_default': 'CC-BY-NC-ND-4.0'
-})
 
 meta = struct({
     'webmention': 'https://webmention.io/petermolnar.net/webmention',

@@ -13,7 +13,7 @@
 <nav>
     <ul>
         {% for y, url in category.years.items() %}
-        {% if y == category.year %}
+        {% if (y == category.year) or (not category.year and loop.first) %}
         <li>
             <span>
                 {{ y }}
@@ -21,7 +21,7 @@
         </li>
         {% else %}
         <li>
-            <a href="{{ url }}">
+            <a href="{{ url|relurl(baseurl) }}">
                 <strong>{{ y }}</strong>
             </a>
         </li>
@@ -53,7 +53,7 @@
     {% endif %}
     {% set _ = year.append(post.copyrightYear)%}
         {% include 'meta-article.j2.html' %}
-    {% if loop.last %}
+    {% if not category.paginated and loop.last %}
     </section>
     {% endif %}
 {% endfor %}

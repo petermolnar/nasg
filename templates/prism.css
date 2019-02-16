@@ -1,4 +1,3 @@
-
 .token.comment,
 .token.prolog,
 .token.doctype,
@@ -20,7 +19,7 @@
 .token.constant,
 .token.symbol,
 .token.deleted {
-  color: #905;
+  color: #f05;
 }
 
 .token.selector,
@@ -29,7 +28,7 @@
 .token.char,
 .token.builtin,
 .token.inserted {
-  color: #690;
+  color: #7a0;
 }
 
 .token.operator,
@@ -43,7 +42,7 @@
 .token.atrule,
 .token.attr-value,
 .token.keyword {
-  color: #07a;
+  color: #09c;
 }
 
 .token.function,
@@ -67,4 +66,4 @@
 
 .token.entity {
   cursor: help;
-}    
+}        

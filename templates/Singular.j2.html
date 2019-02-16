@@ -7,6 +7,9 @@
 {% block meta %}
     <meta name="description" content="{{ post.description|striptags|e }}" />
     <link rel="canonical" href="{{ post.url }}" />
+    <link rel="alternate" type="application/json" href="{{ post.url }}index.json" />
+    <link rel="alternate" type="application/ld+json" href="{{ post.url }}index.json" />
+    <link rel="alternate" type="application/mf2+json" href="https://pin13.net/mf2/?url={{ post.url|urlencode }}" />
     <meta property="og:title" content="{{ post.headline }}" />
     <meta property="og:type" content="article" />
     <meta property="og:url" content="{{ post.url }}" />
@@ -38,6 +41,16 @@
     {% endif %}
 {% endblock %}
 
+{% block cc %}
+                <li>
+                    <a href="{{ post.license }}">
+                        <svg width="80" height="15">
+                            <use xlink:href="#button-cc"/>
+                        </svg>
+                    </a>
+                </li>
+{% endblock %}
+
 {% block content %}
 <main>
     <article class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
@@ -48,7 +61,7 @@
                     <svg width="16" height="16">
                         <use xlink:href="#icon-reply" />
                     </svg>
-                    <a href="{{ post.url }}">
+                    <a href="{{ post.url|relurl(baseurl) }}">
                         RE:
                     </a>
                     <a href="{{ post.mentions.url }}" class="u-in-reply-to">
@@ -56,7 +69,7 @@
                     </a>
                 </span>
                 {% else %}
-                <a href="{{ post.url }}">
+                <a href="{{ post.url|relurl(baseurl) }}">
                     {{ post.headline }}
                 </a>
                 {% endif %}
@@ -65,7 +78,7 @@
 
         {% if post.review %}
         <div class="h-review hreview">
-            <strong>Review summary of: <a href="{{ post.review.url }}" class="p-name u-url p-item h-product item fn">{{ post.review.name }}</a></strong>
+            <strong>Review summary of: <a href="{{ post.review.url }}" class="p-name u-url p-item h-product item fn url">{{ post.review.name }}</a></strong>
             <p>
                 By
                 <span class="p-author h-card reviewer vcard">
@@ -86,12 +99,12 @@
 
         {% if post.description|length %}
         <div class="e-summary entry-summary">
-            {{ post.description }}
+            {{ post.description|relurl(baseurl) }}
         </div>
         {% endif %}
 
         <div class="e-content entry-content">
-            {{ post.text }}
+            {{ post.text|relurl(baseurl) }}
         </div>
 
         <footer>
@@ -164,7 +177,7 @@
 
                 <dt>Author</dt>
                 <dd class="p-author h-card vcard">
-                    <img class="u-photo photo" src="{{ post.author.image }}" alt="" />
+                    <img class="u-photo photo" src="{{ post.author.image|relurl(baseurl) }}" alt="" />
                     <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
                     <a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>
                 </dd>
@@ -227,13 +240,24 @@
             <ol>
                 {% for comment in post.comment %}
                 <li class="h-entry p-comment hentry">
-                    <a href="{{ comment.url }}">
-                        {{ comment.disambiguatingDescription }}
-                    </a>
+                    <i>
+                        {% if 'like-of' == comment.disambiguatingDescription %}
+                        {% set icon = 'star' %}
+                        {% elif 'bookmark-of' == comment.disambiguatingDescription %}
+                        {% set icon = 'bookmark' %}
+                        {% elif 'reply' == comment.disambiguatingDescription %}
+                        {% set icon = 'reply' %}
+                        {% else %}
+                        {% set icon = 'link' %}
+                        {% endif %}
+                        <svg width="16" height="16">
+                            <use xlink:href="#icon-{{ icon }}"></use>
+                        </svg>
+                    </i>
                     from
                     <span class="p-author h-card vcard">
                         {% if comment.author.url %}
-                        <a class="u-url p-name fn" href="{{ comment.author.url }}">
+                        <a class="u-url p-name fn url org" href="{{ comment.author.url }}">
                             {{ comment.author.name }}
                         </a>
                         {% else %}
@@ -247,9 +271,6 @@
                         {{ comment.datePublished|printdate }}
                     </time>
                     <br />
-                    <svg width="16" height="16">
-                        <use xlink:href="#icon-link"></use>
-                    </svg>
                     <a class="u-url" href="{{ comment.url }}">
                         {{ comment.url }}
                     </a>

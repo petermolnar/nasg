@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80" height="15" version="1.1" viewBox="0 0 80 15" xmlns="http://www.w3.org/2000/svg">
+    <rect width="80" height="15" fill="#666"/>
+    <rect x="1" y="1" width="78" height="13" fill="#fff"/>
+    <rect x="18" y="2" width="2" height="11" fill="#5d8f17"/>
+    <rect x="20" y="2" width="2" height="11" fill="#609218"/>
+    <rect x="22" y="2" width="2" height="11" fill="#639519"/>
+    <rect x="24" y="2" width="2" height="11" fill="#66981a"/>
+    <rect x="26" y="2" width="2" height="11" fill="#699b1b"/>
+    <rect x="28" y="2" width="2" height="11" fill="#6c9e1b"/>
+    <rect x="30" y="2" width="2" height="11" fill="#6fa11c"/>
+    <rect x="32" y="2" width="2" height="11" fill="#72a51d"/>
+    <rect x="34" y="2" width="2" height="11" fill="#76a81e"/>
+    <rect x="36" y="2" width="2" height="11" fill="#78aa1f"/>
+    <rect x="38" y="2" width="2" height="11" fill="#7cae20"/>
+    <rect x="40" y="2" width="2" height="11" fill="#7eb120"/>
+    <rect x="42" y="2" width="2" height="11" fill="#82b421"/>
+    <rect x="44" y="2" width="2" height="11" fill="#85b722"/>
+    <rect x="46" y="2" width="2" height="11" fill="#88ba23"/>
+    <rect x="48" y="2" width="2" height="11" fill="#8bbd24"/>
+    <rect x="50" y="2" width="2" height="11" fill="#8ec125"/>
+    <rect x="52" y="2" width="2" height="11" fill="#91c325"/>
+    <rect x="54" y="2" width="2" height="11" fill="#94c626"/>
+    <rect x="56" y="2" width="2" height="11" fill="#97ca27"/>
+    <rect x="58" y="2" width="2" height="11" fill="#9acd28"/>
+    <rect x="60" y="2" width="2" height="11" fill="#9dd029"/>
+    <rect x="62" y="2" width="2" height="11" fill="#a0d32a"/>
+    <rect x="64" y="2" width="2" height="11" fill="#a4d62b"/>
+    <rect x="66" y="2" width="2" height="11" fill="#a6d92b"/>
+    <rect x="68" y="2" width="2" height="11" fill="#a8db2c"/>
+    <rect x="70" y="2" width="2" height="11" fill="#acdf2d"/>
+    <rect x="72" y="2" width="2" height="11" fill="#b0e32e"/>
+    <rect x="74" y="2" width="2" height="11" fill="#b3e62f"/>
+    <rect x="76" y="2" width="2" height="11" fill="#b6e92f"/>
+    <polygon points="4 4 6 4 6 9 7 9 7 10 12 10 12 12 11 12 11 13 4 13 4 12 3 12 3 5 4 5" fill="#5c8d17"/>
+    <polygon points="7 3 9 3 9 6 10 6 10 7 13 7 13 9 8 9 8 8 7 8" fill="#8dc024"/>
+    <polygon points="10 2 13 2 13 3 14 3 14 6 11 6 11 5 10 5" fill="#a5d82b"/>
+    <path d="m20 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
+    <path d="m26 5h1v5h-1z" fill="#fff"/>
+    <path d="m29 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z" fill="#fff"/>
+    <path d="m33 5v5h1v-2h1v1h1v-2h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 3v1h1v-1h-1z" fill="#fff"/>
+    <path d="m39 5v1h2v-1h-2zm2 1v1 1 1h1v-1-1-1h-1zm0 3h-2v1h2v-1zm-2 0v-3h-1v3h1z" fill="#fff"/>
+    <path d="m43 5h3v1h-2v1h2v1h-2v2h-1z" fill="#fff"/>
+    <path d="m48 5v1h2v-1h-2zm2 1v1 1 1h1v-1-1-1h-1zm0 3h-2v1h2v-1zm-2 0v-3h-1v3h1z" fill="#fff"/>
+    <path d="m52 5v5h1v-2h1v1h1v-2h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 3v1h1v-1h-1z" fill="#fff"/>
+    <path d="m57 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
+    <path d="m64 5v1h2v-1h-2zm2 1v1h-2v-1h-1v4h1v-2h2v2h1v-4h-1z" fill="#fff"/>
+    <path d="m68 5h3v1h-1v4h-1v-4h-1" fill="#fff"/>
+    <path d="m73 5h3v1h-3v1h2v1h1v1h-1v1h-3v-1h3v-1h-2v-1h-1v-1h1" fill="#fff"/>
+</svg>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80" height="15" version="1.1" viewBox="0 0 80 15" xmlns="http://www.w3.org/2000/svg">
+    <rect y="0" width="80" height="15"/>
+    <rect x="1" y="1" width="78" height="13" fill="#fff"/>
+    <rect x="2" y="2" width="76" height="11"/>
+    <path d="m42 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
+    <path d="m31 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z" fill="#fff"/>
+    <path d="m37 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z" fill="#fff"/>
+    <path d="m57 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z" fill="#fff"/>
+    <path d="m49 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
+    <path d="m70 5h3v1h-3v1h2v1h1v1h-1v1h-3v-1h3v-1h-2v-1h-1v-1h1" fill="#fff"/>
+    <path d="m62 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z" fill="#fff"/>
+    <path d="m2 2v11h19.891a8.5136 8.5 0 0 0 2.1088-5.5898 8.5136 8.5 0 0 0-1.9563-5.4102h-13.119z" fill="#abb1aa"/>
+    <path d="m6.0195 2a8.5 8.5 0 0 0-2.0195 5.5 8.5 8.5 0 0 0 2.0312 5.5h12.949a8.5 8.5 0 0 0 2.0195-5.5 8.5 8.5 0 0 0-2.0312-5.5z"/>
+    <circle cx="12.5" cy="7.5" r="6.5" fill="#feffff"/>
+    <path d="m9 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z"/>
+    <path d="m14 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z"/>
+</svg>

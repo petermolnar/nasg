@@ -15,11 +15,13 @@ import asyncio
 import sqlite3
 import json
 import queue
+import base64
 from shutil import copy2 as cp
 from math import ceil
 from urllib.parse import urlparse
 from collections import OrderedDict, namedtuple
 import logging
+
 import arrow
 import langdetect
 import wand.image
@@ -27,16 +29,14 @@ import jinja2
 import yaml
 import frontmatter
 from feedgen.feed import FeedGenerator
-from bleach import clean
-from emoji import UNICODE_EMOJI
 from slugify import slugify
 import requests
+
 from pandoc import PandocMarkdown
 from meta import Exif
 import settings
+from settings import struct
 import keys
-
-from pprint import pprint
 
 logger = logging.getLogger('NASG')
 
@@ -44,8 +44,6 @@ MarkdownImage = namedtuple(
     'MarkdownImage',
     ['match', 'alt', 'fname', 'title', 'css']
 )
-
-REPLY_TYPES = ['webmention', 'in-reply-to', 'reply']
 
 J2 = jinja2.Environment(
     loader=jinja2.FileSystemLoader(searchpath=settings.paths.get('tmpl')),
@@ -60,13 +58,18 @@ RE_MDIMG = re.compile(
 )
 
 RE_CODE = re.compile(
-    r'^(?:[~`]{3}).+$',
+    r'^(?:[~`]{3,4}).+$',
     re.MULTILINE
 )
 
 RE_PRECODE = re.compile(
     r'<pre class="([^"]+)"><code>'
 )
+
+def mtime(path):
+    if os.path.exists(path):
+        return int(os.path.getmtime(path))
+    return 0
 
 def utfyamldump(data):
     return yaml.dump(
@@ -83,12 +86,43 @@ def url2slug(url, limit=200):
         lower=True
     )[:limit]
 
+J2.filters['url2slug'] = url2slug
+
 def rfc3339todt(rfc3339):
     t = arrow.get(rfc3339).format('YYYY-MM-DD HH:mm ZZZ')
     return "%s" % (t)
 
 J2.filters['printdate'] = rfc3339todt
-J2.filters['url2slug'] = url2slug
+
+
+RE_MYURL = re.compile(
+    r'(^(%s[^"]+)$|"(%s[^"]+)")' % (
+        settings.site.url,
+        settings.site.url
+    )
+)
+
+def relurl(text, baseurl=None):
+    if not baseurl:
+        baseurl = settings.site.url
+    for match, standalone, href in RE_MYURL.findall(text):
+        needsquotes = False
+        if len(href):
+            needsquotes = True
+            url = href
+        else:
+            url = standalone
+
+        r = os.path.relpath(url, baseurl)
+        if url.endswith('/') and not r.endswith('/'):
+            r = "%s/index.html" % r
+        if needsquotes:
+            r = '"%s"' % r
+        logger.debug("RELURL: %s => %s (base: %s)", match, r, baseurl)
+        text = text.replace(match, r)
+    return text
+
+J2.filters['relurl'] = relurl
 
 def writepath(fpath, content, mtime=0):
     d = os.path.dirname(fpath)
@@ -126,6 +160,7 @@ class cached_property(object):
 
 
 class AQ:
+    """ Async queue which starts execution right on population """
     def __init__(self):
         self.loop = asyncio.get_event_loop()
         self.queue = asyncio.Queue(loop=self.loop)
@@ -145,6 +180,7 @@ class AQ:
 
 
 class Webmention(object):
+    """ outgoing webmention class """
     def __init__(self, source, target, dpath, mtime=0):
         self.source = source
         self.target = target
@@ -166,7 +202,7 @@ class Webmention(object):
     def exists(self):
         if not os.path.isfile(self.fpath):
             return False
-        elif os.path.getmtime(self.fpath) > self.mtime:
+        elif mtime(self.fpath) > self.mtime:
             return True
         else:
             return False
@@ -196,9 +232,10 @@ class Webmention(object):
 
 
 class MarkdownDoc(object):
+    """ Base class for anything that is stored as .md """
     @property
     def mtime(self):
-        return os.path.getmtime(self.fpath)
+        return mtime(self.fpath)
 
     @property
     def dt(self):
@@ -234,7 +271,7 @@ class MarkdownDoc(object):
     def content(self):
         return self._parsed[1]
 
-    def __pandoc(self, c):
+    def pandoc(self, c):
         if c and len(c):
             c = PandocMarkdown(c)
             c = RE_PRECODE.sub(
@@ -247,7 +284,7 @@ class MarkdownDoc(object):
         if hasattr(self, 'images') and len(self.images):
             for match, img in self.images.items():
                 c = c.replace(match, str(img))
-        return self.__pandoc(c)
+        return self.pandoc(c)
 
 
 class Comment(MarkdownDoc):
@@ -260,7 +297,7 @@ class Comment(MarkdownDoc):
         if maybe and 'null' != maybe:
             dt = arrow.get(maybe)
         else:
-            dt = arrow.get(os.path.getmtime(self.fpath))
+            dt = arrow.get(mtime(self.fpath))
         return dt
 
     @property
@@ -295,11 +332,12 @@ class Comment(MarkdownDoc):
 
     @property
     def type(self):
-        if len(self.content):
-            maybe = clean(self.content, strip=True)
-            if maybe in UNICODE_EMOJI:
-                return maybe
         return self.meta.get('type', 'webmention')
+        #if len(self.content):
+            #maybe = clean(self.content, strip=True)
+            #if maybe in UNICODE_EMOJI:
+                #return maybe
+
 
     @cached_property
     def jsonld(self):
@@ -322,7 +360,7 @@ class Gone(object):
 
     def __init__(self, fpath):
         self.fpath = fpath
-        self.mtime = os.path.getmtime(fpath)
+        self.mtime = mtime(fpath)
 
     @property
     def source(self):
@@ -472,7 +510,7 @@ class Singular(MarkdownDoc):
     def html_summary(self):
         c = self.summary
         if c and len(c):
-            c = PandocMarkdown(self.summary)
+            c = self.pandoc(self.summary)
         return c
 
     @property
@@ -531,13 +569,14 @@ class Singular(MarkdownDoc):
     @property
     def to_ping(self):
         urls = []
-        w = Webmention(
-            self.url,
-            'https://fed.brid.gy/',
-            os.path.dirname(self.fpath),
-            self.dt
-        )
-        urls.append(w)
+        if not self.is_page and self.is_front:
+            w = Webmention(
+                self.url,
+                'https://fed.brid.gy/',
+                os.path.dirname(self.fpath),
+                self.dt
+            )
+            urls.append(w)
         if self.is_reply:
             w = Webmention(
                 self.url,
@@ -589,6 +628,47 @@ class Singular(MarkdownDoc):
         else:
             return False
 
+    #@cached_property
+    #def oembed_xml(self):
+        #oembed = etree.Element("oembed", version="1.0")
+        #xmldoc = etree.ElementTree(oembed)
+        #for k, v in self.oembed_json.items():
+            #x = etree.SubElement(oembed, k).text = "%s" % (v)
+        #s = etree.tostring(
+                #xmldoc,
+                #encoding='utf-8',
+                #xml_declaration=True,
+                #pretty_print=True
+        #)
+        #return s
+
+    #@cached_property
+    #def oembed_json(self):
+        #r = {
+          #"version": "1.0",
+          #"provider_name": settings.site.name,
+          #"provider_url": settings.site.url,
+          #"author_name": settings.author.name,
+          #"author_url": settings.author.url,
+          #"title": self.title,
+          #"type": "link",
+          #"html": self.html_content,
+        #}
+
+        #img = None
+        #if self.is_photo:
+            #img = self.photo
+        #elif not self.is_photo and len(self.images):
+            #img = list(self.images.values())[0]
+        #if img:
+            #r.update({
+                #"type": "rich",
+                #"thumbnail_url": img.jsonld.thumbnail.url,
+                #"thumbnail_width": img.jsonld.thumbnail.width,
+                #"thumbnail_height": img.jsonld.thumbnail.height
+            #})
+        #return r
+
     @cached_property
     def review(self):
         if 'review' not in self.meta:
@@ -632,7 +712,6 @@ class Singular(MarkdownDoc):
         }
         return r
 
-
     @cached_property
     def jsonld(self):
         r = {
@@ -665,11 +744,6 @@ class Singular(MarkdownDoc):
                 "@type": "Photograph",
                 "image": self.photo.jsonld,
             })
-        elif not self.is_photo and len(self.images):
-            img = list(self.images.values())[0]
-            r.update({
-                "image": img.jsonld,
-            })
         elif self.has_code:
             r.update({
                 "@type": "TechArticle",
@@ -678,7 +752,11 @@ class Singular(MarkdownDoc):
             r.update({
                 "@type": "WebPage",
             })
-
+        if not self.is_photo and len(self.images):
+            img = list(self.images.values())[0]
+            r.update({
+                "image": img.jsonld,
+            })
 
         if self.is_reply:
             r.update({
@@ -708,7 +786,7 @@ class Singular(MarkdownDoc):
         for mtime in sorted(self.comments.keys()):
             r["comment"].append(self.comments[mtime].jsonld)
 
-        return r
+        return struct(r)
 
     @property
     def template(self):
@@ -734,7 +812,7 @@ class Singular(MarkdownDoc):
         elif not os.path.exists(self.renderfile):
             logger.debug('rendering required: no html yet')
             return False
-        elif self.dt > os.path.getmtime(self.renderfile):
+        elif self.dt > mtime(self.renderfile):
             logger.debug('rendering required: self.dt > html mtime')
             return False
         else:
@@ -768,31 +846,40 @@ class Singular(MarkdownDoc):
                 self.name,
                 os.path.basename(f)
             )
-            if os.path.exists(t) and os.path.getmtime(
-                    f) <= os.path.getmtime(t):
+            if os.path.exists(t) and mtime(
+                    f) <= mtime(t):
                 continue
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
 
-    async def render(self):
-        if self.exists:
-            return
-        logger.info("rendering %s", self.name)
-        r    = J2.get_template(self.template).render({
+    @cached_property
+    def html(self):
+        r = J2.get_template(self.template).render({
             'baseurl': self.url,
             'post': self.jsonld,
             'site': settings.site,
             'menu': settings.menu,
             'meta': settings.meta,
         })
+        return r
+
+    async def render(self):
+        if self.exists:
+            return
+        logger.info("rendering %s", self.name)
         writepath(
             self.renderfile,
-            r
+            self.html
         )
+        j = settings.site.copy()
+        j.update({
+            "mainEntity": self.jsonld
+        })
         writepath(
-            self.renderfile.replace('.html', '.json'),
-            json.dumps(self.jsonld, indent=4, ensure_ascii=False)
+            os.path.join(self.renderdir,'index.json'),
+            json.dumps(j, indent=4, ensure_ascii=False)
         )
+        del(j)
 
 
 class Home(Singular):
@@ -844,7 +931,7 @@ class WebImage(object):
         self.mdimg = mdimg
         self.fpath = fpath
         self.parent = parent
-        self.mtime = os.path.getmtime(self.fpath)
+        self.mtime = mtime(self.fpath)
         self.fname, self.fext = os.path.splitext(os.path.basename(fpath))
         self.resized_images = [
             (k, self.Resized(self, k))
@@ -863,20 +950,20 @@ class WebImage(object):
             return True
         return False
 
-    @cached_property
+    @property
     def jsonld(self):
         r = {
             "@context": "http://schema.org",
             "@type": "ImageObject",
             "url": self.href,
             "image": self.href,
-            "thumbnail": {
+            "thumbnail": struct({
                 "@context": "http://schema.org",
                 "@type": "ImageObject",
                 "url": self.src,
                 "width": self.displayed.width,
                 "height": self.displayed.height,
-            },
+            }),
             "name": os.path.basename(self.fpath),
             "encodingFormat": self.mime_type,
             "contentSize": self.mime_size,
@@ -902,21 +989,7 @@ class WebImage(object):
             })
         if self.is_mainimg:
             r.update({"representativeOfPage": True})
-        return r
-
-    #@cached_property
-    #def tmplvars(self):
-        #return {
-            #'src': self.src,
-            #'href': self.href,
-            #'width': self.displayed.width,
-            #'height': self.displayed.height,
-            #'title': self.title,
-            #'caption': self.caption,
-            #'exif': self.exif,
-            #'is_photo': self.is_photo,
-            #'is_mainimg': self.is_mainimg
-        #}
+        return struct(r)
 
     def __str__(self):
         if len(self.mdimg.css):
@@ -966,7 +1039,12 @@ class WebImage(object):
 
     @property
     def mime_size(self):
-        return os.path.getsize(self.linked.fpath)
+        try:
+            size = os.path.getsize(self.linked.fpath)
+        except Exception as e:
+            logger.error('Failed to get mime size of %s', self.linked.fpath)
+            size = self.meta.get('FileSize', 0)
+        return size
 
     @property
     def displayed(self):
@@ -1102,6 +1180,12 @@ class WebImage(object):
             self.crop = crop
 
         @property
+        def data(self):
+            with open(self.fpath, 'rb') as f:
+                encoded = base64.b64encode(f.read())
+            return "data:%s;base64,%s" % (self.parent.mime_type, encoded.decode('utf-8'))
+
+        @property
         def suffix(self):
             return settings.photo.get('sizes').get(self.size, '')
 
@@ -1144,7 +1228,7 @@ class WebImage(object):
         @property
         def exists(self):
             if os.path.isfile(self.fpath):
-                if os.path.getmtime(self.fpath) >= self.parent.mtime:
+                if mtime(self.fpath) >= self.parent.mtime:
                     return True
             return False
 
@@ -1216,13 +1300,13 @@ class PHPFile(object):
             return False
         if not os.path.exists(self.renderfile):
             return False
-        if self.mtime > os.path.getmtime(self.renderfile):
+        if self.mtime > mtime(self.renderfile):
             return False
         return True
 
     @property
     def mtime(self):
-        return os.path.getmtime(
+        return mtime(
             os.path.join(
                 settings.paths.get('tmpl'),
                 self.templatefile
@@ -1238,8 +1322,8 @@ class PHPFile(object):
         raise ValueError('Not implemented')
 
     async def render(self):
-        if self.exists:
-            return
+        #if self.exists:
+            #return
         await self._render()
 
 
@@ -1532,7 +1616,7 @@ class Category(dict):
             return False
         if not os.path.exists(fpath):
             return False
-        if os.path.getmtime(fpath) >= ts:
+        if mtime(fpath) >= ts:
             return True
         return False
 
@@ -1554,10 +1638,10 @@ class Category(dict):
             'title': self.title,
         }
 
-    def tmplvars(self, posts=[], year=False):
+    def tmplvars(self, posts=[], year=None):
         baseurl = self.url
         if year:
-            baseurl = '%s/%s/' % (baseurl, year)
+            baseurl = '%s%s/' % (baseurl, year)
         return {
             'baseurl': baseurl,
             'site': settings.site,
@@ -1672,8 +1756,10 @@ class Category(dict):
         for year in self.years.keys():
             if year == self.newest_year:
                 fpath = self.indexfpath()
+                tyear = None
             else:
                 fpath = self.indexfpath("%d" % (year))
+                tyear = year
             y = arrow.get("%d" % year, self.trange).to('utc')
             tsmin = y.floor('year').timestamp
             tsmax = y.ceil('year').timestamp
@@ -1697,7 +1783,7 @@ class Category(dict):
                         # some posts disappear
                         # TODO figure this out...
                         self.get_posts(start, end+1),
-                        year
+                        tyear
                     )
                 )
                 writepath(fpath, r)
@@ -1752,7 +1838,7 @@ class Sitemap(dict):
     def mtime(self):
         r = 0
         if os.path.exists(self.renderfile):
-            r = os.path.getmtime(self.renderfile)
+            r = mtime(self.renderfile)
         return r
 
     def append(self, post):
@@ -1969,7 +2055,7 @@ def make():
         if e.endswith('.md'):
             continue
         t = os.path.join(settings.paths.get('build'),os.path.basename(e))
-        if os.path.exists(t) and os.path.getmtime(e) <= os.path.getmtime(t):
+        if os.path.exists(t) and mtime(e) <= mtime(t):
             continue
         cp(e, t)
 

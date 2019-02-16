@@ -13,8 +13,6 @@ import requests
 import keys
 import settings
 
-from pprint import pprint
-
 EXIFDATE = re.compile(
     r'^(?P<year>[0-9]{4}):(?P<month>[0-9]{2}):(?P<day>[0-9]{2})\s+'
     r'(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2})$'
@@ -69,130 +67,6 @@ class CachedMeta(dict):
             for k, v in data.items():
                 self[k] = v
 
-class GoogleClassifyText(CachedMeta):
-    def __init__(self, fpath, txt, lang='en'):
-        self.fpath = fpath
-        self.txt = txt
-        self.lang = lang
-        self._read()
-
-    def _call_tool(self):
-        params = {
-            "document": {
-                "type": "PLAIN_TEXT",
-                "content": self.txt,
-                "language": self.lang,
-            }
-        }
-
-        url = "https://language.googleapis.com/v1beta2/documents:classifyText?key=%s" % (
-            keys.gcloud.get('key')
-        )
-        logging.info(
-            "calling Google classifyText for %s",
-            self.fpath
-        )
-        try:
-            r = requests.post(url, json=params)
-            resp = r.json()
-            for cat in resp.get('categories', []):
-                self[cat.get('name')] = cat.get('confidence')
-        except Exception as e:
-            logging.error(
-                'failed to call Google Vision API on: %s, reason: %s',
-                self.fpath,
-                e
-            )
-
-class GoogleVision(CachedMeta):
-    def __init__(self, fpath, imgurl):
-        self.fpath = fpath
-        self.imgurl = imgurl
-        self._read()
-
-    @property
-    def response(self):
-        if 'responses' not in self:
-            return {}
-        if not len(self['responses']):
-            return {}
-        if 'labelAnnotations' not in self['responses'][0]:
-            return {}
-        return self['responses'][0]
-
-    @property
-    def tags(self):
-        tags = []
-
-        if 'labelAnnotations' in self.response:
-            for label in self.response['labelAnnotations']:
-                tags.append(label['description'])
-
-        if 'webDetection' in self.response:
-            if 'webEntities' in self.response['webDetection']:
-                for label in self.response['webDetection']['webEntities']:
-                    tags.append(label['description'])
-        return tags
-
-    @property
-    def landmark(self):
-        landmark = None
-        if 'landmarkAnnotations' in self.response:
-            if len(self.response['landmarkAnnotations']):
-                match = self.response['landmarkAnnotations'].pop()
-                landmark = {
-                    'name': match['description'],
-                    'latitude': match['locations'][0]['latLng']['latitude'],
-                    'longitude': match['locations'][0]['latLng']['longitude']
-                }
-        return landmark
-
-    @property
-    def onlinecopies(self):
-        copies = []
-        if 'webDetection' in self.response:
-            if 'pagesWithMatchingImages' in self.response['webDetection']:
-                for match in self.response['webDetection']['pagesWithMatchingImages']:
-                    copies.append(match['url'])
-        return copies
-
-    def _call_tool(self):
-        params = {
-            "requests": [{
-                "image": {"source": {"imageUri": self.imgurl}},
-                "features": [
-                    {
-                      "type": "LANDMARK_DETECTION",
-                    },
-                    {
-                      "type": "WEB_DETECTION",
-                    },
-                    {
-                      "type": "LABEL_DETECTION",
-                    }
-                ]
-            }]
-        }
-
-        url = "https://vision.googleapis.com/v1/images:annotate?key=%s" % (
-            keys.gcloud.get('key')
-        )
-        logging.info(
-            "calling Google Vision for %s",
-            self.fpath
-        )
-
-        try:
-            r = requests.post(url, json=params)
-            resp = r.json()
-            for k, v in resp.items():
-                self[k] = v
-        except Exception as e:
-            logging.error(
-                'failed to call Google Vision API on: %s, reason: %s',
-                self.fpath,
-                e
-            )
 
 class Exif(CachedMeta):
     def __init__(self, fpath):
