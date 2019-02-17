@@ -97,30 +97,34 @@
         <rect x="29" y="10" width="49" height="1" fill="#fc371d"/>
         <rect x="29" y="11" width="49" height="1" fill="#fc291c"/>
         <rect x="29" y="12" width="49" height="1" fill="#fc1c1c"/>
-        <path d="m34 5h1v5h-1z" fill="#fff"/>
-        <path d="m37 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z" fill="#fff"/>
-        <path d="m44 5v5h3v-1h-2v-3h2v-1h-3zm3 1v3h1v-3h-1z" fill="#fff"/>
-        <path d="m50 5h1v5h-1z" fill="#fff"/>
-        <path d="m53 5h3v1h-2v1h2v1h-2v1h2v1h-3z" fill="#fff"/>
-        <path d="m58 5h1v4h1v-3h1v3h1v-4h1v4h-1v1h-1v-1h-1v1h-1v-1h-1z" fill="#fff"/>
-        <path d="m65 5h3v1h-2v1h2v1h-2v1h2v1h-3z" fill="#fff"/>
-        <path d="m70 5v5h3v-1h-2v-1h2v-1h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 2v1h1v-1h-1z" fill="#fff"/>
+        <g fill="#fff">
+            <path d="m34 5h1v5h-1z"/>
+            <path d="m37 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z"/>
+            <path d="m44 5v5h3v-1h-2v-3h2v-1h-3zm3 1v3h1v-3h-1z"/>
+            <path d="m50 5h1v5h-1z"/>
+            <path d="m53 5h3v1h-2v1h2v1h-2v1h2v1h-3z"/>
+            <path d="m58 5h1v4h1v-3h1v3h1v-4h1v4h-1v1h-1v-1h-1v1h-1v-1h-1z"/>
+            <path d="m65 5h3v1h-2v1h2v1h-2v1h2v1h-3z"/>
+            <path d="m70 5v5h3v-1h-2v-1h2v-1h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 2v1h1v-1h-1z"/>
+        </g>
     </symbol>
     <symbol id="button-webmention" viewBox="0 0 80 15">
         <rect width="80" height="15" fill="#666"/>
         <rect x="1" y="1" width="78" height="13" fill="#fff" style="paint-order:markers fill stroke"/>
         <path d="m13 1v1h-1v1h-1v1h1 1v1h-1v2h-1v2h-1v-3h-1v-2h-1v2h-1v3h-1v-2h-1v-3h-1v-2h-1-1v2h1v3h1v3h1v3h1 1v-3h1v-2h1v2h1v3h1 1v-3h1v-3h1v-3h1 1v-1h-1v-1h-1v-1h-1z" fill="#610371"/>
         <rect x="19" y="2" width="59" height="11" fill="#850e9a"/>
-        <path d="m33 5v5h3v-1h-2v-1h2v-1h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 2v1h1v-1h-1z" fill="#fff"/>
-        <path d="m28 5h3v1h-2v1h2v1h-2v1h2v1h-3z" fill="#fff"/>
-        <path d="m21 5h1v4h1v-3h1v3h1v-4h1v4h-1v1h-1v-1h-1v1h-1v-1h-1z" fill="#fff"/>
-        <path d="m39 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
-        <path d="m51 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z" fill="#fff"/>
-        <path d="m58 5h3v1h-1v4h-1v-4h-1" fill="#fff"/>
-        <path d="m63 5h1v5h-1z" fill="#fff"/>
-        <path d="m67 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z" fill="#fff"/>
-        <path d="m71 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z" fill="#fff"/>
-        <path d="m46 5h3v1h-2v1h2v1h-2v1h2v1h-3z" fill="#fff"/>
+        <g fill="#fff">
+            <path d="m33 5v5h3v-1h-2v-1h2v-1h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 2v1h1v-1h-1z"/>
+            <path d="m28 5h3v1h-2v1h2v1h-2v1h2v1h-3z"/>
+            <path d="m21 5h1v4h1v-3h1v3h1v-4h1v4h-1v1h-1v-1h-1v1h-1v-1h-1z"/>
+            <path d="m39 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z"/>
+            <path d="m51 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z"/>
+            <path d="m58 5h3v1h-1v4h-1v-4h-1"/>
+            <path d="m63 5h1v5h-1z"/>
+            <path d="m67 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z"/>
+            <path d="m71 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z"/>
+            <path d="m46 5h3v1h-2v1h2v1h-2v1h2v1h-3z"/>
+        </g>
     </symbol>
     <symbol id="button-microformats" viewBox="0 0 80 15">
         <rect width="80" height="15" fill="#666"/>
@@ -158,34 +162,64 @@
         <polygon points="4 4 6 4 6 9 7 9 7 10 12 10 12 12 11 12 11 13 4 13 4 12 3 12 3 5 4 5" fill="#5c8d17"/>
         <polygon points="7 3 9 3 9 6 10 6 10 7 13 7 13 9 8 9 8 8 7 8" fill="#8dc024"/>
         <polygon points="10 2 13 2 13 3 14 3 14 6 11 6 11 5 10 5" fill="#a5d82b"/>
-        <path d="m20 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
-        <path d="m26 5h1v5h-1z" fill="#fff"/>
-        <path d="m29 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z" fill="#fff"/>
-        <path d="m33 5v5h1v-2h1v1h1v-2h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 3v1h1v-1h-1z" fill="#fff"/>
-        <path d="m39 5v1h2v-1h-2zm2 1v1 1 1h1v-1-1-1h-1zm0 3h-2v1h2v-1zm-2 0v-3h-1v3h1z" fill="#fff"/>
-        <path d="m43 5h3v1h-2v1h2v1h-2v2h-1z" fill="#fff"/>
-        <path d="m48 5v1h2v-1h-2zm2 1v1 1 1h1v-1-1-1h-1zm0 3h-2v1h2v-1zm-2 0v-3h-1v3h1z" fill="#fff"/>
-        <path d="m52 5v5h1v-2h1v1h1v-2h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 3v1h1v-1h-1z" fill="#fff"/>
-        <path d="m57 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
-        <path d="m64 5v1h2v-1h-2zm2 1v1h-2v-1h-1v4h1v-2h2v2h1v-4h-1z" fill="#fff"/>
-        <path d="m68 5h3v1h-1v4h-1v-4h-1" fill="#fff"/>
-        <path d="m73 5h3v1h-3v1h2v1h1v1h-1v1h-3v-1h3v-1h-2v-1h-1v-1h1" fill="#fff"/>
+        <g fill="#fff">
+            <path d="m20 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z"/>
+            <path d="m26 5h1v5h-1z"/>
+            <path d="m29 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z"/>
+            <path d="m33 5v5h1v-2h1v1h1v-2h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 3v1h1v-1h-1z"/>
+            <path d="m39 5v1h2v-1h-2zm2 1v1 1 1h1v-1-1-1h-1zm0 3h-2v1h2v-1zm-2 0v-3h-1v3h1z"/>
+            <path d="m43 5h3v1h-2v1h2v1h-2v2h-1z"/>
+            <path d="m48 5v1h2v-1h-2zm2 1v1 1 1h1v-1-1-1h-1zm0 3h-2v1h2v-1zm-2 0v-3h-1v3h1z"/>
+            <path d="m52 5v5h1v-2h1v1h1v-2h-2v-1h2v-1h-3zm3 1v1h1v-1h-1zm0 3v1h1v-1h-1z"/>
+            <path d="m57 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z"/>
+            <path d="m64 5v1h2v-1h-2zm2 1v1h-2v-1h-1v4h1v-2h2v2h1v-4h-1z"/>
+            <path d="m68 5h3v1h-1v4h-1v-4h-1"/>
+            <path d="m73 5h3v1h-3v1h2v1h1v1h-1v1h-3v-1h3v-1h-2v-1h-1v-1h1"/>
+        </g>
     </symbol>
     <symbol id="button-cc" viewBox="0 0 80 15">
         <rect y="0" width="80" height="15" fill="#000"/>
         <rect x="1" y="1" width="78" height="13" fill="#fff"/>
         <rect x="2" y="2" width="76" height="11" fill="#000"/>
-        <path d="m42 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
-        <path d="m31 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z" fill="#fff"/>
-        <path d="m37 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z" fill="#fff"/>
-        <path d="m57 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z" fill="#fff"/>
-        <path d="m49 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z" fill="#fff"/>
-        <path d="m70 5h3v1h-3v1h2v1h1v1h-1v1h-3v-1h3v-1h-2v-1h-1v-1h1" fill="#fff"/>
-        <path d="m62 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z" fill="#fff"/>
+        <g fill="#fff">
+            <path d="m42 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z"/>
+            <path d="m31 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z"/>
+            <path d="m37 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z"/>
+            <path d="m57 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z"/>
+            <path d="m49 5h1v1h1v1h1v-1h1v-1h1v5h-1v-3h-1v1h-1v-1h-1v3h-1z"/>
+            <path d="m70 5h3v1h-3v1h2v1h1v1h-1v1h-3v-1h3v-1h-2v-1h-1v-1h1"/>
+            <path d="m62 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z"/>
+        </g>
         <path d="m2 2v11h19.891a8.5136 8.5 0 0 0 2.1088-5.5898 8.5136 8.5 0 0 0-1.9563-5.4102h-13.119z" fill="#aaa"/>
         <path d="m6.0195 2a8.5 8.5 0 0 0-2.0195 5.5 8.5 8.5 0 0 0 2.0312 5.5h12.949a8.5 8.5 0 0 0 2.0195-5.5 8.5 8.5 0 0 0-2.0312-5.5z" fill="#000"/>
         <circle cx="12.5" cy="7.5" r="6.5" fill="#fff"/>
         <path d="m9 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z" fill="#000"/>
         <path d="m14 5h2v1h1v1h-1v-1h-2v3h2v-1h1v1h-1v1h-2v-1h-1v-3h1z" fill="#000"/>
+    </symbol>
+    <symbol id="button-nojs" viewBox="0 0 80 15">
+        <rect width="80" height="15" fill="#666"/>
+        <rect x="1" y="1" width="78" height="13" fill="#fff"/>
+        <rect x="16" y="2" width="62" height="11" fill="#666"/>
+        <g fill="#fff">
+            <path d="m27 5v1h2v-1zm2 1v3h1v-3zm0 3h-2v1h2zm-2 0v-3h-1v3z"/>
+            <path d="m20 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z"/>
+            <rect x="-1" y="259.03" width="78" height="13"/>
+            <path d="m70 5v5h3v-1h-2v-3h2v-1zm3 1v3h1v-3z"/>
+            <path d="m66 5h3v1h-2v1h2v1h-2v1h2v1h-3z"/>
+            <circle cx="7.5" cy="7.5" r="5.5" stroke="#666"/>
+        </g>
+        <g fill="#666">
+            <rect transform="rotate(-45)" x="-6" y="10" width="11" height="1"/>
+            <path d="m9 5h3v1h-3v1h2v1h1v1h-1v1h-3v-1h3v-1h-2v-1h-1v-1h1"/>
+            <path d="m6 5v4h1v-4zm0 4h-2v1h2zm-2 0v-1h-1v1z"/>
+        </g>
+        <g fill="#fff">
+            <path d="m40 5h3v1h-3v1h2v1h1v1h-1v1h-3v-1h3v-1h-2v-1h-1v-1h1"/>
+            <path d="m37 5v4h1v-4zm0 4h-2v1h2zm-2 0v-1h-1v1z"/>
+            <path d="m57 5h3v1h-2v1h2v1h-2v1h2v1h-3z"/>
+            <path d="m61 5v5h3v-1h-2v-3h2v-1zm3 1v3h1v-3z"/>
+            <path d="m53 5h3v1h-2v1h2v1h-2v1h2v1h-3z"/>
+            <path d="m47 5h1v1h1v1h1v1h1v-3h1v5h-1v-1h-1v-1h-1v-1h-1v3h-1z"/>
+        </g>
     </symbol>
 </svg>

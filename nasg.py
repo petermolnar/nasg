@@ -67,11 +67,13 @@ RE_PRECODE = re.compile(
 )
 
 def mtime(path):
+    """ return seconds level mtime or 0 (chomp microsecs) """
     if os.path.exists(path):
         return int(os.path.getmtime(path))
     return 0
 
 def utfyamldump(data):
+    """ dump YAML with actual UTF-8 chars """
     return yaml.dump(
         data,
         default_flow_style=False,
@@ -80,6 +82,7 @@ def utfyamldump(data):
     )
 
 def url2slug(url, limit=200):
+    """ convert URL to max 200 char ASCII string """
     return slugify(
         re.sub(r"^https?://(?:www)?", "", url),
         only_ascii=True,
@@ -89,11 +92,11 @@ def url2slug(url, limit=200):
 J2.filters['url2slug'] = url2slug
 
 def rfc3339todt(rfc3339):
+    """ nice dates for humans """
     t = arrow.get(rfc3339).format('YYYY-MM-DD HH:mm ZZZ')
     return "%s" % (t)
 
 J2.filters['printdate'] = rfc3339todt
-
 
 RE_MYURL = re.compile(
     r'(^(%s[^"]+)$|"(%s[^"]+)")' % (
@@ -125,16 +128,15 @@ def relurl(text, baseurl=None):
 J2.filters['relurl'] = relurl
 
 def writepath(fpath, content, mtime=0):
+    """ f.write with extras """
     d = os.path.dirname(fpath)
     if not os.path.isdir(d):
         logger.debug('creating directory tree %s', d)
         os.makedirs(d)
-
     if isinstance(content, str):
         mode = 'wt'
     else:
         mode = 'wb'
-
     with open(fpath, mode) as f:
         logger.info('writing file %s', fpath)
         f.write(content)
@@ -880,6 +882,10 @@ class Singular(MarkdownDoc):
             json.dumps(j, indent=4, ensure_ascii=False)
         )
         del(j)
+        cp(
+            self.fpath,
+            os.path.join(self.renderdir,'index.md')
+        )
 
 
 class Home(Singular):
