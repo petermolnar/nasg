@@ -21,6 +21,7 @@ from math import ceil
 from urllib.parse import urlparse
 from collections import OrderedDict, namedtuple
 import logging
+import csv
 
 import arrow
 import langdetect
@@ -31,14 +32,21 @@ import frontmatter
 from feedgen.feed import FeedGenerator
 from slugify import slugify
 import requests
+import lxml.etree as etree
 
-from pandoc import PandocMarkdown
+from pandoc import PandocMarkdown, PandocTXT
 from meta import Exif
 import settings
 from settings import struct
 import keys
 
 logger = logging.getLogger('NASG')
+
+CATEGORY = 'category'
+MDFILE = 'index.md'
+TXTFILE = 'index.txt'
+HTMLFILE = 'index.html'
+GOPHERFILE = 'gophermap'
 
 MarkdownImage = namedtuple(
     'MarkdownImage',
@@ -72,6 +80,7 @@ def mtime(path):
         return int(os.path.getmtime(path))
     return 0
 
+
 def utfyamldump(data):
     """ dump YAML with actual UTF-8 chars """
     return yaml.dump(
@@ -81,6 +90,7 @@ def utfyamldump(data):
         allow_unicode=True
     )
 
+
 def url2slug(url, limit=200):
     """ convert URL to max 200 char ASCII string """
     return slugify(
@@ -89,12 +99,15 @@ def url2slug(url, limit=200):
         lower=True
     )[:limit]
 
+
 J2.filters['url2slug'] = url2slug
+
 
 def rfc3339todt(rfc3339):
     """ nice dates for humans """
     t = arrow.get(rfc3339).format('YYYY-MM-DD HH:mm ZZZ')
     return "%s" % (t)
+
 
 J2.filters['printdate'] = rfc3339todt
 
@@ -104,6 +117,7 @@ RE_MYURL = re.compile(
         settings.site.url
     )
 )
+
 
 def relurl(text, baseurl=None):
     if not baseurl:
@@ -118,14 +132,16 @@ def relurl(text, baseurl=None):
 
         r = os.path.relpath(url, baseurl)
         if url.endswith('/') and not r.endswith('/'):
-            r = "%s/index.html" % r
+            r = "%s/%s" % (r, HTMLFILE)
         if needsquotes:
             r = '"%s"' % r
         logger.debug("RELURL: %s => %s (base: %s)", match, r, baseurl)
         text = text.replace(match, r)
     return text
 
+
 J2.filters['relurl'] = relurl
+
 
 def writepath(fpath, content, mtime=0):
     """ f.write with extras """
@@ -163,6 +179,7 @@ class cached_property(object):
 
 class AQ:
     """ Async queue which starts execution right on population """
+
     def __init__(self):
         self.loop = asyncio.get_event_loop()
         self.queue = asyncio.Queue(loop=self.loop)
@@ -174,7 +191,7 @@ class AQ:
         while not self.queue.empty():
             item = await self.queue.get()
             self.queue.task_done()
-        #asyncio.gather() ?
+        # asyncio.gather() ?
 
     def run(self):
         consumer = asyncio.ensure_future(self.consume())
@@ -183,6 +200,7 @@ class AQ:
 
 class Webmention(object):
     """ outgoing webmention class """
+
     def __init__(self, source, target, dpath, mtime=0):
         self.source = source
         self.target = target
@@ -275,7 +293,7 @@ class MarkdownDoc(object):
 
     def pandoc(self, c):
         if c and len(c):
-            c = PandocMarkdown(c)
+            c = str(PandocMarkdown(c))
             c = RE_PRECODE.sub(
                 '<pre><code lang="\g<1>" class="language-\g<1>">', c)
         return c
@@ -305,7 +323,9 @@ class Comment(MarkdownDoc):
     @property
     def targetname(self):
         t = urlparse(self.meta.get('target'))
-        return t.path.rstrip('/').strip('/').split('/')[-1]
+        return os.path.split(t.path.lstrip('/'))[0]
+        #t = urlparse(self.meta.get('target'))
+        #return t.path.rstrip('/').strip('/').split('/')[-1]
 
     @property
     def source(self):
@@ -335,11 +355,10 @@ class Comment(MarkdownDoc):
     @property
     def type(self):
         return self.meta.get('type', 'webmention')
-        #if len(self.content):
-            #maybe = clean(self.content, strip=True)
-            #if maybe in UNICODE_EMOJI:
-                #return maybe
-
+        # if len(self.content):
+        #maybe = clean(self.content, strip=True)
+        # if maybe in UNICODE_EMOJI:
+        # return maybe
 
     @cached_property
     def jsonld(self):
@@ -418,10 +437,24 @@ class Singular(MarkdownDoc):
                     maybe = c.dt
         return maybe
 
+
+    @property
+    def dt(self):
+        dt = int(MarkdownDoc.dt.fget(self))
+        for maybe in self.comments.keys():
+            if int(dt) < int(maybe):
+                dt = int(maybe)
+        return dt
+
     @property
     def sameas(self):
         r = []
-        for k in glob.glob(os.path.join(os.path.dirname(self.fpath), '*.copy')):
+        for k in glob.glob(
+            os.path.join(
+                os.path.dirname(self.fpath),
+                '*.copy'
+            )
+        ):
             with open(k, 'rt') as f:
                 r.append(f.read())
         return r
@@ -436,7 +469,7 @@ class Singular(MarkdownDoc):
         files = [
             k
             for k in glob.glob(os.path.join(os.path.dirname(self.fpath), '*.md'))
-            if os.path.basename(k) != 'index.md'
+            if os.path.basename(k) != MDFILE
         ]
         for f in files:
             c = Comment(f)
@@ -463,9 +496,9 @@ class Singular(MarkdownDoc):
                     images.update({match: WebImage(imgpath, mdimg, self)})
             else:
                 logger.error("Missing image: %s, referenced in %s",
-                    imgpath,
-                    self.fpath
-                )
+                             imgpath,
+                             self.fpath
+                             )
         return images
 
     @property
@@ -493,7 +526,7 @@ class Singular(MarkdownDoc):
         if len(self.images) != 1:
             return False
         photo = next(iter(self.images.values()))
-        maybe = self.fpath.replace("index.md", "%s.jpg" % (self.name))
+        maybe = self.fpath.replace(MDFILE, "%s.jpg" % (self.name))
         if photo.fpath == maybe:
             return True
         return False
@@ -630,46 +663,46 @@ class Singular(MarkdownDoc):
         else:
             return False
 
-    #@cached_property
-    #def oembed_xml(self):
-        #oembed = etree.Element("oembed", version="1.0")
-        #xmldoc = etree.ElementTree(oembed)
-        #for k, v in self.oembed_json.items():
-            #x = etree.SubElement(oembed, k).text = "%s" % (v)
-        #s = etree.tostring(
-                #xmldoc,
-                #encoding='utf-8',
-                #xml_declaration=True,
-                #pretty_print=True
-        #)
-        #return s
+    @cached_property
+    def oembed_xml(self):
+        oembed = etree.Element("oembed", version="1.0")
+        xmldoc = etree.ElementTree(oembed)
+        for k, v in self.oembed_json.items():
+            x = etree.SubElement(oembed, k).text = "%s" % (v)
+        s = etree.tostring(
+            xmldoc,
+            encoding='utf-8',
+            xml_declaration=True,
+            pretty_print=True
+        )
+        return s
 
-    #@cached_property
-    #def oembed_json(self):
-        #r = {
-          #"version": "1.0",
-          #"provider_name": settings.site.name,
-          #"provider_url": settings.site.url,
-          #"author_name": settings.author.name,
-          #"author_url": settings.author.url,
-          #"title": self.title,
-          #"type": "link",
-          #"html": self.html_content,
-        #}
+    @cached_property
+    def oembed_json(self):
+        r = {
+          "version": "1.0",
+          "provider_name": settings.site.name,
+          "provider_url": settings.site.url,
+          "author_name": settings.author.name,
+          "author_url": settings.author.url,
+          "title": self.title,
+          "type": "link",
+          "html": self.html_content,
+        }
 
-        #img = None
-        #if self.is_photo:
-            #img = self.photo
-        #elif not self.is_photo and len(self.images):
-            #img = list(self.images.values())[0]
-        #if img:
-            #r.update({
-                #"type": "rich",
-                #"thumbnail_url": img.jsonld.thumbnail.url,
-                #"thumbnail_width": img.jsonld.thumbnail.width,
-                #"thumbnail_height": img.jsonld.thumbnail.height
-            #})
-        #return r
+        img = None
+        if self.is_photo:
+            img = self.photo
+        elif not self.is_photo and len(self.images):
+            img = list(self.images.values())[0]
+        if img:
+            r.update({
+            "type": "rich",
+            "thumbnail_url": img.jsonld.thumbnail.url,
+            "thumbnail_width": img.jsonld.thumbnail.width,
+            "thumbnail_height": img.jsonld.thumbnail.height
+            })
+        return r
 
     @cached_property
     def review(self):
@@ -744,7 +777,7 @@ class Singular(MarkdownDoc):
         if self.is_photo:
             r.update({
                 "@type": "Photograph",
-                "image": self.photo.jsonld,
+                #"image": self.photo.jsonld,
             })
         elif self.has_code:
             r.update({
@@ -754,11 +787,15 @@ class Singular(MarkdownDoc):
             r.update({
                 "@type": "WebPage",
             })
-        if not self.is_photo and len(self.images):
-            img = list(self.images.values())[0]
-            r.update({
-                "image": img.jsonld,
-            })
+        if len(self.images):
+            r["image"] = []
+            for img in list(self.images.values()):
+                r["image"].append(img.jsonld)
+        # if not self.is_photo and len(self.images):
+            # img = list(self.images.values())[0]
+            # r.update({
+                # "image": img.jsonld,
+            # })
 
         if self.is_reply:
             r.update({
@@ -775,8 +812,8 @@ class Singular(MarkdownDoc):
         if self.event:
             r.update({"subjectOf": self.event})
 
-        for donation in settings.donateActions:
-            r["potentialAction"].append(donation)
+        #for donation in settings.donateActions:
+            #r["potentialAction"].append(donation)
 
         for url in list(set(self.syndicate)):
             r["potentialAction"].append({
@@ -795,15 +832,28 @@ class Singular(MarkdownDoc):
         return "%s.j2.html" % (self.__class__.__name__)
 
     @property
+    def gophertemplate(self):
+        return "%s.j2.txt" % (self.__class__.__name__)
+
+    @property
     def renderdir(self):
-        return os.path.dirname(self.renderfile)
+        return os.path.join(
+            settings.paths.get('build'),
+            self.name
+        )
 
     @property
     def renderfile(self):
         return os.path.join(
-            settings.paths.get('build'),
-            self.name,
-            'index.html'
+            self.renderdir,
+            HTMLFILE
+        )
+
+    @property
+    def gopherfile(self):
+        return os.path.join(
+            self.renderdir,
+            TXTFILE
         )
 
     @property
@@ -831,7 +881,15 @@ class Singular(MarkdownDoc):
         ])
 
     async def copyfiles(self):
-        exclude = ['.md', '.jpg', '.png', '.gif', '.ping', '.url', '.del', '.copy']
+        exclude = [
+            '.md',
+            '.jpg',
+            '.png',
+            '.gif',
+            '.ping',
+            '.url',
+            '.del',
+            '.copy']
         files = glob.glob(
             os.path.join(
                 os.path.dirname(self.fpath),
@@ -854,39 +912,41 @@ class Singular(MarkdownDoc):
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
 
-    @cached_property
-    def html(self):
-        r = J2.get_template(self.template).render({
+    async def render(self):
+        if self.exists:
+            return
+        logger.info("rendering %s", self.name)
+        v = {
             'baseurl': self.url,
             'post': self.jsonld,
             'site': settings.site,
             'menu': settings.menu,
             'meta': settings.meta,
-        })
-        return r
-
-    async def render(self):
-        if self.exists:
-            return
-        logger.info("rendering %s", self.name)
+        }
         writepath(
             self.renderfile,
-            self.html
+            J2.get_template(self.template).render(v)
         )
+
+        g = {
+            'post': self.jsonld,
+            'summary': PandocTXT(self.summary),
+            'content': PandocTXT(self.content)
+        }
+        writepath(
+            self.gopherfile,
+            J2.get_template(self.gophertemplate).render(g)
+        )
+
         j = settings.site.copy()
         j.update({
             "mainEntity": self.jsonld
         })
         writepath(
-            os.path.join(self.renderdir,'index.json'),
+            os.path.join(self.renderdir, 'index.json'),
             json.dumps(j, indent=4, ensure_ascii=False)
         )
         del(j)
-        cp(
-            self.fpath,
-            os.path.join(self.renderdir,'index.md')
-        )
-
 
 class Home(Singular):
     def __init__(self, fpath):
@@ -904,7 +964,7 @@ class Home(Singular):
     def renderfile(self):
         return os.path.join(
             settings.paths.get('build'),
-            'index.html'
+            HTMLFILE
         )
 
     @property
@@ -915,6 +975,27 @@ class Home(Singular):
             if pts > maybe:
                 maybe = pts
         return maybe
+
+    async def render_gopher(self):
+        lines = [
+            "%s's gopherhole - phlog, if you prefer" % (settings.site.name),
+            '',
+            ''
+        ]
+
+        for category, post in self.posts:
+            line = "1%s\t/%s/%s\t%s\t70" % (
+                category['name'],
+                CATEGORY,
+                category['name'],
+                settings.site.name
+            )
+            lines.append(line)
+        lines.append('')
+        lines.append('')
+        lines = lines + list(map(lambda x: ("%s" % x), settings.bye.split('\n')))
+        lines.append('')
+        writepath(self.renderfile.replace(HTMLFILE,GOPHERFILE), "\r\n".join(lines))
 
     async def render(self):
         if self.exists:
@@ -929,6 +1010,7 @@ class Home(Singular):
             'posts': self.posts
         })
         writepath(self.renderfile, r)
+        await self.render_gopher()
 
 
 class WebImage(object):
@@ -1111,7 +1193,7 @@ class WebImage(object):
             'Model': ['Model'],
             'FNumber': ['FNumber', 'Aperture'],
             'ExposureTime': ['ExposureTime'],
-            'FocalLength': ['FocalLength'], # ['FocalLengthIn35mmFormat'],
+            'FocalLength': ['FocalLength'],  # ['FocalLengthIn35mmFormat'],
             'ISO': ['ISO'],
             'LensID': ['LensID', 'LensSpec', 'Lens'],
             'CreateDate': ['CreateDate', 'DateTimeOriginal']
@@ -1189,7 +1271,8 @@ class WebImage(object):
         def data(self):
             with open(self.fpath, 'rb') as f:
                 encoded = base64.b64encode(f.read())
-            return "data:%s;base64,%s" % (self.parent.mime_type, encoded.decode('utf-8'))
+            return "data:%s;base64,%s" % (
+                self.parent.mime_type, encoded.decode('utf-8'))
 
         @property
         def suffix(self):
@@ -1328,8 +1411,8 @@ class PHPFile(object):
         raise ValueError('Not implemented')
 
     async def render(self):
-        #if self.exists:
-            #return
+        # if self.exists:
+            # return
         await self._render()
 
 
@@ -1359,7 +1442,7 @@ class Search(PHPFile):
                 notindexed=mtime,
                 tokenize=porter
             )'''
-        )
+                        )
         self.is_changed = False
 
     def __exit__(self):
@@ -1548,7 +1631,7 @@ class Category(dict):
     @property
     def url(self):
         if len(self.name):
-            url = "%s/category/%s/" % (settings.site.get('url'), self.name)
+            url = "%s/%s/%s/" % (settings.site.get('url'), CATEGORY, self.name)
         else:
             url = '%s/' % (settings.site.get('url'))
         return url
@@ -1566,7 +1649,7 @@ class Category(dict):
         if len(self.name):
             return os.path.join(
                 settings.paths.get('build'),
-                'category',
+                CATEGORY,
                 self.name
             )
         else:
@@ -1665,17 +1748,17 @@ class Category(dict):
             'posts': posts,
         }
 
-    def indexfpath(self, subpath=None):
+    def indexfpath(self, subpath=None, fname=HTMLFILE):
         if subpath:
             return os.path.join(
                 self.dpath,
                 subpath,
-                'index.html'
+                fname
             )
         else:
             return os.path.join(
                 self.dpath,
-                'index.html'
+                fname
             )
 
     async def render_feed(self, xmlformat):
@@ -1711,8 +1794,9 @@ class Category(dict):
             fe.category({
                 'term': post.category,
                 'label': post.category,
-                'scheme': "%s/category/%s/" % (
+                'scheme': "%s/%s/%s/" % (
                     settings.site.get('url'),
+                    CATEGORY,
                     post.category
                 )
             })
@@ -1758,6 +1842,32 @@ class Category(dict):
         )
         writepath(self.indexfpath(), r)
 
+    async def render_gopher(self):
+        lines = [
+            '%s - %s' % (self.name, settings.site.name),
+            '',
+            ''
+        ]
+        for post in self.get_posts():
+            line = "0%s\t/%s/%s\t%s\t70" % (
+                post.headline,
+                post.name,
+                TXTFILE,
+                settings.site.name
+            )
+            lines.append(line)
+            if isinstance(post['image'], list):
+                for img in post['image']:
+                    line = "I%s\t/%s/%s\t%s\t70" % (
+                        img.headline,
+                        post.name,
+                        img.name,
+                        settings.site.name
+                    )
+                    lines.append(line)
+            lines.append('')
+        writepath(self.indexfpath(fname=GOPHERFILE), "\r\n".join(lines))
+
     async def render_archives(self):
         for year in self.years.keys():
             if year == self.newest_year:
@@ -1779,7 +1889,7 @@ class Category(dict):
                     end = index
 
             if self.is_uptodate(fpath, self[self.sortedkeys[start]].dt):
-                    logger.info("%s / %d is up to date", self.name, year)
+                logger.info("%s / %d is up to date", self.name, year)
             else:
                 logger.info("updating %s / %d", self.name, year)
                 logger.info("getting posts from %d to %d", start, end)
@@ -1788,7 +1898,7 @@ class Category(dict):
                         # I don't know why end needs the +1, but without that
                         # some posts disappear
                         # TODO figure this out...
-                        self.get_posts(start, end+1),
+                        self.get_posts(start, end + 1),
                         tyear
                     )
                 )
@@ -1819,9 +1929,10 @@ class Category(dict):
                 self.name
             )
 
-
     async def render(self):
         await self.render_feeds()
+        if not self.is_uptodate(self.indexfpath(), self.newest()):
+            await self.render_gopher()
         if not self.is_paginated:
             if not self.is_uptodate(self.indexfpath(), self.newest()):
                 logger.info(
@@ -1829,6 +1940,7 @@ class Category(dict):
                     self.name
                 )
                 await self.render_flat()
+
             else:
                 logger.info(
                     '%s flat index is up to date',
@@ -1837,6 +1949,7 @@ class Category(dict):
             return
         else:
             await self.render_archives()
+
 
 
 class Sitemap(dict):
@@ -1875,7 +1988,7 @@ class WebmentionIO(object):
         newest = 0
         content = settings.paths.get('content')
         for e in glob.glob(os.path.join(content, '*', '*', '*.md')):
-            if os.path.basename(e) == 'index.md':
+            if os.path.basename(e) == MDFILE:
                 continue
             # filenames are like [received epoch]-[slugified source url].md
             try:
@@ -1889,7 +2002,7 @@ class WebmentionIO(object):
                 continue
             if mtime > newest:
                 newest = mtime
-        return arrow.get(newest+1)
+        return arrow.get(newest + 1)
 
     def makecomment(self, webmention):
         if 'published_ts' in webmention.get('data'):
@@ -1899,12 +2012,19 @@ class WebmentionIO(object):
             else:
                 dt = arrow.get(webmention.get('data').get('published'))
 
-        slug = webmention.get('target').strip('/').split('/')[-1]
+        slug = os.path.split(urlparse(webmention.get('target')).path.lstrip('/'))[0]
+
         # ignore selfpings
         if slug == settings.site.get('name'):
             return
 
-        fdir = glob.glob(os.path.join(settings.paths.get('content'), '*', slug))
+        fdir = glob.glob(
+            os.path.join(
+                settings.paths.get('content'),
+                '*',
+                slug
+            )
+        )
         if not len(fdir):
             logger.error(
                 "couldn't find post for incoming webmention: %s",
@@ -1962,6 +2082,7 @@ class WebmentionIO(object):
             logger.error('failed to query webmention.io: %s', e)
             pass
 
+
 def make():
     start = int(round(time.time() * 1000))
     last = 0
@@ -1989,7 +2110,7 @@ def make():
     frontposts = Category()
     home = Home(settings.paths.get('home'))
 
-    for e in sorted(glob.glob(os.path.join(content, '*', '*', 'index.md'))):
+    for e in sorted(glob.glob(os.path.join(content, '*', '*', MDFILE))):
         post = Singular(e)
         # deal with images, if needed
         for i in post.images.values():
@@ -2060,10 +2181,17 @@ def make():
     for e in glob.glob(os.path.join(content, '*.*')):
         if e.endswith('.md'):
             continue
-        t = os.path.join(settings.paths.get('build'),os.path.basename(e))
+        t = os.path.join(settings.paths.get('build'), os.path.basename(e))
         if os.path.exists(t) and mtime(e) <= mtime(t):
             continue
         cp(e, t)
+
+    # ...
+    #for url in settings.site.sameAs:
+        #if "dat://" in url:
+            #p = os.path.join(settings.paths.build, '.well-known', 'dat')
+            #if not os.path.exists(p):
+                #writepath(p, "%s\nTTL=3600" % (url))
 
     end = int(round(time.time() * 1000))
     logger.info('process took %d ms' % (end - start))

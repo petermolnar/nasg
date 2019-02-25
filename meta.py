@@ -18,6 +18,7 @@ EXIFDATE = re.compile(
     r'(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2})$'
 )
 
+
 class CachedMeta(dict):
     def __init__(self, fpath):
         self.fpath = fpath
@@ -25,7 +26,7 @@ class CachedMeta(dict):
     @property
     def cfile(self):
         fname = os.path.basename(self.fpath)
-        if fname  == 'index.md':
+        if fname == 'index.md':
             fname = os.path.basename(os.path.dirname(self.fpath))
 
         return os.path.join(

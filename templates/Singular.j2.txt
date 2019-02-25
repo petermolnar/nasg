@@ -1,0 +1,10 @@
+---
+Title: {{ post.headline }}
+Author: {{ post.author.name }} <{{ post.author.email}}>
+URL: {{ post.url }}
+Published: {{ post.datePublished|printdate }}
+---
+
+{{ summary }}
+
+{{ content }}

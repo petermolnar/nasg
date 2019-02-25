@@ -47,6 +47,9 @@ site = struct({
     "name": "petermolnar.net",
     "image": "https://petermolnar.net/favicon.ico",
     "license": "https://spdx.org/licenses/%s.html" % (licence['_default']),
+    #"sameAs": [
+        #"dat://8d03735af11d82fff82028e0f830f9ac470f5e9fbe10ab5eb6feb877232714a2"
+    #],
     "author": {
         "@context": "http://schema.org",
         "@type": "Person",
@@ -88,30 +91,28 @@ site = struct({
             "@type": "FollowAction",
             "url": "https://petermolnar.net/follow/",
             "name": "follow"
-        }
+        },
+        #{
+            #"@context": "http://schema.org",
+            #"@type": "DonateAction",
+            #"description": "Monzo (only in the UK or via Google Pay)",
+            #"name": "monzo",
+            #"price": "3GBP",
+            #"url": "https://monzo.me/petermolnar/3",
+            #"recipient": author
+        #},
+        #{
+            #"@context": "http://schema.org",
+            #"@type": "DonateAction",
+            #"description": "Paypal",
+            #"name": "paypal",
+            #"price": "3GBP",
+            #"url": "https://paypal.me/petermolnar/3GBP",
+            #"recipient": author
+        #}
     ]
 })
 
-donateActions = [
-    {
-        "@context": "http://schema.org",
-        "@type": "DonateAction",
-        "description": "Monzo (only in the UK or via Google Pay)",
-        "name": "monzo",
-        "price": "3GBP",
-        "url": "https://monzo.me/petermolnar/3",
-        "recipient": author
-    },
-    {
-        "@context": "http://schema.org",
-        "@type": "DonateAction",
-        "description": "Paypal",
-        "name": "paypal",
-        "price": "3GBP",
-        "url": "https://paypal.me/petermolnar/3GBP",
-        "recipient": author
-    }
-]
 
 menu = {
     'home': {
@@ -169,6 +170,29 @@ photo = struct({
         1280: '_b',
     },
 })
+
+bye = """
+███████╗███████╗███████╗    ██╗   ██╗ ██████╗ ██╗   ██╗
+██╔════╝██╔════╝██╔════╝    ╚██╗ ██╔╝██╔═══██╗██║   ██║
+███████╗█████╗  █████╗       ╚████╔╝ ██║   ██║██║   ██║
+╚════██║██╔══╝  ██╔══╝        ╚██╔╝  ██║   ██║██║   ██║
+███████║███████╗███████╗       ██║   ╚██████╔╝╚██████╔╝
+╚══════╝╚══════╝╚══════╝       ╚═╝    ╚═════╝  ╚═════╝
+
+███████╗██████╗  █████╗  ██████╗███████╗
+██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝
+███████╗██████╔╝███████║██║     █████╗
+╚════██║██╔═══╝ ██╔══██║██║     ██╔══╝
+███████║██║     ██║  ██║╚██████╗███████╗
+╚══════╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝
+
+ ██████╗ ██████╗ ██╗    ██╗██████╗  ██████╗ ██╗   ██╗
+██╔════╝██╔═══██╗██║    ██║██╔══██╗██╔═══██╗╚██╗ ██╔╝
+██║     ██║   ██║██║ █╗ ██║██████╔╝██║   ██║ ╚████╔╝
+██║     ██║   ██║██║███╗██║██╔══██╗██║   ██║  ╚██╔╝
+╚██████╗╚██████╔╝╚███╔███╔╝██████╔╝╚██████╔╝   ██║
+ ╚═════╝ ╚═════╝  ╚══╝╚══╝ ╚═════╝  ╚═════╝    ╚═╝
+ """
 
 _parser = argparse.ArgumentParser(description='Parameters for NASG')
 _booleanparams = {

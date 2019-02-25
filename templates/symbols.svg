@@ -77,9 +77,6 @@
     <symbol id="icon-star" viewBox="0 0 16 16">
         <path d="M16 6.204l-5.528-0.803-2.472-5.009-2.472 5.009-5.528 0.803 4 3.899-0.944 5.505 4.944-2.599 4.944 2.599-0.944-5.505 4-3.899z"></path>
     </symbol>
-    <symbol id="icon-reply" viewBox="0 0 16 16">
-        <path d="M7 12.119v3.881l-6-6 6-6v3.966c6.98 0.164 6.681-4.747 4.904-7.966 4.386 4.741 3.455 12.337-4.904 12.119z"></path>
-    </symbol>
     <symbol id="button-indieweb" viewBox="0 0 80 15">
         <rect width="80" height="15" fill="#666"/>
         <rect x="1" y="1" width="78" height="13" fill="#fff"/>

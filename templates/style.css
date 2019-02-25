@@ -288,19 +288,6 @@ li p {
  margin: 0;
 }
 
-.encourage, .encourage a  {
-  color: #090;
-}
-
-.encourage a {
-  color: #0a0;
-  font-weight: bold;
-}
-
-.encourage h2 {
-  border-color: #090;
-}
-
 .footnotes hr:before {
   content: 'Links';
   color: #ccc;
