@@ -1,9 +1,7 @@
----
-Title: {{ post.headline }}
-Author: {{ post.author.name }} <{{ post.author.email}}>
-URL: {{ post.url }}
-Published: {{ post.datePublished|printdate }}
----
+{{ post.headline|center(width=80) }}
+
+by {{ post.author.name }} <{{ post.author.email}}>
+{{ post.datePublished|printdate }}
 
 {{ summary }}
 

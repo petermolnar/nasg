@@ -9,7 +9,6 @@
     <link rel="canonical" href="{{ post.url }}" />
     <link rel="alternate" type="application/json" href="{{ post.url }}index.json" />
     <link rel="alternate" type="application/ld+json" href="{{ post.url }}index.json" />
-    <link rel="alternate" type="application/mf2+json" href="https://pin13.net/mf2/?url={{ post.url|urlencode }}" />
     <link rel="alternate" type="text/plain" href="{{ post.url }}index.txt" />
     <meta property="og:title" content="{{ post.headline }}" />
     <meta property="og:type" content="article" />
@@ -75,6 +74,58 @@
                 </a>
                 {% endif %}
             </h1>
+
+            <p>
+                <a rel="license" href="{{ post.license }}" class="u-license">
+                    {{ post.license | extractlicense }}
+                </a>
+                by
+                <span class="p-author h-card vcard">
+                    <img class="u-photo photo" src="{{ post.author.image|relurl(baseurl) }}" alt="" />
+                    <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
+                    (<a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>)
+                </span>
+                at
+                <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
+                <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
+                <br />
+                <a class="u-url u-uuid bookmark" href="{{ post.url }}">{{ post.url }}</a>
+<!--
+{% if post.sameAs|length %}
+                <br />
+                    Syndicated to:
+                    <ul>
+                    {% for url in post.sameAs %}
+                        <li>
+                            <a class="u-syndication" href="{{ url }}">
+                                {{ url }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                    </ul>
+{% endif %}
+-->
+            </p>
+
+{% if post.subjectOf %}
+            <p class="h-event vevent">
+                <span class="summary">
+                    Journey from
+                        <time class="dt-start dtstart" datetime="{{ post.subjectOf.startDate }}">
+                            {{ post.subjectOf.startDate|printdate }}
+                        </time>
+                        to
+                        <time class="dt-end dtend" datetime="{{ post.subjectOf.endDate }}">
+                            {{ post.subjectOf.endDate|printdate }}
+                        </time>, in
+                        <span class="p-location location">
+                            {{ post.subjectOf.location.name }}
+                        </span>
+                    </span>
+                    <a class="u-url url" href="{{ post.url }}"></a>
+                </p>
+{% endif %}
+
         </header>
 
         {% if post.review %}
@@ -107,106 +158,6 @@
         <div class="e-content entry-content">
             {{ post.text|relurl(baseurl) }}
         </div>
-
-        <footer>
-            <dl>
-                {% if post.subjectOf %}
-                <dt>Trip details</dt>
-                <dd class="h-event vevent">
-                    <span class="summary">
-                        From
-                        <time class="dt-start dtstart" datetime="{{ post.subjectOf.startDate }}">
-                            {{ post.subjectOf.startDate|printdate }}
-                        </time>
-                        to
-                        <time class="dt-end dtend" datetime="{{ post.subjectOf.endDate }}">
-                            {{ post.subjectOf.endDate|printdate }}
-                        </time>, in
-                        <span class="p-location location">
-                            {{ post.subjectOf.location.name }}
-                        </span>
-                    </span>
-                    <a class="u-url url" href="{{ post.url }}"></a>
-                </dd>
-                {% endif %}
-
-                <dt>Published</dt>
-                <dd>
-                    <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
-                    <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
-                </dd>
-
-                <dt>License</dt>
-                <dd class="license">
-                {% if 'CC-BY-4.0' in post.license %}
-                    <a rel="license" href="{{ post.license }}" class="u-license">
-                        CC-BY-4.0
-                    </a>
-                    <ul>
-                        <li>you can share it</li>
-                        <li>you can republish it</li>
-                        <li>you can modify it, but you need to indicate the modifications</li>
-                        <li>you can use it for commercial purposes</li>
-                        <li>you always need to make a link back here</li>
-                    </ul>
-                {% elif 'CC-BY-NC-4.0' in post.license %}
-                    <a rel="license" href="{{ post.license }}" class="u-license">
-                        CC-BY-NC-4.0
-                    </a>
-                    <ul>
-                        <li>you can share it</li>
-                        <li>you can republish it</li>
-                        <li>you can modify it, but you need to indicate the modifications</li>
-                        <li>you can't use it for commercial purposes</li>
-                        <li>you always need to make a link back here</li>
-                    </ul>
-                    For commercial use, please contact me.
-                {% elif 'CC-BY-NC-ND-4.0' in post.license %}
-                    <a rel="license" href="{{ post.license }}" class="u-license">
-                        CC-BY-NC-ND-4.0
-                    </a>
-                    <ul>
-                        <li>you can share it</li>
-                        <li>you can't modify it</li>
-                        <li>you can't republish it</li>
-                        <li>you can't use it for commercial purposes</li>
-                        <li>you always need to make a link back here</li>
-                    </ul>
-                    For commercial use, please contact me.
-                {% endif %}
-                </dd>
-
-                <dt>Author</dt>
-                <dd class="p-author h-card vcard">
-                    <img class="u-photo photo" src="{{ post.author.image|relurl(baseurl) }}" alt="" />
-                    <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
-                    <a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>
-                </dd>
-
-                <dt>Entry URL</dt>
-                <dd>
-                    <a class="u-url u-uuid bookmark" href="{{ post.url }}">
-                        {{ post.url }}
-                    </a>
-                </dd>
-
-                {% if post.sameAs|length %}
-                <dt>Also on</dt>
-                <dd>
-                    <ul>
-                    {% for url in post.sameAs %}
-                    <li>
-                        <a class="u-syndication" href="{{ url }}">
-                            {{ url }}
-                        </a>
-                    </li>
-                    {% endfor %}
-                    </ul>
-                </dd>
-                {% endif %}
-
-            </dl>
-        </footer>
 
     {% if 'WebPage' != post['@type'] %}
         <section class="syndication">

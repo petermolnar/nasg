@@ -6,17 +6,44 @@ __email__ = "mail@petermolnar.net"
 
 import subprocess
 import logging
+from tempfile import gettempdir
+import hashlib
+import os
+import settings
 
-
-class PandocBase(str):
+class Pandoc(str):
     in_format = 'html'
     in_options = []
     out_format = 'plain'
     out_options = []
     columns = None
 
+    @property
+    def hash(self):
+        return str(hashlib.sha1(self.source.encode()).hexdigest())
+
+    @property
+    def cachefile(self):
+        return os.path.join(
+            settings.tmpdir,
+            "%s_%s.pandoc" % (
+                self.__class__.__name__,
+                self.hash
+            )
+        )
+
+    @property
+    def cache(self):
+        if not os.path.exists(self.cachefile):
+            return False
+        with open(self.cachefile, 'rt') as f:
+            self.result = f.read()
+            return True
+
     def __init__(self, text):
         self.source = text
+        if self.cache:
+            return
         conv_to = '--to=%s' % (self.out_format)
         if (len(self.out_options)):
             conv_to = '%s+%s' % (
@@ -58,6 +85,8 @@ class PandocBase(str):
             )
         r = stdout.decode('utf-8').strip()
         self.result = r
+        with open(self.cachefile, 'wt') as f:
+            f.write(self.result)
 
     def __str__(self):
         return str(self.result)
@@ -66,7 +95,7 @@ class PandocBase(str):
         return str(self.result)
 
 
-class PandocMarkdown(PandocBase):
+class PandocMD2HTML(Pandoc):
     in_format = 'markdown'
     in_options = [
         'footnotes',
@@ -86,7 +115,7 @@ class PandocMarkdown(PandocBase):
     out_options = []
 
 
-class PandocHTML(PandocBase):
+class PandocHTML2MD(Pandoc):
     in_format = 'html'
     in_options = []
     out_format = 'markdown'
@@ -94,8 +123,6 @@ class PandocHTML(PandocBase):
         'footnotes',
         'pipe_tables',
         'strikeout',
-        # 'superscript',
-        # 'subscript',
         'raw_html',
         'definition_lists',
         'backtick_code_blocks',
@@ -106,14 +133,12 @@ class PandocHTML(PandocBase):
     ]
 
 
-class PandocTXT(PandocBase):
+class PandocMD2TXT(Pandoc):
     in_format = 'markdown'
     in_options = [
         'footnotes',
         'pipe_tables',
         'strikeout',
-        # 'superscript',
-        # 'subscript',
         'raw_html',
         'definition_lists',
         'backtick_code_blocks',
@@ -124,91 +149,12 @@ class PandocTXT(PandocBase):
     ]
     out_format = 'plain'
     out_options = []
-    columns = '--columns=72'
+    columns = '--columns=80'
 
 
-#class PandocMarkdown(str):
-    #def __new__(cls, text):
-        #""" Pandoc command line call with piped in- and output """
-        #cmd = (
-            #'pandoc',
-            #'-o-',
-            #'--from=markdown+%s' % (
-                #'+'.join([
-                    #'footnotes',
-                    #'pipe_tables',
-                    #'strikeout',
-                    ## 'superscript',
-                    ## 'subscript',
-                    #'raw_html',
-                    #'definition_lists',
-                    #'backtick_code_blocks',
-                    #'fenced_code_attributes',
-                    #'shortcut_reference_links',
-                    #'lists_without_preceding_blankline',
-                    #'autolink_bare_uris',
-                #])
-            #),
-            #'--to=html5',
-            #'--quiet',
-            #'--no-highlight'
-        #)
-        #p = subprocess.Popen(
-            #cmd,
-            #stdin=subprocess.PIPE,
-            #stdout=subprocess.PIPE,
-            #stderr=subprocess.PIPE,
-        #)
-
-        #stdout, stderr = p.communicate(input=text.encode())
-        #if stderr:
-            #logging.warning(
-                #"Error during pandoc covert:\n\t%s\n\t%s",
-                #cmd,
-                #stderr
-            #)
-        #r = stdout.decode('utf-8').strip()
-        #return str.__new__(cls, r)
-
-
-#class PandocHTML(str):
-    #def __new__(cls, text):
-        #""" Pandoc command line call with piped in- and output """
-        #cmd = (
-            #'pandoc',
-            #'-o-',
-            #'--to=markdown+%s' % (
-                #'+'.join([
-                    #'footnotes',
-                    #'pipe_tables',
-                    #'strikeout',
-                    ## 'superscript',
-                    ## 'subscript',
-                    #'raw_html',
-                    #'definition_lists',
-                    #'backtick_code_blocks',
-                    #'fenced_code_attributes',
-                    #'shortcut_reference_links',
-                    #'lists_without_preceding_blankline',
-                    #'autolink_bare_uris',
-                #])
-            #),
-            #'--from=html',
-            #'--quiet',
-        #)
-        #p = subprocess.Popen(
-            #cmd,
-            #stdin=subprocess.PIPE,
-            #stdout=subprocess.PIPE,
-            #stderr=subprocess.PIPE,
-        #)
-
-        #stdout, stderr = p.communicate(input=text.encode())
-        #if stderr:
-            #logging.warning(
-                #"Error during pandoc covert:\n\t%s\n\t%s",
-                #cmd,
-                #stderr
-            #)
-        #r = stdout.decode('utf-8').strip()
-        #return str.__new__(cls, r)
+class PandocHTML2TXT(Pandoc):
+    in_format = 'html'
+    in_options = []
+    out_format = 'plain'
+    out_options = []
+    columns = '--columns=80'

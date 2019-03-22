@@ -34,7 +34,7 @@ from slugify import slugify
 import requests
 import lxml.etree as etree
 
-from pandoc import PandocMarkdown, PandocTXT
+from pandoc import PandocMD2HTML, PandocMD2TXT, PandocHTML2TXT
 from meta import Exif
 import settings
 from settings import struct
@@ -47,6 +47,9 @@ MDFILE = 'index.md'
 TXTFILE = 'index.txt'
 HTMLFILE = 'index.html'
 GOPHERFILE = 'gophermap'
+ATOMFILE = 'atom.xml'
+RSSFILE = 'index.xml'
+JSONFEEDFILE = 'index.json'
 
 MarkdownImage = namedtuple(
     'MarkdownImage',
@@ -110,6 +113,14 @@ def rfc3339todt(rfc3339):
 
 
 J2.filters['printdate'] = rfc3339todt
+
+
+def extractlicense(url):
+    """ extract license name """
+    n, e = os.path.splitext(os.path.basename(url))
+    return n.upper()
+
+J2.filters['extractlicense'] = extractlicense
 
 RE_MYURL = re.compile(
     r'(^(%s[^"]+)$|"(%s[^"]+)")' % (
@@ -283,28 +294,29 @@ class MarkdownDoc(object):
             meta, txt = frontmatter.parse(f.read())
         return(meta, txt)
 
-    @property
+    @cached_property
     def meta(self):
         return self._parsed[0]
 
-    @property
+    @cached_property
     def content(self):
         return self._parsed[1]
-
-    def pandoc(self, c):
-        if c and len(c):
-            c = str(PandocMarkdown(c))
-            c = RE_PRECODE.sub(
-                '<pre><code lang="\g<1>" class="language-\g<1>">', c)
-        return c
 
     @cached_property
     def html_content(self):
         c = "%s" % (self.content)
+        if not len(c):
+            return c
+
         if hasattr(self, 'images') and len(self.images):
             for match, img in self.images.items():
                 c = c.replace(match, str(img))
-        return self.pandoc(c)
+        c = str(PandocMD2HTML(c))
+        c = RE_PRECODE.sub(
+            '<pre><code lang="\g<1>" class="language-\g<1>">',
+            c
+        )
+        return c
 
 
 class Comment(MarkdownDoc):
@@ -543,10 +555,16 @@ class Singular(MarkdownDoc):
 
     @cached_property
     def html_summary(self):
-        c = self.summary
-        if c and len(c):
-            c = self.pandoc(self.summary)
-        return c
+        c = "%s" % (self.summary)
+        return PandocMD2HTML(c)
+
+    @cached_property
+    def txt_summary(self):
+        return PandocMD2TXT(self.summary)
+
+    @cached_property
+    def txt_content(self):
+        return PandocMD2TXT(self.content)
 
     @property
     def title(self):
@@ -930,8 +948,8 @@ class Singular(MarkdownDoc):
 
         g = {
             'post': self.jsonld,
-            'summary': PandocTXT(self.summary),
-            'content': PandocTXT(self.content)
+            'summary': self.txt_summary,
+            'content': self.txt_content
         }
         writepath(
             self.gopherfile,
@@ -992,9 +1010,9 @@ class Home(Singular):
             )
             lines.append(line)
         lines.append('')
-        lines.append('')
-        lines = lines + list(map(lambda x: ("%s" % x), settings.bye.split('\n')))
-        lines.append('')
+        #lines.append('')
+        #lines = lines + list(settings.bye.split('\n'))
+        #lines.append('')
         writepath(self.renderfile.replace(HTMLFILE,GOPHERFILE), "\r\n".join(lines))
 
     async def render(self):
@@ -1683,7 +1701,7 @@ class Category(dict):
         return os.path.join(
             self.dpath,
             'feed',
-            'index.xml'
+            RSSFILE
         )
 
     @property
@@ -1691,7 +1709,15 @@ class Category(dict):
         return os.path.join(
             self.dpath,
             'feed',
-            'atom.xml'
+            ATOMFILE
+        )
+
+    @property
+    def jsonfeedfpath(self):
+        return os.path.join(
+            self.dpath,
+            'feed',
+            JSONFEEDFILE
         )
 
     def get_posts(self, start=0, end=-1):
@@ -1836,6 +1862,50 @@ class Category(dict):
             fg.link(href=settings.meta.get('hub'), rel='hub')
             writepath(self.atomfeedfpath, fg.atom_str(pretty=True))
 
+    async def render_json(self):
+        logger.info(
+            'rendering category "%s" JSON feed',
+            self.name,
+        )
+        start = 0
+        end = int(settings.pagination)
+
+        js = {
+            "version": "https://jsonfeed.org/version/1",
+            "title": self.title,
+            "home_page_url": settings.site.url,
+            "feed_url": "%s%s" % (self.url, JSONFEEDFILE),
+            "author": {
+                "name": settings.author.name,
+                "url": settings.author.url,
+                "avatar": settings.author.image,
+            },
+            "items": []
+        }
+
+        for k in reversed(self.sortedkeys[start:end]):
+            post = self[k]
+            pjs = {
+                "id": post.url,
+                "content_text": post.txt_content,
+                "content_html": post.html_content,
+                "url": post.url,
+                "date_published": str(post.published),
+            }
+            if len(post.summary):
+                pjs.update({"summary": post.txt_summary})
+            if post.is_photo:
+                pjs.update({"attachment": {
+                    "url": post.photo.href,
+                    "mime_type": post.photo.mime_type,
+                    "size_in_bytes": "%d" % post.photo.mime_size
+                }})
+            js["items"].append(pjs)
+        writepath(
+            self.jsonfeedfpath,
+            json.dumps(js, indent=4, ensure_ascii=False)
+        )
+
     async def render_flat(self):
         r = J2.get_template(self.template).render(
             self.tmplvars(self.get_posts())
@@ -1856,6 +1926,9 @@ class Category(dict):
                 settings.site.name
             )
             lines.append(line)
+            #lines.append(post.datePublished)
+            if (len(post.description)):
+                lines.extend(str(PandocHTML2TXT(post.description)).split("\n"))
             if isinstance(post['image'], list):
                 for img in post['image']:
                     line = "I%s\t/%s/%s\t%s\t70" % (
@@ -1928,6 +2001,19 @@ class Category(dict):
                 '%s ATOM feed up to date',
                 self.name
             )
+
+        if not self.is_uptodate(self.jsonfeedfpath, self.newest()):
+            logger.info(
+                '%s JSON feed outdated, generating new',
+                self.name
+            )
+            await self.render_json()
+        else:
+            logger.info(
+                '%s JSON feed up to date',
+                self.name
+            )
+
 
     async def render(self):
         await self.render_feeds()
@@ -2081,6 +2167,31 @@ class WebmentionIO(object):
         except ValueError as e:
             logger.error('failed to query webmention.io: %s', e)
             pass
+
+
+# class GranaryIO(dict):
+    # granary = 'https://granary.io/url'
+    # convert_to = ['as2', 'mf2-json', 'jsonfeed']
+
+    # def __init__(self, source):
+        # self.source = source
+
+    # def run(self):
+        # for c in self.convert_to:
+            # p = {
+                # 'url': self.source,
+                # 'input': html,
+                # 'output': c
+            # }
+            # r = requests.get(self.granary, params=p)
+            # logger.info("queried granary.io for %s for url: %s", c, self.source)
+            # if r.status_code != requests.codes.ok:
+                # continue
+            # try:
+                # self[c] = webmentions.text
+            # except ValueError as e:
+                # logger.error('failed to query granary.io: %s', e)
+                # pass
 
 
 def make():

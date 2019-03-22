@@ -49,6 +49,8 @@ main p {
 h1 {
   border-bottom: 4px double #999;
   text-transform:uppercase;
+  text-align: center;
+  padding-bottom: 1em;
 }
 
 article > footer > dl > dt,
@@ -215,7 +217,7 @@ figcaption > dl dd {
   margin: 0 0.3em;
 }
 
-footer img {
+.vcard img {
   height: 1em;
 }
 
@@ -274,6 +276,16 @@ th, tr:nth-child(even) {
 
 main > header > p {
   text-align: center;
+}
+
+article > header {
+  border-bottom: 4px double #999;
+  margin-bottom: 2em;
+}
+
+.h-feed article > header {
+  border: none;
+  margin: 0;
 }
 
 main ul {
@@ -343,4 +355,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}
+}            
