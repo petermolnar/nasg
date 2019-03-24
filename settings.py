@@ -169,6 +169,7 @@ photo = struct({
         720: '',
         1280: '_b',
     },
+    'earlyyears': 2014
 })
 
 tmpdir = os.path.join(gettempdir(),'nasg')

@@ -607,7 +607,15 @@ class Singular(MarkdownDoc):
 
     @property
     def published(self):
-        return arrow.get(self.meta.get('published'))
+        # ok, so here's a hack: because I have no idea when my older photos
+        # were actually published, any photo from before 2014 will have
+        # the EXIF createdate as publish date
+        pub = arrow.get(self.meta.get('published'))
+        if self.is_photo:
+            maybe = arrow.get(self.photo.exif.get('CreateDate'))
+            if maybe.year < settings.photo.earlyyears:
+                pub = maybe
+        return pub
 
     @property
     def is_reply(self):
@@ -1398,6 +1406,15 @@ class WebImage(object):
                 with open(self.fpath, 'wb') as f:
                     logger.info("writing %s", self.fpath)
                     thumb.save(file=f)
+
+                # n, e = os.path.splitext(os.path.basename(self.fpath))
+                # webppath = self.fpath.replace(e, '.webp')
+                # with open(webppath, 'wb') as f:
+                    # logger.info("writing %s", webppath)
+                    # thumb.format = 'webp'
+                    # thumb.compression_quality = 88
+                    # thumb.save(file=f)
+
 
 
 class PHPFile(object):
