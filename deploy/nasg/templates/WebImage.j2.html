@@ -1,0 +1,65 @@
+<figure class="photo">
+{% if url != thumbnail.url %}
+    <a href="{{ url }}"{% if representativeOfPage %} class="u-featured"{% endif %}>
+{% endif %}
+        <img src="{{ thumbnail.url }}" title="{{ headline }}" alt="{{ headline }}" width="{{ thumbnail.width }}" height="{{ thumbnail.height }}" />
+{% if url != thumbnail.url %}
+    </a>
+{% endif %}
+    <figcaption>
+        <span class="alt">{{ caption }}</span>
+{% if creator is defined %}
+{% macro exifvalue(key) %}
+    {% for data in exifData: %}
+        {% if key == data['name'] %}
+            {{ data['value'] }}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
+        <dl class="exif">
+            <dt>Camera</dt>
+            <dd>
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-camera" />
+                </svg>
+                {{ exifvalue('Model')|trim }}
+            </dd>
+            <dt>Aperture</dt>
+            <dd>
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-aperture" />
+                </svg>
+                f/{{ exifvalue('FNumber')|trim }}
+            </dd>
+            <dt>Shutter speed</dt>
+            <dd>
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-clock" />
+                </svg>
+                {{ exifvalue('ExposureTime')|trim }} sec
+            </dd>
+            <dt>Focal length (as set)</dt>
+            <dd>
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-focallength" />
+                </svg>
+                {{ exifvalue('FocalLength')|trim }}
+            </dd>
+            <dt>Sensitivity</dt>
+            <dd>
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-sensitivity" />
+                </svg>
+                ISO {{ exifvalue('ISO')|trim }}
+            </dd>
+            <dt>Lens</dt>
+            <dd>
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-lens" />
+                </svg>
+                {{ exifvalue('LensID')|trim }}
+            </dd>
+        </dl>
+{% endif %}
+    </figcaption>
+</figure>

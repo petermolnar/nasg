@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>https://petermolnar.net/feed/</id>
+  <title>Peter Molnar</title>
+  <updated>1970-01-01T00:00:00+00:00</updated>
+  <author>
+    <name>Peter Molnar</name>
+    <email>mail@petermolnar.net</email>
+  </author>
+  <link href="https://petermolnar.net/feed/" rel="self"/>
+  <link href="https://petermolnar.superfeedr.com/" rel="hub"/>
+  <generator uri="http://lkiesow.github.io/python-feedgen" version="0.7.0">python-feedgen</generator>
+  <logo>https://petermolnar.net/favicon.png</logo>
+  <subtitle>Peter Molnar</subtitle>
+</feed>

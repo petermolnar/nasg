@@ -57,15 +57,26 @@ class Pandoc(str):
                 conv_from,
                 '+'.join(self.in_options)
             )
-
+    
+        is_pandoc_version2 = False
+        try:
+            version = subprocess.check_output(['pandoc', '-v'])
+            if version.startswith(b'pandoc 2'):
+                is_pandoc_version2 = True
+        except OSError:
+            print("Error: pandoc is not installed!")
+        
         cmd = [
             'pandoc',
             '-o-',
             conv_to,
             conv_from,
-            '--quiet',
             '--no-highlight'
         ]
+        if is_pandoc_version2:
+            # Only pandoc v2 and higher support quiet param
+            cmd.append('--quiet')
+
         if self.columns:
             cmd.append(self.columns)
 

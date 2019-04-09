@@ -1,0 +1,56 @@
+{% extends "base.j2.html" %}
+{% block lang %}{% endblock %}
+
+{% block title %}{{ category.title }}{% endblock %}
+{% block meta %}
+    <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />
+    <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}atom.xml" />
+    <link rel="alternate" type="application/json" title="{{ category.title }} JSON feed" href="{{ category.feed }}index.json" />
+    <link rel="feed" title="{{ category.title}} feed" href="{{ category.url }}" />
+{% endblock %}
+
+{% block pagination %}
+{% if category.paginated %}
+<nav>
+    <ul>
+        {% for y, url in category.years.items() %}
+        {% if (y == category.year) or (not category.year and loop.first) %}
+        <li>
+            <span>
+                {{ y }}
+            </span>
+        </li>
+        {% else %}
+        <li>
+            <a href="{{ url|relurl(baseurl) }}">
+                <strong>{{ y }}</strong>
+            </a>
+        </li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<main class="h-feed hatom">
+
+{% set year = [0] %}
+{% for post in posts %}
+    {% set _year = year.pop() %}
+    {% if not category.paginated and _year != post.copyrightYear %}
+        {% if not loop.first %}
+        </section>
+        {% endif %}
+        <section>
+        <h2>{{ post.copyrightYear }}</h2>
+    {% endif %}
+    {% set _ = year.append(post.copyrightYear)%}
+        {% include 'meta-article.j2.html' %}
+    {% if not category.paginated and loop.last %}
+    </section>
+    {% endif %}
+{% endfor %}
+</main>
+{% endblock %}

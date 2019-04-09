@@ -1,0 +1,8 @@
+{{ post.headline|center(width=80) }}
+
+by {{ post.author.name }} <{{ post.author.email}}>
+{{ post.datePublished|printdate }}
+
+{{ summary }}
+
+{{ content }}

@@ -1,0 +1,36 @@
+{% extends "base.j2.html" %}
+
+{% block title %}{{ post.headline }} - {{ site.name }}{% endblock %}
+
+{% block meta %}
+    <meta name="author" content="{{ site.author.name }} <{{ site.author.email }}>" />
+    <meta name="description" content="{{ post.description|e }}" />
+    <link rel="canonical" href="{{ site.url }}" />
+    {% for category, latest in elements %}
+    <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />
+    <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}atom.xml" />
+    <link rel="feed" title="{{ category.title}} feed" href="{{ category.url }}" />
+    {% endfor %}
+{% endblock %}
+
+{% block content %}
+<main class="h-feed hatom">
+    <aside>
+        <div>
+            {{ post.text }}
+        </div>
+    </aside>
+
+    {% for category, post in posts %}
+    <section>
+        <h2>in:
+            <a href="{{ category.url|relurl(baseurl) }}/">
+                <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>
+                {{ category.name }}
+            </a>
+        </h2>
+        {% include 'meta-article.j2.html' %}
+    </section>
+{% endfor %}
+</main>
+{% endblock %}

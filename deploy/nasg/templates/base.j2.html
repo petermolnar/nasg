@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html{% block lang %}{% endblock %} prefix="og: http://ogp.me/ns# article: http://ogp.me/ns/article#">
+<head>
+    <!--[if lt IE 9]>
+    <script src="{{ site.url}}/html5shiv-printshiv.js"></script>
+    <![endif]-->
+    <title>{% block title %}{% endblock %}</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
+    <meta name="author" content="{{ site.author.name }} ({{ site.author.email }})" />
+    <link rel="icon" href="{{ site.image }}" />
+    <!-- <base href="{{ baseurl }}" /> -->
+    {% for key, value in meta.items() %}
+    <link rel="{{ key }}" href="{{ value }}" />
+    {% endfor %}
+    {% block meta %}{% endblock %}
+    <style media="all">
+        {% include('style.css') %}
+    </style>
+    <style id="css_alt" media="speech">
+        {% include('style-alt.css') %}
+    </style>
+    <style media="print">
+        {% include('style-print.css') %}
+    </style>
+</head>
+
+<body>
+
+{% macro activemenu(name) %}
+{% if (post is defined and post.name ==  name )
+    or (post is defined and post.genre ==  name )
+    or ( category is defined and category.name == name )%}class="active"{% endif %}
+{% endmacro %}
+
+<header>
+    <section>
+        <nav>
+            <ul>
+            {% for key, data in menu.items() %}
+                <li>
+                    <a title="{{ data.text }}" href="{{ data.url|relurl(baseurl) }}" {{ activemenu(key) }} >
+                        <svg width="16" height="16">
+                            <use xlink:href="#icon-{{ key }}" />
+                        </svg>
+                        {{ data.text }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+        </nav>
+
+        <div>
+            <form class="theme" aria-hidden="true">
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-contrast"></use>
+                </svg>
+                <span>
+                    <input name="colorscheme" value="dark" id="darkscheme" type="radio">
+                    <label for="darkscheme">dark</label>
+                </span>
+                <span>
+                    <input name="colorscheme" value="light" id="lightscheme" type="radio">
+                    <label for="lightscheme">light</label>
+                </span>
+            </form>
+            {% for action in site.potentialAction %}
+            {% if 'SearchAction' == action['@type'] %}
+            <form role="search" method="get" action="{{ action.url|relurl(baseurl) }}">
+                <label for="qsub">
+                    <input type="submit" value="search" id="qsub" name="qsub" />
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-search"></use>
+                    </svg>
+                </label>
+                <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
+            </form>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+</header>
+
+{% block content %}
+{% endblock %}
+
+{% block pagination %}
+{% endblock %}
+
+<footer class="p-author h-card vcard">
+    <section>
+        <p>
+            <a href="https://creativecommons.org/">CC</a>,
+            1999-2019,
+            <img class="u-photo photo" src="{{ site.author.image|relurl(baseurl) }}" alt="Photo of {{ site.author.name }}" />
+            <a class="p-name u-url fn url" href="{{ site.author.url }}" rel="me"> {{ site.author.name }}</a>
+            <a class="u-email email" rel="me" href="mailto:{{ site.author.email }}">
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-mail"></use>
+                </svg>
+                {{ site.author.email }}
+            </a>
+        </p>
+        <nav>
+            <ul>
+                {% for action in site.potentialAction %}
+                {% if 'FollowAction' == action['@type'] %}
+                <li>
+                    <a href="{{ action.url }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-{{ action['@type'] }}" /></svg>
+                        {{ action.name }}
+                    </a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                <li>
+                    <a href="{{ site.author.follows }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-following" /></svg>
+                        followings
+                    </a>
+                </li>
+                {% for url in site.author.sameAs %}
+                <li>
+                    {% if 'cv.html' in url %}
+                    <a href="{{ url }}" class="u-url">
+                        <svg width="16" height="16"><use xlink:href="#icon-resume" /></svg>
+                        resume
+                    </a>
+                    {% elif 'github' in url %}
+                    <a rel="me" href="{{ url }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-github" /></svg>
+                        github
+                    </a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        <nav>
+            <a href="https://xn--sr8hvo.ws/%F0%9F%87%BB%F0%9F%87%AE%F0%9F%93%A2/previous">←</a>
+                Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
+            <a href="https://xn--sr8hvo.ws/%F0%9F%87%BB%F0%9F%87%AE%F0%9F%93%A2/next">→</a>
+        </nav>
+    </section>
+    <section>
+        <nav>
+            <ul>
+                <li>
+                    <a href="https://indieweb.org/">
+                        <svg width="80" height="15">
+                            <use xlink:href="#button-indieweb"/>
+                        </svg>
+                    </a>
+                </li>
+                <li>
+                    <a href="http://microformats.org/">
+                        <svg width="80" height="15">
+                            <use xlink:href="#button-microformats"/>
+                        </svg>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://www.w3.org/TR/webmention/">
+                        <svg width="80" height="15">
+                            <use xlink:href="#button-webmention"/>
+                        </svg>
+                    </a>
+                </li>
+{% block cc %}
+                <li>
+                    <a href="{{ site.license }}">
+                        <svg width="80" height="15">
+                            <use xlink:href="#button-cc"/>
+                        </svg>
+                    </a>
+                </li>
+{% endblock %}
+                <li>
+                    <svg width="80" height="15">
+                        <use xlink:href="#button-nojs"/>
+                    </svg>
+                </li>
+            </ul>
+        </nav>
+    </section>
+</footer>
+
+<script>
+{% include 'themeswitcher.js' %}
+{% include 'konami.js' %}
+</script>
+
+{% include 'symbols.svg' %}
+
+{% block prism %}
+{% endblock %}
+
+    </body>
+</html>
