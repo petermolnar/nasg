@@ -112,6 +112,14 @@ Add an `index.md` file to the `~/MyWebsite/content/home` directory.
 
 Finally, change the [settings.py](settings.py) file, like the `base` path and `syncserver` etc. to your needs.
 
+### Run
+
+Execute within the root folder:
+
+`./run`
+
+For more info, see: `./run -h`.
+
 ## Functionalities based on file extensions/names
 
 - **entry_name/index.md**: main entry (YAML + Multimarkdown)
