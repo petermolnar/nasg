@@ -2342,15 +2342,18 @@ def make():
 
     if not settings.args.get('nosync'):
         # upload site
-        logger.info('starting syncing')
-        os.system(
-            "rsync -avuhH --delete-after %s/ %s/" % (
-                settings.paths.get('build'),
-                '%s/%s' % (settings.syncserver,
-                           settings.paths.get('remotewww'))
+        try:
+            logger.info('starting syncing')
+            os.system(
+                "rsync -avuhH --delete-after %s/ %s/" % (
+                    settings.paths.get('build'),
+                    '%s/%s' % (settings.syncserver,
+                            settings.paths.get('remotewww'))
+                )
             )
-        )
-        logger.info('syncing finished')
+            logger.info('syncing finished')
+        except Exception as e:
+            logger.error('syncing failed: %s', e)
 
     if not settings.args.get('nosync'):
         logger.info('sending webmentions')

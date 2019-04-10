@@ -80,6 +80,22 @@ Install the pip dependency packages by using the Pipfile by running:
 
 `pipenv install`
 
+#### SSH (optional)
+
+Once the build is done, NASG will attempt to sync the output folder to a remote server. It needs an entry in the `~/.ssh/config` file:
+
+```
+Host liveserver
+    HostName your.ssh.host
+    User your.ssh.user
+    IdentityFile ~/.ssh/your.ssh.identity.file
+    IdentitiesOnly yes
+    ServerAliveInterval 30
+
+```
+
+Note: if you don't have this, there will be no auto upload, but the build will still succeed.
+
 ### Prepare
 
 Create a local base directory where your contents will be put into. Eg:

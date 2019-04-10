@@ -3,4 +3,9 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+if [ ! -f 'keys.py' ]; then
+    echo "missing keys.py file; please copy keys.dist.py to keys.py and fill in the needed values inside"
+    exit 1
+fi
+
 python3 nasg.py "$@"
