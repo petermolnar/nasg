@@ -1711,7 +1711,10 @@ class Category(dict):
 
     @property
     def mtime(self):
-        return self[self.sortedkeys[0]].published.timestamp
+        if len (self.sortedkeys) > 0:
+            return self[self.sortedkeys[0]].published.timestamp
+        else:
+            return 0
 
     @property
     def rssfeedfpath(self):
@@ -1759,7 +1762,10 @@ class Category(dict):
             [self[k].dt for k in self.sortedkeys[start:end]],
             reverse=True
         )
-        return s[0]
+        if len(s) > 0:
+            return s[0] # Timestamp in seconds since epoch
+        else:
+            return 0
 
     @property
     def ctmplvars(self):
@@ -2071,10 +2077,11 @@ class Sitemap(dict):
         return os.path.join(settings.paths.get('build'), 'sitemap.txt')
 
     async def render(self):
-        if self.mtime >= sorted(self.values())[-1]:
-            return
-        with open(self.renderfile, 'wt') as f:
-            f.write("\n".join(sorted(self.keys())))
+        if len(self) > 0:
+            if self.mtime >= sorted(self.values())[-1]:
+                return
+            with open(self.renderfile, 'wt') as f:
+                f.write("\n".join(sorted(self.keys())))
 
 
 class WebmentionIO(object):

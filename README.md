@@ -61,6 +61,65 @@ How it works
     - fallback - 404 handler to do redirects/gones, gets populated with an array of both
     - micropub - a micropub endpoint that accepts micropub content and puts the incoming payload into a json file, nothing else
 
+## Deploy
+
+### Requirements
+
+For Debian based distributions, install the packages:
+* python3
+* python3-pip
+* pandoc
+
+`sudo apt install python3 python3-pip pandoc`
+
+Install pipenv via pip:
+
+`sudo pip3 install pipenv`
+
+Install the pip dependency packages by using the Pipfile by running:
+
+`pipenv install`
+
+### Prepare
+
+Create a local base directory where your contents will be put into. Eg:
+
+`~/MyWebsite`
+
+Create the following directories within your base directory directory: `www`, `nasg/templates`, `content/home`.
+
+Copy the templates from the `templates` directory to the `~/MyWebsite/nasg/templates` directory.
+
+Create a new file within the root directory called `keys.py` with the following content:
+
+```python
+webmentionio = {
+    'domain': 'yourdomain.com',
+    'token': 'token',
+    'secret': 'secret'
+}
+
+telegraph = {
+    'token': 'token'
+}
+
+zapier = {
+    'zapier': 'secret'
+}
+```
+
+Add an `index.md` file to the `~/MyWebsite/content/home` directory.
+
+Finally, change the [settings.py](settings.py) file, like the `base` path and `syncserver` etc. to your needs.
+
+### Run
+
+Execute within the root folder:
+
+`./run`
+
+For more info, see: `./run -h`.
+
 ## Functionalities based on file extensions/names
 
 - **entry_name/index.md**: main entry (YAML + Multimarkdown)
