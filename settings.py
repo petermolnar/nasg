@@ -182,7 +182,8 @@ _booleanparams = {
     'force': 'force rendering HTML',
     'nosync': 'skip sync to live server',
     'debug': 'set logging to debug level',
-    'quiet': 'show only errors'
+    'quiet': 'show only errors',
+    'noping': 'don\'t send webmentions but save a dummy that it was done'
 }
 
 for k, v in _booleanparams.items():

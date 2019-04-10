@@ -1,7 +1,8 @@
 var DEFAULT_THEME = 'dark';
 var ALT_THEME = 'light';
 var STORAGE_KEY = 'theme';
-var colorscheme = document.getElementsByName('colorscheme');
+var colorscheme = [];
+var mql = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
 
 function indicateTheme(mode) {
     for(var i = colorscheme.length; i--; ) {
@@ -53,21 +54,43 @@ function autoTheme(e) {
     indicateTheme(mode);
 }
 
-var mql = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
-autoTheme(mql);
-mql.addListener(autoTheme);
+function doTheme() {
+    var themeform = document.createElement('form');
+    themeform.className = "theme";
+    themeform.innerHTML='<svg width="16" height="16"><use xlink:href="#icon-contrast"></use></svg>';
+    document.getElementById("header-forms").insertBefore(themeform, document.getElementById("search"));
+    var schemes = ["dark", "light"];
+    for (var i = 0; i < schemes.length; i++) {
+        var span = document.createElement('span');
+        themeform.appendChild(span);
+
+        var input = document.createElement('input');
+        input.name = 'colorscheme';
+        input.type = 'radio';
+        input.id = schemes[i] + input.name;
+        input.value = schemes[i];
+        span.appendChild(input);
+
+        var label = document.createElement('label');
+        label.htmlFor = input.id;
+        label.innerHTML = schemes[i];
+        span.appendChild(label);
+    }
+
+    colorscheme = document.getElementsByName('colorscheme');
+    for(var i = colorscheme.length; i--; ) {
+        colorscheme[i].onclick = setTheme;
+    }
+
+    autoTheme(mql);
+    mql.addListener(autoTheme);
+}
 
 var test = 'ping';
 try {
     localStorage.setItem(test, test);
     localStorage.removeItem(test);
-    for(var i = colorscheme.length; i--; ) {
-        colorscheme[i].onclick = setTheme;
-    }
-    var themeforms = document.getElementsByClassName(STORAGE_KEY);
-    for(var i = themeforms.length; i--; ) {
-        themeforms[i].style.display = 'inline-block';
-    }
+    doTheme();
 } catch(e) {
     console.log('localStorage is not available, manual theme switching is disabled');
 }

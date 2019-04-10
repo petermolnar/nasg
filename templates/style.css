@@ -46,26 +46,14 @@ main p {
   margin: 1em 0;
 }
 
-h1 {
-  border-bottom: 4px double #999;
+h1 {  
   text-transform:uppercase;
   text-align: center;
   padding-bottom: 1em;
 }
 
-article > footer > dl > dt,
-h2 {
-  border-bottom: 1px solid #999;
-}
-
-article > footer > dl > dt,
-h3,
 hr {
   border-bottom: 1px dotted #999;
-}
-
-h4 {
-  border-bottom: 1px dashed #999;
 }
 
 svg {
@@ -81,7 +69,7 @@ body > svg {
 a {
   color: #f90;
   text-decoration: none;
-  border-bottom: 1px solid transparent;
+  border-bottom: 1px none #f90;
 }
 
 a:hover {
@@ -151,9 +139,13 @@ input {
   color: #ccc;
 }
 
-.hidden, .theme,
+.hidden,
 .theme input, input[type=submit] {
   display: none;
+}
+
+.theme {
+  margin: 0 0.3em 0 0;
 }
 
 .theme input + label {
@@ -161,6 +153,7 @@ input {
   cursor: pointer;
   border-bottom: 3px solid transparent;
   padding-bottom: 0.1em;
+  margin-left:0.6em;
 }
 
 .theme input:hover + label,
@@ -288,6 +281,18 @@ article > header {
   margin: 0;
 }
 
+.h-feed aside a,
+.h-feed article a,
+body > nav > ul > li a {
+  border-bottom: 1px solid rgba(255, 153, 0, 0.5);
+}
+
+.h-feed aside a:hover,
+.h-feed article a:hover,
+body > nav > ul > li a:hover {
+  border-bottom: 1px solid #eee;
+}
+
 main ul {
   margin-left: 2em;
 }
@@ -355,4 +360,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}            
+}                    

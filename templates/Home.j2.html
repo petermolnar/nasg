@@ -24,7 +24,7 @@
     {% for category, post in posts %}
     <section>
         <h2>in:
-            <a href="{{ category.url|relurl(baseurl) }}/">
+            <a href="{{ category.url|relurl(baseurl) }}">
                 <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>
                 {{ category.name }}
             </a>

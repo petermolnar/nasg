@@ -50,23 +50,10 @@
             </ul>
         </nav>
 
-        <div>
-            <form class="theme" aria-hidden="true">
-                <svg width="16" height="16">
-                    <use xlink:href="#icon-contrast"></use>
-                </svg>
-                <span>
-                    <input name="colorscheme" value="dark" id="darkscheme" type="radio">
-                    <label for="darkscheme">dark</label>
-                </span>
-                <span>
-                    <input name="colorscheme" value="light" id="lightscheme" type="radio">
-                    <label for="lightscheme">light</label>
-                </span>
-            </form>
+        <div id="header-forms">
             {% for action in site.potentialAction %}
             {% if 'SearchAction' == action['@type'] %}
-            <form role="search" method="get" action="{{ action.url|relurl(baseurl) }}">
+            <form id="search" role="search" method="get" action="{{ action.url|relurl(baseurl) }}">
                 <label for="qsub">
                     <input type="submit" value="search" id="qsub" name="qsub" />
                     <svg width="16" height="16">

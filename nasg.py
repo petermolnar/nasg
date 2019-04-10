@@ -244,6 +244,10 @@ class Webmention(object):
     async def send(self):
         if self.exists:
             return
+        elif settings.args.get('noping'):
+            self.save("noping entry at %" %(arrow.now()))
+            return
+
         telegraph_url = 'https://telegraph.p3k.io/webmention'
         telegraph_params = {
             'token': '%s' % (keys.telegraph.get('token')),
@@ -1233,7 +1237,7 @@ class WebImage(object):
                 else:
                     exif[ekey] = maybe
                 break
-        return exif
+        return struct(exif)
 
     def _maybe_watermark(self, img):
         if not self.is_photo:
@@ -1244,14 +1248,12 @@ class WebImage(object):
             return img
 
         with wand.image.Image(filename=wmarkfile) as wmark:
+            w = self.height * 0.2
+            h = wmark.height * (w / wmark.width)
             if self.width > self.height:
-                w = self.width * 0.3
-                h = wmark.height * (w / wmark.width)
                 x = self.width - w - (self.width * 0.01)
                 y = self.height - h - (self.height * 0.01)
             else:
-                w = self.height * 0.24
-                h = wmark.height * (w / wmark.width)
                 x = self.width - h - (self.width * 0.01)
                 y = self.height - w - (self.height * 0.01)
 
@@ -1396,9 +1398,9 @@ class WebImage(object):
                     thumb.compression_quality = 88
                     thumb.unsharp_mask(
                         radius=1,
-                        sigma=0.5,
-                        amount=0.7,
-                        threshold=0.5
+                        sigma=1,
+                        amount=0.5,
+                        threshold=0.1
                     )
                     thumb.format = 'pjpeg'
 
@@ -1649,6 +1651,13 @@ class Category(dict):
     @property
     def sortedkeys(self):
         return list(sorted(self.keys(), reverse=True))
+
+    @property
+    def is_photos(self):
+        r = True
+        for i in self.values():
+            r = r & i.is_photo
+        return r
 
     @property
     def is_paginated(self):
