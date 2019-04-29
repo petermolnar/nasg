@@ -90,6 +90,12 @@
                 <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
                 <br />
                 <a class="u-url u-uuid bookmark" href="{{ post.url }}">{{ post.url }}</a>
+                {% if post.keywords|length > 0 %}
+                    <br />
+                    {% for keyword in post.keywords %}
+                    #<span class="p-category">{{ keyword }}</span>{% if not loop.last %} {% endif %}
+                    {% endfor %}
+                {% endif %}
 <!--
 {% if post.sameAs|length %}
                 <br />
