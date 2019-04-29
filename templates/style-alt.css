@@ -61,4 +61,18 @@ input {
 body > footer a:hover {
   color: #fff;
   border-bottom: 1px solid #fff;
-}                
+}      
+
+.h-feed aside a,
+.h-feed article a,
+body > nav > ul > li a {
+  border-bottom: 1px solid #3173b4;
+}
+
+.comments .u-url:hover,
+.footnotes a:hover,
+.h-feed aside a:hover,
+.h-feed article a:hover,
+body > nav > ul > li a:hover {
+  border-bottom: 1px solid #014384;
+}

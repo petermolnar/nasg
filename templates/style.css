@@ -2,7 +2,7 @@
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  font-family: "Courier", monospace;
+  font-family: "Courier New", monospace;
   margin: 0;
   padding: 0;
   line-height: 1.5em;
@@ -20,11 +20,14 @@ body > footer {
   padding: 0.6em 0;
 }
 
-body > main,
 body > nav,
+body > main,
+body > main > article,
+body > main > aside,
+body > main > section,
 body > header > section,
 body > footer > section {
-  max-width: 88ch;
+  max-width: 56em;
   margin: 0 auto;
   padding: 0 1em;
 }
@@ -46,7 +49,7 @@ main p {
   margin: 1em 0;
 }
 
-h1 {  
+h1 {
   text-transform:uppercase;
   text-align: center;
   padding-bottom: 1em;
@@ -64,6 +67,7 @@ svg {
 
 body > svg {
   display: none;
+  visibility: hidden;
 }
 
 a {
@@ -281,18 +285,6 @@ article > header {
   margin: 0;
 }
 
-.h-feed aside a,
-.h-feed article a,
-body > nav > ul > li a {
-  border-bottom: 1px solid rgba(255, 153, 0, 0.5);
-}
-
-.h-feed aside a:hover,
-.h-feed article a:hover,
-body > nav > ul > li a:hover {
-  border-bottom: 1px solid #eee;
-}
-
 main ul {
   margin-left: 2em;
 }
@@ -319,6 +311,7 @@ li p {
   text-overflow: ellipsis;
   vertical-align: top;
   max-width: 96%;
+  border-bottom: 1px solid rgba(255, 153, 0, 0);
 }
 
 .footnote-back {
@@ -337,6 +330,21 @@ body > nav {
 body > nav > ul > li {
   margin: 0 0.6em;
 }
+
+.h-feed aside a,
+.h-feed article a,
+body > nav > ul > li a {
+  border-bottom: 1px solid rgba(255, 153, 0, 0.5);
+}
+
+.comments .u-url:hover,
+.footnotes a:hover,
+.h-feed aside a:hover,
+.h-feed article a:hover,
+body > nav > ul > li a:hover {
+  border-bottom: 1px solid #eee;
+}
+
 
 @media all and (min-width: 58em) {
   body > header > section {
@@ -360,4 +368,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}                    
+}

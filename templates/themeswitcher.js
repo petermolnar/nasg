@@ -1,6 +1,8 @@
 var DEFAULT_THEME = 'dark';
 var ALT_THEME = 'light';
 var STORAGE_KEY = 'theme';
+var theme_container = document.getElementById("header-forms");
+var theme_insbefore = document.getElementById("search");
 var colorscheme = [];
 var mql = window.matchMedia('(prefers-color-scheme: ' + ALT_THEME + ')');
 
@@ -58,7 +60,7 @@ function doTheme() {
     var themeform = document.createElement('form');
     themeform.className = "theme";
     themeform.innerHTML='<svg width="16" height="16"><use xlink:href="#icon-contrast"></use></svg>';
-    document.getElementById("header-forms").insertBefore(themeform, document.getElementById("search"));
+    theme_container.insertBefore(themeform, theme_insbefore);
     var schemes = ["dark", "light"];
     for (var i = 0; i < schemes.length; i++) {
         var span = document.createElement('span');
