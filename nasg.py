@@ -63,7 +63,7 @@ J2 = jinja2.Environment(
 )
 
 RE_MDIMG = re.compile(
-    r'(?P<match>!\[(?P<alt>[^\]]+)?\]\((?P<fname>[^\s]+)'
+    r'(?P<match>!\[(?P<alt>[^\]]+)?\]\((?P<fname>[^\s\]]+)'
     r'(?:\s[\'\"](?P<title>[^\"\']+)[\'\"])?\)(?:{(?P<css>[^\}]+)\})?)',
     re.IGNORECASE
 )
@@ -245,7 +245,7 @@ class Webmention(object):
         if self.exists:
             return
         elif settings.args.get('noping'):
-            self.save("noping entry at %" %(arrow.now()))
+            self.save("noping entry at %s" % arrow.now() )
             return
 
         telegraph_url = 'https://telegraph.p3k.io/webmention'
@@ -653,7 +653,7 @@ class Singular(MarkdownDoc):
         elif self.is_photo:
             w = Webmention(
                 self.url,
-                'https://brid.gy/publish/flickr/',
+                'https://brid.gy/publish/flickr',
                 os.path.dirname(self.fpath),
                 self.dt
             )
@@ -802,6 +802,7 @@ class Singular(MarkdownDoc):
             "potentialAction": [],
             "comment": [],
             "commentCount": len(self.comments.keys()),
+            "keywords": self.tags
         }
 
         if self.is_photo:
@@ -2182,9 +2183,15 @@ class WebmentionIO(object):
             'type': webmention.get('activity').get('type', 'webmention')
         }
 
+        try:
+            txt = webmention.get('data').get('content', '').strip()
+        except Exception as e:
+            txt = ''
+            pass
+
         r = "---\n%s\n---\n\n%s\n" % (
             utfyamldump(meta),
-            webmention.get('data').get('content', '').strip()
+            txt
         )
         writepath(fpath, r)
 
@@ -2259,8 +2266,9 @@ def make():
         # deal with images, if needed
         for i in post.images.values():
             queue.put(i.downsize())
-        for i in post.to_ping:
-            send.append(i)
+        if not post.is_future:
+            for i in post.to_ping:
+                send.append(i)
 
         # render and arbitrary file copy tasks for this very post
         queue.put(post.render())
