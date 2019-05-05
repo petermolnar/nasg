@@ -96,21 +96,23 @@
                     #<span class="p-category">{{ keyword }}</span>{% if not loop.last %} {% endif %}
                     {% endfor %}
                 {% endif %}
-<!--
-{% if post.sameAs|length %}
+                {% if post['@type'] == 'Photograph' %}
+                    {% if post.image[0].locationCreated %}
+                    <br />
+                    Location:
+                    <a class="h-geo" href="https://www.openstreetmap.org/#map=14/{{ post.image[0].locationCreated.geo.longitude }}/{{ post.image[0].locationCreated.geo.latitude }}">
+                        <span class="p-longitude">{{ post.image[0].locationCreated.geo.longitude }}</span>,
+                        <span class="p-latitude">{{ post.image[0].locationCreated.geo.latitude }}</span>
+                    </a>
+                    {% endif %}
+                {% endif %}
+                {% if post.sameAs|length %}
                 <br />
                     Syndicated to:
-                    <ul>
                     {% for url in post.sameAs %}
-                        <li>
-                            <a class="u-syndication" href="{{ url }}">
-                                {{ url }}
-                            </a>
-                        </li>
+                        <a class="u-syndication" href="{{ url }}">{{ url }}</a>{% if not loop.last and post.sameAs|length >1 %}, {% endif %}
                     {% endfor %}
-                    </ul>
-{% endif %}
--->
+                {% endif %}
             </p>
 
 {% if post.subjectOf %}

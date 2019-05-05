@@ -230,6 +230,58 @@ class Webmention(object):
         )
 
     @property
+    def syndication_fpath(self):
+        return self.fpath.replace('.ping', '.copy')
+
+    def check_syndication(self):
+        """ this is very specific to webmention.io and brid.gy publish """
+        if os.path.isfile(self.syndication_fpath):
+            logger.debug("syndication copy exist for %s", self.dpath)
+            return
+        if "fed.brid.gy" in self.target:
+            return
+        if "brid.gy" not in self.target:
+            return
+        if not self.exists:
+            return
+
+        with open(self.fpath) as f:
+            txt = f.read()
+            if "telegraph.p3k.io" not in txt:
+                return
+            try:
+                maybe = json.loads(txt)
+                if "location" not in maybe:
+                    return
+                if "http_body" not in maybe:
+                    wio = requests.get(maybe["location"])
+                    if wio.status_code != requests.codes.ok:
+                        return
+                    maybe = wio.json()
+                    with open(self.fpath, "wt") as update:
+                        update.write(json.dumps(maybe, sort_keys=True, indent=4))
+                if "url" in maybe["http_body"]:
+                    data = json.loads(maybe["http_body"])
+                    url = data["url"]
+                    sp = os.path.join(
+                        self.dpath, "%s.copy" % url2slug(url, 200)
+                    )
+                    with open(sp, "wt") as f:
+                        logger.info(
+                            "writing syndication copy URL %s to %s",
+                            url,
+                            sp
+                        )
+                        f.write(url)
+            except Exception as e:
+                logger.error(
+                    "failed to fetch syndication URL for %s: %s",
+                    self.dpath,
+                    e
+                )
+                pass
+
+    @property
     def exists(self):
         if not os.path.isfile(self.fpath):
             return False
@@ -243,6 +295,7 @@ class Webmention(object):
 
     async def send(self):
         if self.exists:
+            self.check_syndication()
             return
         elif settings.args.get('noping'):
             self.save("noping entry at %s" % arrow.now() )
@@ -264,7 +317,6 @@ class Webmention(object):
             logger.error('sending failed: %s %s', r.status_code, r.text)
         else:
             self.save(r.text)
-
 
 class MarkdownDoc(object):
     """ Base class for anything that is stored as .md """
@@ -464,7 +516,7 @@ class Singular(MarkdownDoc):
 
     @property
     def sameas(self):
-        r = []
+        r = {}
         for k in glob.glob(
             os.path.join(
                 os.path.dirname(self.fpath),
@@ -472,8 +524,8 @@ class Singular(MarkdownDoc):
             )
         ):
             with open(k, 'rt') as f:
-                r.append(f.read())
-        return r
+                r.update({f.read(): True})
+        return list(r.keys())
 
     @cached_property
     def comments(self):
@@ -1108,6 +1160,20 @@ class WebImage(object):
             })
         if self.is_mainimg:
             r.update({"representativeOfPage": True})
+
+        if self.exif['GPSLatitude'] != 0 and self.exif['GPSLongitude'] != 0:
+            r.update({
+                "locationCreated": struct({
+                    "@context": "http://schema.org",
+                    "@type": "Place",
+                    "geo": struct({
+                        "@context": "http://schema.org",
+                        "@type": "GeoCoordinates",
+                        "latitude": self.exif['GPSLatitude'],
+                        "longitude": self.exif['GPSLongitude']
+                    })
+                })
+            })
         return struct(r)
 
     def __str__(self):
@@ -1215,7 +1281,9 @@ class WebImage(object):
             'FocalLength': '',
             'ISO': '',
             'LensID': '',
-            'CreateDate': str(arrow.get(self.mtime))
+            'CreateDate': str(arrow.get(self.mtime)),
+            'GPSLatitude': 0,
+            'GPSLongitude': 0
         }
         if not self.is_photo:
             return exif
@@ -1227,7 +1295,9 @@ class WebImage(object):
             'FocalLength': ['FocalLength'],  # ['FocalLengthIn35mmFormat'],
             'ISO': ['ISO'],
             'LensID': ['LensID', 'LensSpec', 'Lens'],
-            'CreateDate': ['CreateDate', 'DateTimeOriginal']
+            'CreateDate': ['CreateDate', 'DateTimeOriginal'],
+            'GPSLatitude': ['GPSLatitude'],
+            'GPSLongitude': ['GPSLongitude']
         }
 
         for ekey, candidates in mapping.items():
@@ -1399,9 +1469,9 @@ class WebImage(object):
                     thumb.compression_quality = 88
                     thumb.unsharp_mask(
                         radius=1,
-                        sigma=1,
-                        amount=0.5,
-                        threshold=0.1
+                        sigma=0.5,
+                        amount=0.7,
+                        threshold=0.5
                     )
                     thumb.format = 'pjpeg'
 
