@@ -2,8 +2,8 @@
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
     <ShortName>{{ site.name }}</ShortName>
     <Description>Search {{ site.name }}</Description>
-    <Url type="application/rss+xml" rel="results" method="get" template="{{ site.url }}/opensearch.php?q={searchTerms}" />
-    <Url type="text/html" rel="results" method="get" template="{{ site.url }}/search.php?q={searchTerms}" />
+    <Url rel="results" method="get" type="text/html" template="{{ site.url }}/search.php?q={searchTerms}" />
+    <Url rel="results" method="get" type="application/rss+xml" template="{{ site.url }}/search.php?q={searchTerms}&amp;xml" />
     <Image>{{ site.image }}</Image>
     <InputEncoding>UTF-8</InputEncoding>
 </OpenSearchDescription>
