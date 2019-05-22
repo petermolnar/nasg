@@ -326,6 +326,7 @@ class MarkdownDoc(object):
 
     @property
     def dt(self):
+        """ this returns a timestamp, not an arrow object """
         maybe = self.mtime
         for key in ['published', 'date']:
             t = self.meta.get(key, None)
@@ -500,7 +501,6 @@ class Singular(MarkdownDoc):
         maybe = self.dt
         if len(self.comments):
             for c in self.comments.values():
-
                 if c.dt > maybe:
                     maybe = c.dt
         return maybe
@@ -1574,7 +1574,7 @@ class Search(PHPFile):
         return ret
 
     def append(self, post):
-        mtime = int(post.mtime)
+        mtime = int(post.published.timestamp)
         check = self.check(post.name)
         if (check and check < mtime):
             self.db.execute('''
@@ -1602,24 +1602,22 @@ class Search(PHPFile):
             self.is_changed = True
 
     @property
-    def renderfile(self):
-        return os.path.join(
-            settings.paths.get('build'),
-            'search.php'
-        )
-
-    @property
-    def templatefile(self):
-        return 'Search.j2.php'
+    def templates(self):
+        return ['Search.j2.php', 'OpenSearch.j2.php', 'OpenSearch.j2.xml']
 
     async def _render(self):
-        r = J2.get_template(self.templatefile).render({
-            'post': {},
-            'site': settings.site,
-            'menu': settings.menu,
-            'meta': settings.meta,
-        })
-        writepath(self.renderfile, r)
+        for template in self.templates:
+            r = J2.get_template(template).render({
+                'post': {},
+                'site': settings.site,
+                'menu': settings.menu,
+                'meta': settings.meta,
+            })
+            target = os.path.join(
+                settings.paths.get('build'),
+                template.replace('.j2', '').lower()
+            )
+            writepath(target, r)
 
 
 class IndexPHP(PHPFile):
