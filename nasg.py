@@ -229,15 +229,9 @@ class Webmention(object):
             )
         )
 
-    @property
-    def syndication_fpath(self):
-        return self.fpath.replace('.ping', '.copy')
-
     def check_syndication(self):
         """ this is very specific to webmention.io and brid.gy publish """
-        if os.path.isfile(self.syndication_fpath):
-            logger.debug("syndication copy exist for %s", self.dpath)
-            return
+
         if "fed.brid.gy" in self.target:
             return
         if "brid.gy" not in self.target:
@@ -247,39 +241,39 @@ class Webmention(object):
 
         with open(self.fpath) as f:
             txt = f.read()
-            if "telegraph.p3k.io" not in txt:
+
+        if "telegraph.p3k.io" not in txt:
+            return
+
+        try:
+            maybe = json.loads(txt)
+            if "location" not in maybe:
                 return
-            try:
-                maybe = json.loads(txt)
-                if "location" not in maybe:
+            if "http_body" not in maybe:
+                logger.debug("trying to re-fetch %s for %s", maybe["location"], self.fpath)
+                wio = requests.get(maybe["location"])
+                if wio.status_code != requests.codes.ok:
                     return
-                if "http_body" not in maybe:
-                    wio = requests.get(maybe["location"])
-                    if wio.status_code != requests.codes.ok:
-                        return
-                    maybe = wio.json()
-                    with open(self.fpath, "wt") as update:
-                        update.write(json.dumps(maybe, sort_keys=True, indent=4))
-                if "url" in maybe["http_body"]:
-                    data = json.loads(maybe["http_body"])
-                    url = data["url"]
-                    sp = os.path.join(
-                        self.dpath, "%s.copy" % url2slug(url, 200)
-                    )
-                    with open(sp, "wt") as f:
-                        logger.info(
-                            "writing syndication copy URL %s to %s",
-                            url,
-                            sp
-                        )
-                        f.write(url)
-            except Exception as e:
-                logger.error(
-                    "failed to fetch syndication URL for %s: %s",
-                    self.dpath,
-                    e
-                )
-                pass
+                maybe = wio.json()
+                logger.debug("response: %s", maybe)
+                with open(self.fpath, "wt") as update:
+                    update.write(json.dumps(maybe, sort_keys=True, indent=4))
+            if "url" in maybe["http_body"]:
+                data = json.loads(maybe["http_body"])
+                url = data["url"]
+                sp = os.path.join(self.dpath, "%s.copy" % url2slug(url, 200))
+                if os.path.exists(sp):
+                    return
+                with open(sp, "wt") as f:
+                    logger.info("writing syndication copy %s to %s", url, sp)
+                    f.write(url)
+        except Exception as e:
+            logger.error(
+                "failed to fetch syndication URL for %s: %s",
+                self.dpath,
+                e
+            )
+            pass
 
     @property
     def exists(self):
