@@ -1603,7 +1603,7 @@ class Search(PHPFile):
 
     @property
     def templates(self):
-        return ['Search.j2.php', 'OpenSearch.j2.php', 'OpenSearch.j2.xml']
+        return ['Search.j2.php', 'OpenSearch.j2.xml']
 
     async def _render(self):
         for template in self.templates:
