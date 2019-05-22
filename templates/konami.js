@@ -12,6 +12,8 @@ function kcl(cb) {
 }
 
 kcl(function () {
+    var st = document.getElementById('css_surprise');
+    st.setAttribute('media', 'all');
     var e = document.createElement('img');
     e.src = '/iddqd.gif';
     document.body.appendChild(e);

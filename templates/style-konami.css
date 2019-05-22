@@ -1,0 +1,79 @@
+body {
+  color: #F13C20;
+  background-color: #EFE2BA;
+}
+
+a {
+  color: #B77902;
+}
+
+a:hover {
+  color: #D79922;
+  border-bottom: 1px solid #D79922;
+}
+
+code,
+pre {
+  color: #006400;
+}
+
+button svg {
+  transform: rotate(180deg);
+  transition: all 0.2s;
+}
+
+blockquote {
+  color: #555;
+}
+
+td, th {
+  border: 1px solid #111;
+}
+
+th, tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, .1);
+}
+
+pre > code::before {
+  color: #444;
+}
+
+.footnotes hr::before {
+  color: #222;
+}
+
+body > header,
+body > footer{
+  background-color: #D79922;
+  color: #F13C20;
+}
+
+body > header a,
+body > footer a,
+.theme input + label {
+  color: #EFE2BA;
+}
+
+input {
+  background-color: #EFE2BA;
+  color: #F13C20;
+}
+
+body > footer a:hover {
+  color: #fff;
+  border-bottom: 1px solid #fff;
+}
+
+.h-feed aside a,
+.h-feed article a,
+body > nav > ul > li a {
+  border-bottom: 1px solid #F13C20;
+}
+
+.comments .u-url:hover,
+.footnotes a:hover,
+.h-feed aside a:hover,
+.h-feed article a:hover,
+body > nav > ul > li a:hover {
+  border-bottom: 1px solid #F13C20;
+}    
