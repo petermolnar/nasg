@@ -6,7 +6,7 @@
     <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}" />
     <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}atom.xml" />
     <link rel="alternate" type="application/json" title="{{ category.title }} JSON feed" href="{{ category.feed }}index.json" />
-    <link rel="feed" title="{{ category.title}} feed" href="{{ category.url }}" />
+    <link rel="feed" title="{{ category.title}} feed" href="http://www.unmung.com/feed?feed={{ category.feed|urlencode }}" />
 {% endblock %}
 
 {% block pagination %}
