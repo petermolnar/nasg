@@ -158,6 +158,18 @@ paths = struct({
     'remotequeue': 'queue',
     'micropub': os.path.join(base, 'content', 'note'),
     'home': os.path.join(base, 'content', 'home', 'index.md'),
+    'category': 'category',
+    'feed': 'feed'
+})
+
+filenames = struct({
+    'rss': 'index.xml',
+    'atom': 'atom.xml',
+    'json': 'index.json',
+    'md': 'index.md',
+    'txt': 'index.txt',
+    'html': 'index.html',
+    'gopher': 'gophermap'
 })
 
 photo = struct({

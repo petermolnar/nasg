@@ -10,7 +10,6 @@ import glob
 import os
 import time
 import re
-import imghdr
 import asyncio
 import sqlite3
 import json
@@ -26,13 +25,13 @@ import csv
 import arrow
 import langdetect
 import wand.image
+import filetype
 import jinja2
 import yaml
 import frontmatter
 from feedgen.feed import FeedGenerator
 from slugify import slugify
 import requests
-import lxml.etree as etree
 
 from pandoc import PandocMD2HTML, PandocMD2TXT, PandocHTML2TXT
 from meta import Exif
@@ -41,15 +40,6 @@ from settings import struct
 import keys
 
 logger = logging.getLogger('NASG')
-
-CATEGORY = 'category'
-MDFILE = 'index.md'
-TXTFILE = 'index.txt'
-HTMLFILE = 'index.html'
-GOPHERFILE = 'gophermap'
-ATOMFILE = 'atom.xml'
-RSSFILE = 'index.xml'
-JSONFEEDFILE = 'index.json'
 
 MarkdownImage = namedtuple(
     'MarkdownImage',
@@ -143,7 +133,7 @@ def relurl(text, baseurl=None):
 
         r = os.path.relpath(url, baseurl)
         if url.endswith('/') and not r.endswith('/'):
-            r = "%s/%s" % (r, HTMLFILE)
+            r = "%s/%s" % (r, settings.filenames.html)
         if needsquotes:
             r = '"%s"' % r
         logger.debug("RELURL: %s => %s (base: %s)", match, r, baseurl)
@@ -531,7 +521,7 @@ class Singular(MarkdownDoc):
         files = [
             k
             for k in glob.glob(os.path.join(os.path.dirname(self.fpath), '*.md'))
-            if os.path.basename(k) != MDFILE
+            if os.path.basename(k) != settings.filenames.md
         ]
         for f in files:
             c = Comment(f)
@@ -554,7 +544,8 @@ class Singular(MarkdownDoc):
                 fname
             )
             if imgpath in self.files:
-                if imghdr.what(imgpath):
+                kind = filetype.guess(imgpath)
+                if kind and 'image' in kind.mime.lower():
                     images.update({match: WebImage(imgpath, mdimg, self)})
             else:
                 logger.error("Missing image: %s, referenced in %s",
@@ -588,7 +579,7 @@ class Singular(MarkdownDoc):
         if len(self.images) != 1:
             return False
         photo = next(iter(self.images.values()))
-        maybe = self.fpath.replace(MDFILE, "%s.jpg" % (self.name))
+        maybe = self.fpath.replace(settings.filenames.md, "%s.jpg" % (self.name))
         if photo.fpath == maybe:
             return True
         return False
@@ -740,47 +731,6 @@ class Singular(MarkdownDoc):
             return False
 
     @cached_property
-    def oembed_xml(self):
-        oembed = etree.Element("oembed", version="1.0")
-        xmldoc = etree.ElementTree(oembed)
-        for k, v in self.oembed_json.items():
-            x = etree.SubElement(oembed, k).text = "%s" % (v)
-        s = etree.tostring(
-            xmldoc,
-            encoding='utf-8',
-            xml_declaration=True,
-            pretty_print=True
-        )
-        return s
-
-    @cached_property
-    def oembed_json(self):
-        r = {
-          "version": "1.0",
-          "provider_name": settings.site.name,
-          "provider_url": settings.site.url,
-          "author_name": settings.author.name,
-          "author_url": settings.author.url,
-          "title": self.title,
-          "type": "link",
-          "html": self.html_content,
-        }
-
-        img = None
-        if self.is_photo:
-            img = self.photo
-        elif not self.is_photo and len(self.images):
-            img = list(self.images.values())[0]
-        if img:
-            r.update({
-            "type": "rich",
-            "thumbnail_url": img.jsonld.thumbnail.url,
-            "thumbnail_width": img.jsonld.thumbnail.width,
-            "thumbnail_height": img.jsonld.thumbnail.height
-            })
-        return r
-
-    @cached_property
     def review(self):
         if 'review' not in self.meta:
             return False
@@ -923,14 +873,14 @@ class Singular(MarkdownDoc):
     def renderfile(self):
         return os.path.join(
             self.renderdir,
-            HTMLFILE
+            settings.filenames.html
         )
 
     @property
     def gopherfile(self):
         return os.path.join(
             self.renderdir,
-            TXTFILE
+            settings.filenames.txt
         )
 
     @property
@@ -1041,7 +991,7 @@ class Home(Singular):
     def renderfile(self):
         return os.path.join(
             settings.paths.get('build'),
-            HTMLFILE
+            settings.filenames.html
         )
 
     @property
@@ -1063,7 +1013,7 @@ class Home(Singular):
         for category, post in self.posts:
             line = "1%s\t/%s/%s\t%s\t70" % (
                 category['name'],
-                CATEGORY,
+                settings.paths.category,
                 category['name'],
                 settings.site.name
             )
@@ -1072,7 +1022,13 @@ class Home(Singular):
         #lines.append('')
         #lines = lines + list(settings.bye.split('\n'))
         #lines.append('')
-        writepath(self.renderfile.replace(HTMLFILE,GOPHERFILE), "\r\n".join(lines))
+        writepath(
+            self.renderfile.replace(
+                settings.filenames.html,
+                settings.filenames.gopher
+            ),
+            "\r\n".join(lines)
+        )
 
     async def render(self):
         if self.exists:
@@ -1697,7 +1653,6 @@ class MicropubPHP(PHPFile):
 class Category(dict):
     def __init__(self, name=''):
         self.name = name
-        #self.page = 1
         self.trange = 'YYYY'
 
     def __setitem__(self, key, value):
@@ -1731,16 +1686,16 @@ class Category(dict):
     @property
     def title(self):
         if len(self.name):
-            return "%s - %s" % (self.name, settings.site.get('name'))
+            return "%s - %s" % (self.name, settings.site.name)
         else:
-            return settings.site.get('headline')
+            return settings.site.headline
 
     @property
     def url(self):
         if len(self.name):
-            url = "%s/%s/%s/" % (settings.site.get('url'), CATEGORY, self.name)
+            url = "%s/%s/%s/" % (settings.site.url, settings.paths.category, self.name)
         else:
-            url = '%s/' % (settings.site.get('url'))
+            url = '%s/' % (settings.site.url)
         return url
 
     @property
@@ -1755,12 +1710,12 @@ class Category(dict):
     def dpath(self):
         if len(self.name):
             return os.path.join(
-                settings.paths.get('build'),
-                CATEGORY,
+                settings.paths.build,
+                settings.paths.category,
                 self.name
             )
         else:
-            return settings.paths.get('build')
+            return settings.paths.build
 
     @property
     def newest_year(self):
@@ -1788,28 +1743,11 @@ class Category(dict):
         else:
             return 0
 
-    @property
-    def rssfeedfpath(self):
+    def feedpath(self, fname):
         return os.path.join(
             self.dpath,
-            'feed',
-            RSSFILE
-        )
-
-    @property
-    def atomfeedfpath(self):
-        return os.path.join(
-            self.dpath,
-            'feed',
-            ATOMFILE
-        )
-
-    @property
-    def jsonfeedfpath(self):
-        return os.path.join(
-            self.dpath,
-            'feed',
-            JSONFEEDFILE
+            settings.paths.category,
+            fname
         )
 
     def get_posts(self, start=0, end=-1):
@@ -1869,7 +1807,7 @@ class Category(dict):
             'posts': posts,
         }
 
-    def indexfpath(self, subpath=None, fname=HTMLFILE):
+    def indexfpath(self, subpath=None, fname=settings.filenames.html):
         if subpath:
             return os.path.join(
                 self.dpath,
@@ -1888,6 +1826,10 @@ class Category(dict):
             self.name,
             xmlformat
         )
+        if 'json' == xmlformat:
+            await self.render_json()
+            return
+
         start = 0
         end = int(settings.pagination)
 
@@ -1898,9 +1840,9 @@ class Category(dict):
             'name': settings.author.name,
             'email': settings.author.email
         })
-        fg.logo('%s/favicon.png' % settings.site.get('url'))
+        fg.logo('%s/favicon.png' % settings.site.url)
         fg.updated(arrow.get(self.mtime).to('utc').datetime)
-        fg.description(settings.site.get('headline'))
+        fg.description(settings.site.headline)
 
         for k in reversed(self.sortedkeys[start:end]):
             post = self[k]
@@ -1916,8 +1858,8 @@ class Category(dict):
                 'term': post.category,
                 'label': post.category,
                 'scheme': "%s/%s/%s/" % (
-                    settings.site.get('url'),
-                    CATEGORY,
+                    settings.site.url,
+                    settings.paths.category,
                     post.category
                 )
             })
@@ -1951,25 +1893,20 @@ class Category(dict):
 
         if xmlformat == 'rss':
             fg.link(href=self.feedurl)
-            writepath(self.rssfeedfpath, fg.rss_str(pretty=True))
+            writepath(self.feedpath(settings.filenames.rss), fg.rss_str(pretty=True))
         elif xmlformat == 'atom':
             fg.link(href=self.feedurl, rel='self')
             fg.link(href=settings.meta.get('hub'), rel='hub')
-            writepath(self.atomfeedfpath, fg.atom_str(pretty=True))
+            writepath(self.feedpath(settings.filenames.atom), fg.atom_str(pretty=True))
 
     async def render_json(self):
-        logger.info(
-            'rendering category "%s" JSON feed',
-            self.name,
-        )
-        start = 0
-        end = int(settings.pagination)
+        logger.info('rendering category "%s" JSON feed',self.name)
 
         js = {
             "version": "https://jsonfeed.org/version/1",
             "title": self.title,
             "home_page_url": settings.site.url,
-            "feed_url": "%s%s" % (self.url, JSONFEEDFILE),
+            "feed_url": "%s%s" % (self.url, settings.filenames.json),
             "author": {
                 "name": settings.author.name,
                 "url": settings.author.url,
@@ -1978,7 +1915,7 @@ class Category(dict):
             "items": []
         }
 
-        for k in reversed(self.sortedkeys[start:end]):
+        for k in reversed(self.sortedkeys[0:int(settings.pagination)]):
             post = self[k]
             pjs = {
                 "id": post.url,
@@ -1997,11 +1934,12 @@ class Category(dict):
                 }})
             js["items"].append(pjs)
         writepath(
-            self.jsonfeedfpath,
+            self.feedpath(settings.filenames.json),
             json.dumps(js, indent=4, ensure_ascii=False)
         )
 
     async def render_flat(self):
+        logger.info('rendering flat archive for %s', self.name)
         r = J2.get_template(self.template).render(
             self.tmplvars(self.get_posts())
         )
@@ -2017,11 +1955,10 @@ class Category(dict):
             line = "0%s\t/%s/%s\t%s\t70" % (
                 post.headline,
                 post.name,
-                TXTFILE,
+                settings.filenames.txt,
                 settings.site.name
             )
             lines.append(line)
-            #lines.append(post.datePublished)
             if (len(post.description)):
                 lines.extend(str(PandocHTML2TXT(post.description)).split("\n"))
             if isinstance(post['image'], list):
@@ -2034,7 +1971,10 @@ class Category(dict):
                     )
                     lines.append(line)
             lines.append('')
-        writepath(self.indexfpath(fname=GOPHERFILE), "\r\n".join(lines))
+        writepath(
+            self.indexfpath(fname=settings.filenames.gopher),
+            "\r\n".join(lines)
+        )
 
     async def render_archives(self):
         for year in self.years.keys():
@@ -2073,42 +2013,15 @@ class Category(dict):
                 writepath(fpath, r)
 
     async def render_feeds(self):
-        if not self.is_uptodate(self.rssfeedfpath, self.newest()):
-            logger.info(
-                '%s RSS feed outdated, generating new',
-                self.name
-            )
-            await self.render_feed('rss')
-        else:
-            logger.info(
-                '%s RSS feed up to date',
-                self.name
-            )
-
-        if not self.is_uptodate(self.atomfeedfpath, self.newest()):
-            logger.info(
-                '%s ATOM feed outdated, generating new',
-                self.name
-            )
-            await self.render_feed('atom')
-        else:
-            logger.info(
-                '%s ATOM feed up to date',
-                self.name
-            )
-
-        if not self.is_uptodate(self.jsonfeedfpath, self.newest()):
-            logger.info(
-                '%s JSON feed outdated, generating new',
-                self.name
-            )
-            await self.render_json()
-        else:
-            logger.info(
-                '%s JSON feed up to date',
-                self.name
-            )
-
+        m = {
+            'rss': self.feedpath(settings.filenames.rss),
+            'atom': self.feedpath(settings.filenames.atom),
+            'json': self.feedpath(settings.filenames.json)
+        }
+        for ft, path in m.items():
+            if not self.is_uptodate(path, self.newest()):
+                logger.info('%s outdated, generating new', ft)
+                await self.render_feed(ft)
 
     async def render(self):
         await self.render_feeds()
@@ -2116,21 +2029,9 @@ class Category(dict):
             await self.render_gopher()
         if not self.is_paginated:
             if not self.is_uptodate(self.indexfpath(), self.newest()):
-                logger.info(
-                    '%s flat index outdated, generating new',
-                    self.name
-                )
                 await self.render_flat()
-
-            else:
-                logger.info(
-                    '%s flat index is up to date',
-                    self.name
-                )
-            return
         else:
             await self.render_archives()
-
 
 
 class Sitemap(dict):
@@ -2170,7 +2071,7 @@ class WebmentionIO(object):
         newest = 0
         content = settings.paths.get('content')
         for e in glob.glob(os.path.join(content, '*', '*', '*.md')):
-            if os.path.basename(e) == MDFILE:
+            if os.path.basename(e) == settings.filenames.md:
                 continue
             # filenames are like [received epoch]-[slugified source url].md
             try:
@@ -2323,7 +2224,7 @@ def make():
     frontposts = Category()
     home = Home(settings.paths.get('home'))
 
-    for e in sorted(glob.glob(os.path.join(content, '*', '*', MDFILE))):
+    for e in sorted(glob.glob(os.path.join(content, '*', '*', settings.filenames.md))):
         post = Singular(e)
         # deal with images, if needed
         for i in post.images.values():
