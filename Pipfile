@@ -12,6 +12,7 @@ python-frontmatter = "*"
 langdetect = "*"
 jinja2 = "*"
 feedgen = "*"
+filetype = "*"
 
 [dev-packages]
 
