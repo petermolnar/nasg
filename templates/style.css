@@ -178,6 +178,14 @@ body > footer .email span {
   display: none;
 }
 
+body > footer > section.tip > * {
+  display: inline-block;
+}
+
+body > footer > section.tip a {
+  color: #090;
+}
+
 video,
 figure img {
   display: block;
@@ -285,6 +293,10 @@ article > header {
   margin: 0;
 }
 
+.h-feed article .photo .exif {
+  display: none;
+}
+
 main ul {
   margin-left: 2em;
 }
@@ -368,4 +380,4 @@ body > img {
   right: 0;
   width: 10em;
   height: auto;
-}
+}    

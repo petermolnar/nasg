@@ -32,6 +32,7 @@ import frontmatter
 from feedgen.feed import FeedGenerator
 from slugify import slugify
 import requests
+import lxml.etree as etree
 
 from pandoc import PandocMD2HTML, PandocMD2TXT, PandocHTML2TXT
 from meta import Exif
@@ -907,6 +908,53 @@ class Singular(MarkdownDoc):
             self.content,
         ])
 
+    @cached_property
+    def oembed_xml(self):
+        oembed = etree.Element("oembed", version="1.0")
+        xmldoc = etree.ElementTree(oembed)
+        for k, v in self.oembed_json.items():
+            x = etree.SubElement(oembed, k)
+            t = "%s" % (v)
+            if "html" == k:
+                x.text =  etree.CDATA(t)
+            else:
+                x.text = t
+        s = etree.tostring(
+            xmldoc,
+            encoding='utf-8',
+            xml_declaration=True,
+            pretty_print=True
+        )
+        return s
+
+    @cached_property
+    def oembed_json(self):
+        r = {
+          "version": "1.0",
+          "url": self.url,
+          "provider_name": settings.site.name,
+          "provider_url": settings.site.url,
+          "author_name": settings.author.name,
+          "author_url": settings.author.url,
+          "title": self.title,
+          "type": "link",
+          "html": self.html_content,
+        }
+        img = None
+        if self.is_photo:
+            img = self.photo
+        elif not self.is_photo and len(self.images):
+            img = list(self.images.values())[0]
+        if img:
+            r.update({
+                "type": "rich",
+                "thumbnail_url": img.jsonld.thumbnail.url,
+                "thumbnail_width": img.jsonld.thumbnail.width,
+                "thumbnail_height": img.jsonld.thumbnail.height
+            })
+        return r
+
+
     async def copyfiles(self):
         exclude = [
             '.md',
@@ -916,7 +964,8 @@ class Singular(MarkdownDoc):
             '.ping',
             '.url',
             '.del',
-            '.copy']
+            '.copy'
+        ]
         files = glob.glob(
             os.path.join(
                 os.path.dirname(self.fpath),
@@ -974,6 +1023,16 @@ class Singular(MarkdownDoc):
             json.dumps(j, indent=4, ensure_ascii=False)
         )
         del(j)
+        # oembed
+        writepath(
+            os.path.join(self.renderdir, 'oembed.json'),
+            json.dumps(self.oembed_json, indent=4, ensure_ascii=False)
+        )
+        writepath(
+            os.path.join(self.renderdir, 'oembed.xml'),
+            self.oembed_xml
+        )
+
 
 class Home(Singular):
     def __init__(self, fpath):
@@ -2196,6 +2255,16 @@ class WebmentionIO(object):
                 # logger.error('failed to query granary.io: %s', e)
                 # pass
 
+def dat():
+    for url in settings.site.sameAs:
+        if "dat://" in url:
+            p = os.path.join(settings.paths.build, '.well-known')
+            if not os.path.isdir(p):
+                os.makedirs(p)
+            p = os.path.join(settings.paths.build, '.well-known', 'dat')
+            if not os.path.exists(p):
+                writepath(p, "%s\nTTL=3600" % (url))
+
 
 def make():
     start = int(round(time.time() * 1000))
@@ -2301,12 +2370,8 @@ def make():
             continue
         cp(e, t)
 
-    # ...
-    #for url in settings.site.sameAs:
-        #if "dat://" in url:
-            #p = os.path.join(settings.paths.build, '.well-known', 'dat')
-            #if not os.path.exists(p):
-                #writepath(p, "%s\nTTL=3600" % (url))
+    # dat data
+    dat()
 
     end = int(round(time.time() * 1000))
     logger.info('process took %d ms' % (end - start))

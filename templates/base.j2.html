@@ -133,6 +133,24 @@
             <a href="https://xn--sr8hvo.ws/%F0%9F%87%BB%F0%9F%87%AE%F0%9F%93%A2/next">→</a>
         </nav>
     </section>
+    <section class="tip">
+        <span>Leave me a tip! </span>
+        <nav>
+            <ul>
+                {% for action in site.potentialAction %}
+                {% if 'DonateAction' == action['@type'] %}
+                <li>
+                    <a href="{{ action.url }}">
+                        <svg width="16" height="16"><use xlink:href="#icon-{{ action['name'] }}" /></svg>
+                        {{ action.description }}
+                    </a>
+                </li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+    </section>
+<!--
     <section>
         <nav>
             <ul>
@@ -174,6 +192,7 @@
             </ul>
         </nav>
     </section>
+-->
 </footer>
 
 <script>

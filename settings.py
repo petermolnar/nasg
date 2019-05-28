@@ -48,9 +48,9 @@ site = struct({
     "name": "petermolnar.net",
     "image": "https://petermolnar.net/favicon.ico",
     "license": "https://spdx.org/licenses/%s.html" % (licence['_default']),
-    #"sameAs": [
-        #"dat://8d03735af11d82fff82028e0f830f9ac470f5e9fbe10ab5eb6feb877232714a2"
-    #],
+    "sameAs": [
+        "dat://7efecc3c33baf69d6fecf801e15ede92b369f4944f766489b156263119220939"
+    ],
     "author": {
         "@context": "http://schema.org",
         "@type": "Person",
@@ -64,6 +64,7 @@ site = struct({
             "xmpp:mail@petermolnar.net",
             "https://wa.me/447592011721",
             "https://t.me/petermolnar",
+            "https://twitter.com/petermolnar"
         ],
         "follows": "https://petermolnar.net/following.opml"
     },
@@ -93,24 +94,30 @@ site = struct({
             "url": "https://petermolnar.net/follow/",
             "name": "follow"
         },
-        #{
-            #"@context": "http://schema.org",
-            #"@type": "DonateAction",
-            #"description": "Monzo (only in the UK or via Google Pay)",
-            #"name": "monzo",
-            #"price": "3GBP",
-            #"url": "https://monzo.me/petermolnar/3",
-            #"recipient": author
-        #},
-        #{
-            #"@context": "http://schema.org",
-            #"@type": "DonateAction",
-            #"description": "Paypal",
-            #"name": "paypal",
-            #"price": "3GBP",
-            #"url": "https://paypal.me/petermolnar/3GBP",
-            #"recipient": author
-        #}
+        {
+            "@context": "http://schema.org",
+            "@type": "DonateAction",
+            "description": "Monzo",
+            "name": "monzo",
+            "url": "https://monzo.me/petermolnar/",
+            "recipient": author
+        },
+        {
+            "@context": "http://schema.org",
+            "@type": "DonateAction",
+            "description": "Paypal",
+            "name": "paypal",
+            "url": "https://paypal.me/petermolnar/",
+            "recipient": author
+        },
+        {
+            "@context": "http://schema.org",
+            "@type": "DonateAction",
+            "description": "Cash App",
+            "name": "cash",
+            "url": "https://cash.app/%C2%A3pmlnr",
+            "recipient": author
+        }
     ]
 })
 
@@ -183,6 +190,16 @@ photo = struct({
     },
     'earlyyears': 2014
 })
+
+#symlinks = {
+    #'files/a-view-from-barbican-1280x720.jpg':  'a-view-from-barbican/a-view-from-barbican_b.jpg',
+    #'files/hills_from_beachy_head-540x226.jpg': 'hills-from-beachy-head/hills-from-beachy-head.jpg',
+    #'files/seven_sisters_from_beachy_head-540x304.jpg': 'seven-sisters-from-beachy-head/seven-sisters-from-beachy-head.jpg',
+    #'files/the_countryside-540x304.jpg': 'the-countryside/the-countryside.jpg',
+    #'files/MGP0538-540x358.jpg': '',
+    #'files/IMGP0539-540x358.jpg': '',
+    #'files/IMGP0538-540x358.jpg': '',
+#}
 
 tmpdir = os.path.join(gettempdir(),'nasg')
 if not os.path.isdir(tmpdir):
