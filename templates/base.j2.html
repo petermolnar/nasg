@@ -8,12 +8,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
     <meta name="author" content="{{ site.author.name }} ({{ site.author.email }})" />
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="{{ site.name }}">
     <link rel="icon" href="{{ site.image }}" />
     <!-- <base href="{{ baseurl }}" /> -->
     {% for key, value in meta.items() %}
     <link rel="{{ key }}" href="{{ value }}" />
     {% endfor %}
     {% block meta %}{% endblock %}
+
     <style media="all">
         {% include('style.css') %}
     </style>
@@ -26,7 +28,7 @@
     <style media="print">
         {% include('style-print.css') %}
     </style>
-    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="{{ site.name }}">
+
 </head>
 
 <body>

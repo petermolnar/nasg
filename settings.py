@@ -176,7 +176,9 @@ filenames = struct({
     'md': 'index.md',
     'txt': 'index.txt',
     'html': 'index.html',
-    'gopher': 'gophermap'
+    'gopher': 'gophermap',
+    'oembed_xml': 'oembed.xml',
+    'oembed_json': 'oembed.json'
 })
 
 photo = struct({

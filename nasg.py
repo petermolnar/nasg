@@ -998,11 +998,13 @@ class Singular(MarkdownDoc):
             'site': settings.site,
             'menu': settings.menu,
             'meta': settings.meta,
+            'fnames': settings.filenames
         }
         writepath(
             self.renderfile,
             J2.get_template(self.template).render(v)
         )
+        del(v)
 
         g = {
             'post': self.jsonld,
@@ -1013,26 +1015,26 @@ class Singular(MarkdownDoc):
             self.gopherfile,
             J2.get_template(self.gophertemplate).render(g)
         )
+        del(g)
 
         j = settings.site.copy()
         j.update({
             "mainEntity": self.jsonld
         })
         writepath(
-            os.path.join(self.renderdir, 'index.json'),
+            os.path.join(self.renderdir, settings.filenames.json),
             json.dumps(j, indent=4, ensure_ascii=False)
         )
         del(j)
         # oembed
         writepath(
-            os.path.join(self.renderdir, 'oembed.json'),
+            os.path.join(self.renderdir, settings.filenames.oembed_json),
             json.dumps(self.oembed_json, indent=4, ensure_ascii=False)
         )
         writepath(
-            os.path.join(self.renderdir, 'oembed.xml'),
+            os.path.join(self.renderdir, settings.filenames.oembed_xml),
             self.oembed_xml
         )
-
 
 class Home(Singular):
     def __init__(self, fpath):
@@ -1078,9 +1080,6 @@ class Home(Singular):
             )
             lines.append(line)
         lines.append('')
-        #lines.append('')
-        #lines = lines + list(settings.bye.split('\n'))
-        #lines.append('')
         writepath(
             self.renderfile.replace(
                 settings.filenames.html,
@@ -1099,7 +1098,8 @@ class Home(Singular):
             'site': settings.site,
             'menu': settings.menu,
             'meta': settings.meta,
-            'posts': self.posts
+            'posts': self.posts,
+            'fnames': settings.filenames
         })
         writepath(self.renderfile, r)
         await self.render_gopher()
@@ -1864,6 +1864,7 @@ class Category(dict):
                 'years': self.years,
             },
             'posts': posts,
+            'fnames': settings.filenames
         }
 
     def indexfpath(self, subpath=None, fname=settings.filenames.html):
@@ -1880,14 +1881,15 @@ class Category(dict):
             )
 
     async def render_feed(self, xmlformat):
+        if 'json' == xmlformat:
+            await self.render_json()
+            return
+
         logger.info(
             'rendering category "%s" %s feed',
             self.name,
             xmlformat
         )
-        if 'json' == xmlformat:
-            await self.render_json()
-            return
 
         start = 0
         end = int(settings.pagination)

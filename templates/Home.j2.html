@@ -7,10 +7,10 @@
     <meta name="author" content="{{ site.author.name }} <{{ site.author.email }}>" />
     <meta name="description" content="{{ post.description|e }}" />
     <link rel="canonical" href="{{ site.url }}" />
-    <link rel="alternate" type="application/rss+xml" title="{{ site.title }} RSS feed" href="{{ feed }}" />
-    <link rel="alternate" type="application/atom+xml" title="{{ site.title }} ATOM feed" href="{{ feed }}atom.xml" />
-    <link rel="alternate" type="application/json" title="{{ site.title }} JSON feed" href="{{ feed }}index.json" />
-    <link rel="feed" title="{{ site.title}} feed" href="http://www.unmung.com/feed?feed={{ feed|urlencode }}" />
+    <link rel="alternate" type="application/rss+xml" title="{{ site.name }} RSS feed" href="{{ feed }}{{ fnames.rss }}" />
+    <link rel="alternate" type="application/atom+xml" title="{{ site.name }} ATOM feed" href="{{ feed }}{{ fnames.atom }}" />
+    <link rel="alternate" type="application/json" title="{{ site.name }} JSON feed" href="{{ feed }}{{ fnames.json }}" />
+    <link rel="feed" title="{{ site.name }} feed" href="http://www.unmung.com/feed?feed={{ feed|urlencode }}" />
 {% endblock %}
 
 {% block content %}
