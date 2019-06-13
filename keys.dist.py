@@ -5,6 +5,5 @@ webmentionio = {
 }
 
 telegraph = {
-        'token': 'https://telegraph.p3k.io/ -> select site under avatar -> settings gear icon -> API key'
+    'token': 'https://telegraph.p3k.io/ -> select site under avatar -> settings gear icon -> API key'
 }
-

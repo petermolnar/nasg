@@ -41,15 +41,6 @@ From: %s
     header('HTTP/1.1 202 Accepted');
     exit(0);
 }
-elseif(isset($payload['secret']) && $payload['secret'] == '{{ zapier.secret }}' ) {
-    $logfile = sprintf('%s/zapier.log', $_SERVER['HOME']);
-    $msg = sprintf("%s %s %s\n", $payload['source'], $payload['network'], $payload['url']);
-    file_put_contents($logfile, $msg, FILE_APPEND | LOCK_EX);
-    _syslog('[webhook] accepted from zapier');
-    header('HTTP/1.1 202 Accepted');
-    exit(0);
-}
-
 
 header('HTTP/1.1 400 Bad Request');
 _syslog('[webhook] bad request:' . $raw);

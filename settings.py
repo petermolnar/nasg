@@ -49,7 +49,6 @@ site = struct({
     "image": "https://petermolnar.net/favicon.ico",
     "license": "https://spdx.org/licenses/%s.html" % (licence['_default']),
     "sameAs": [
-        "dat://7efecc3c33baf69d6fecf801e15ede92b369f4944f766489b156263119220939"
     ],
     "author": {
         "@context": "http://schema.org",
@@ -108,14 +107,6 @@ site = struct({
             "description": "Paypal",
             "name": "paypal",
             "url": "https://paypal.me/petermolnar/",
-            "recipient": author
-        },
-        {
-            "@context": "http://schema.org",
-            "@type": "DonateAction",
-            "description": "Cash App",
-            "name": "cash",
-            "url": "https://cash.app/%C2%A3pmlnr",
             "recipient": author
         }
     ]
@@ -181,6 +172,12 @@ filenames = struct({
     'oembed_json': 'oembed.json'
 })
 
+datignore = [
+    '.git',
+    '.dat',
+    '**.php'
+]
+
 photo = struct({
     're_author': re.compile(r'(?:P[eé]ter Moln[aá]r)|(?:Moln[aá]r P[eé]ter)|(?:petermolnar\.(?:eu|net))'),
     'default': 720,
@@ -209,12 +206,13 @@ if not os.path.isdir(tmpdir):
 
 _parser = argparse.ArgumentParser(description='Parameters for NASG')
 _booleanparams = {
-    'regenerate': 'force downsizing images',
-    'force': 'force rendering HTML',
-    'nosync': 'skip sync to live server',
+    'regenerate': 'force (re)downsizing images',
+    'force': 'force (re)rendering HTML',
     'debug': 'set logging to debug level',
     'quiet': 'show only errors',
-    'noping': 'don\'t send webmentions but save a dummy that it was done'
+    'offline': 'offline mode - no syncing, no querying services, etc.',
+    'noping': 'make dummy webmention entries and don\'t really send them',
+    'noservices': 'skip querying any service but do sync the website'
 }
 
 for k, v in _booleanparams.items():

@@ -931,29 +931,21 @@ class Singular(MarkdownDoc):
     def oembed_json(self):
         r = {
           "version": "1.0",
-          "url": self.url,
           "provider_name": settings.site.name,
           "provider_url": settings.site.url,
           "author_name": settings.author.name,
           "author_url": settings.author.url,
           "title": self.title,
-          "type": "link",
-          "html": self.html_content,
+          "type": "link"
         }
-        img = None
         if self.is_photo:
-            img = self.photo
-        elif not self.is_photo and len(self.images):
-            img = list(self.images.values())[0]
-        if img:
             r.update({
-                "type": "rich",
-                "thumbnail_url": img.jsonld.thumbnail.url,
-                "thumbnail_width": img.jsonld.thumbnail.width,
-                "thumbnail_height": img.jsonld.thumbnail.height
+                "type": "photo",
+                "url": self.photo.jsonld.thumbnail.url,
+                "width": self.photo.jsonld.thumbnail.width,
+                "height": self.photo.jsonld.thumbnail.height
             })
         return r
-
 
     async def copyfiles(self):
         exclude = [
@@ -1027,14 +1019,14 @@ class Singular(MarkdownDoc):
         )
         del(j)
         # oembed
-        writepath(
-            os.path.join(self.renderdir, settings.filenames.oembed_json),
-            json.dumps(self.oembed_json, indent=4, ensure_ascii=False)
-        )
-        writepath(
-            os.path.join(self.renderdir, settings.filenames.oembed_xml),
-            self.oembed_xml
-        )
+        # writepath(
+            # os.path.join(self.renderdir, settings.filenames.oembed_json),
+            # json.dumps(self.oembed_json, indent=4, ensure_ascii=False)
+        # )
+        # writepath(
+            # os.path.join(self.renderdir, settings.filenames.oembed_xml),
+            # self.oembed_xml
+        # )
 
 class Home(Singular):
     def __init__(self, fpath):
@@ -1682,8 +1674,7 @@ class WebhookPHP(PHPFile):
     async def _render(self):
         r = J2.get_template(self.templatefile).render({
             'author': settings.author,
-            'webmentionio': keys.webmentionio,
-            'zapier': keys.zapier,
+            'webmentionio': keys.webmentionio
         })
         writepath(self.renderfile, r)
 
@@ -2264,7 +2255,7 @@ def dat():
             if not os.path.isdir(p):
                 os.makedirs(p)
             p = os.path.join(settings.paths.build, '.well-known', 'dat')
-            if not os.path.exists(p):
+            if not os.path.exists(p) or settings.args.get('force'):
                 writepath(p, "%s\nTTL=3600" % (url))
 
 
@@ -2273,7 +2264,7 @@ def make():
     last = 0
 
     # this needs to be before collecting the 'content' itself
-    if not settings.args.get('nosync'):
+    if not settings.args.get('offline') and not settings.args.get('noservices'):
         incoming = WebmentionIO()
         incoming.run()
 
@@ -2373,12 +2364,12 @@ def make():
         cp(e, t)
 
     # dat data
-    dat()
+    #dat()
 
     end = int(round(time.time() * 1000))
     logger.info('process took %d ms' % (end - start))
 
-    if not settings.args.get('nosync'):
+    if not settings.args.get('offline'):
         # upload site
         try:
             logger.info('starting syncing')
@@ -2393,7 +2384,7 @@ def make():
         except Exception as e:
             logger.error('syncing failed: %s', e)
 
-    if not settings.args.get('nosync'):
+    if not settings.args.get('offline') and not settings.args.get('noservices'):
         logger.info('sending webmentions')
         for wm in send:
             queue.put(wm.send())
