@@ -9,7 +9,11 @@ a {
 
 a:hover {
   color: #014384;
-  border-bottom: 1px solid #014384;
+  border-bottom-color: #014384;
+}
+
+.header a:hover {
+  border-bottom-color: #eee;
 }
 
 code,
@@ -42,14 +46,14 @@ pre > code::before {
   color: #222;
 }
 
-body > header,
-body > footer{
+.header,
+.footer {
   background-color: #333;
   color: #ccc;
 }
 
-body > header a,
-body > footer a,
+.header a,
+.footer a,
 .theme input + label {
   color: #71B3F4;
 }
@@ -58,14 +62,12 @@ input {
   background-color: #222;
 }
 
-body > footer a:hover {
+.footer a:hover {
   color: #fff;
   border-bottom: 1px solid #fff;
 }      
 
-.h-feed aside a,
-.h-feed article a,
-body > nav > ul > li a {
+.pagination a {
   border-bottom: 1px solid #3173b4;
 }
 
@@ -75,4 +77,4 @@ body > nav > ul > li a {
 .h-feed article a:hover,
 body > nav > ul > li a:hover {
   border-bottom: 1px solid #014384;
-}
+}    

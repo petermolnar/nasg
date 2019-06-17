@@ -4,12 +4,12 @@ body {
 }
 
 a {
-  color: #B77902;
+  color: #3C20F1;
 }
 
 a:hover {
-  color: #D79922;
-  border-bottom: 1px solid #D79922;
+  color: #1C00D1;
+  border-bottom: 1px solid #1C00D1;
 }
 
 code,
@@ -42,16 +42,21 @@ pre > code::before {
   color: #222;
 }
 
-body > header,
-body > footer{
+.header,
+.footer{
   background-color: #D79922;
   color: #F13C20;
 }
 
-body > header a,
-body > footer a,
-.theme input + label {
-  color: #EFE2BA;
+.footer a:hover,
+.header a:hover {
+  color: #F13C20;
+  border-bottom-color: #F13C20;
+}
+
+.header a.active {
+  color: #F13C20;
+  border-bottom-color: #F13C20;
 }
 
 input {
@@ -59,21 +64,6 @@ input {
   color: #F13C20;
 }
 
-body > footer a:hover {
-  color: #fff;
-  border-bottom: 1px solid #fff;
-}
-
-.h-feed aside a,
-.h-feed article a,
-body > nav > ul > li a {
+.pagination a {
   border-bottom: 1px solid #F13C20;
 }
-
-.comments .u-url:hover,
-.footnotes a:hover,
-.h-feed aside a:hover,
-.h-feed article a:hover,
-body > nav > ul > li a:hover {
-  border-bottom: 1px solid #F13C20;
-}    

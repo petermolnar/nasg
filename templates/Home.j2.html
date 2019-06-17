@@ -15,14 +15,14 @@
 
 {% block content %}
 <main class="h-feed hatom">
-    <aside>
+    <aside class="intro">
         <div>
             {{ post.text }}
         </div>
     </aside>
 
     {% for category, post in posts %}
-    <section>
+    <section class="section home">
         <h2>in:
             <a href="{{ category.url|relurl(baseurl) }}">
                 <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>

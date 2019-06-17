@@ -39,39 +39,35 @@
     or ( category is defined and category.name == name )%}class="active"{% endif %}
 {% endmacro %}
 
-<header>
-    <section>
-        <nav>
-            <ul>
-            {% for key, data in menu.items() %}
-                <li>
-                    <a title="{{ data.text }}" href="{{ data.url|relurl(baseurl) }}" {{ activemenu(key) }} >
-                        <svg width="16" height="16">
-                            <use xlink:href="#icon-{{ key }}" />
-                        </svg>
-                        {{ data.text }}
-                    </a>
-                </li>
-            {% endfor %}
-            </ul>
-        </nav>
+<header class="header">
+    <ul>
+    {% for key, data in menu.items() %}
+        <li>
+            <a title="{{ data.text }}" href="{{ data.url|relurl(baseurl) }}" {{ activemenu(key) }} >
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-{{ key }}" />
+                </svg>
+                {{ data.text }}
+            </a>
+        </li>
+    {% endfor %}
+    </ul>
 
-        <div id="header-forms">
-            {% for action in site.potentialAction %}
-            {% if 'SearchAction' == action['@type'] %}
-            <form id="search" role="search" method="get" action="{{ action.url|relurl(baseurl) }}">
-                <label for="qsub">
-                    <input type="submit" value="search" id="qsub" name="qsub" />
-                    <svg width="16" height="16">
-                        <use xlink:href="#icon-search"></use>
-                    </svg>
-                </label>
-                <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
-            </form>
-            {% endif %}
-            {% endfor %}
-        </div>
-    </section>
+    <div id="header-forms">
+        {% for action in site.potentialAction %}
+        {% if 'SearchAction' == action['@type'] %}
+        <form id="search" role="search" method="get" action="{{ action.url|relurl(baseurl) }}">
+            <label for="qsub">
+                <input type="submit" value="search" id="qsub" name="qsub" />
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-search"></use>
+                </svg>
+            </label>
+            <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
+        </form>
+        {% endif %}
+        {% endfor %}
+    </div>
 </header>
 
 {% block content %}
@@ -80,8 +76,7 @@
 {% block pagination %}
 {% endblock %}
 
-<footer class="p-author h-card vcard">
-    <section>
+<footer class="footer p-author h-card vcard">
         <p>
             <a href="https://creativecommons.org/">CC</a>,
             1999-2019,
@@ -94,50 +89,46 @@
                 {{ site.author.email }}
             </a>
         </p>
-        <nav>
-            <ul>
-                {% for action in site.potentialAction %}
-                {% if 'FollowAction' == action['@type'] %}
-                <li>
-                    <a href="{{ action.url }}">
-                        <svg width="16" height="16"><use xlink:href="#icon-{{ action['@type'] }}" /></svg>
-                        {{ action.name }}
-                    </a>
-                </li>
+        <ul>
+            {% for action in site.potentialAction %}
+            {% if 'FollowAction' == action['@type'] %}
+            <li>
+                <a href="{{ action.url }}">
+                    <svg width="16" height="16"><use xlink:href="#icon-{{ action['@type'] }}" /></svg>
+                    {{ action.name }}
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            <li>
+                <a href="{{ site.author.follows }}">
+                    <svg width="16" height="16"><use xlink:href="#icon-following" /></svg>
+                    followings
+                </a>
+            </li>
+            {% for url in site.author.sameAs %}
+            <li>
+                {% if 'cv.html' in url %}
+                <a href="{{ url }}" class="u-url">
+                    <svg width="16" height="16"><use xlink:href="#icon-resume" /></svg>
+                    resume
+                </a>
+                {% elif 'github' in url %}
+                <a rel="me" href="{{ url }}">
+                    <svg width="16" height="16"><use xlink:href="#icon-github" /></svg>
+                    github
+                </a>
                 {% endif %}
-                {% endfor %}
-                <li>
-                    <a href="{{ site.author.follows }}">
-                        <svg width="16" height="16"><use xlink:href="#icon-following" /></svg>
-                        followings
-                    </a>
-                </li>
-                {% for url in site.author.sameAs %}
-                <li>
-                    {% if 'cv.html' in url %}
-                    <a href="{{ url }}" class="u-url">
-                        <svg width="16" height="16"><use xlink:href="#icon-resume" /></svg>
-                        resume
-                    </a>
-                    {% elif 'github' in url %}
-                    <a rel="me" href="{{ url }}">
-                        <svg width="16" height="16"><use xlink:href="#icon-github" /></svg>
-                        github
-                    </a>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-        </nav>
-        <nav>
+            </li>
+            {% endfor %}
+        </ul>
+        <p>
             <a href="https://xn--sr8hvo.ws/%F0%9F%87%BB%F0%9F%87%AE%F0%9F%93%A2/previous">←</a>
                 Member of <a href="https://xn--sr8hvo.ws">IndieWeb Webring</a>
             <a href="https://xn--sr8hvo.ws/%F0%9F%87%BB%F0%9F%87%AE%F0%9F%93%A2/next">→</a>
-        </nav>
-    </section>
-    <section class="tip">
-        <span>Leave me a tip! </span>
-        <nav>
+        </p>
+        <div class="tip">
+            <span>Leave me a tip! </span>
             <ul>
                 {% for action in site.potentialAction %}
                 {% if 'DonateAction' == action['@type'] %}
@@ -150,8 +141,9 @@
                 {% endif %}
                 {% endfor %}
             </ul>
-        </nav>
-    </section>
+        </div>
+
+
 <!--
     <section>
         <nav>

@@ -60,9 +60,9 @@
 {% endblock %}
 
 {% block content %}
-<main>
+<main class="main">
     <article class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
-        <header>
+        <header class="entry-header">
             <h1 class="p-name entry-title">
                 {% if post.mentions %}
                 <span>
@@ -83,45 +83,45 @@
                 {% endif %}
             </h1>
 
-            <p>
-                <a rel="license" href="{{ post.license }}" class="u-license">
-                    {{ post.license | extractlicense }}
-                </a>
-                by
+            <p>Licenced under
+                <a rel="license" href="{{ post.license }}" class="u-license">{{ post.license | extractlicense }}</a>,
+                created by
                 <span class="p-author h-card vcard">
                     <img class="u-photo photo" src="{{ post.author.image|relurl(baseurl) }}" alt="" />
                     <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
-                    (<a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>)
+                    (<a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>),
                 </span>
-                at
+                published at
                 <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
                 <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
-                <br />
+                to canonical URL
                 <a class="u-url u-uuid bookmark" href="{{ post.url }}">{{ post.url }}</a>
                 {% if post.keywords|length > 0 %}
-                    <br />
+                    with keywords
                     {% for keyword in post.keywords %}
                     #<span class="p-category">{{ keyword }}</span>{% if not loop.last %} {% endif %}
                     {% endfor %}
                 {% endif %}
                 {% if post['@type'] == 'Photograph' %}
                     {% if post.image[0].locationCreated %}
-                    <br />
-                    Location:
+                    from the location
                     <a class="h-geo" href="https://www.openstreetmap.org/#map=14/{{ post.image[0].locationCreated.geo.longitude }}/{{ post.image[0].locationCreated.geo.latitude }}">
                         <span class="p-longitude">{{ post.image[0].locationCreated.geo.longitude }}</span>,
                         <span class="p-latitude">{{ post.image[0].locationCreated.geo.latitude }}</span>
                     </a>
                     {% endif %}
                 {% endif %}
-                {% if post.sameAs|length %}
-                <br />
-                    Syndicated to:
-                    {% for url in post.sameAs %}
-                        <a class="u-syndication" href="{{ url }}">{{ url }}</a>{% if not loop.last and post.sameAs|length >1 %}, {% endif %}
-                    {% endfor %}
-                {% endif %}
             </p>
+            {% if post.sameAs|length %}
+            <p>
+                This post was also syndicated to:
+                <ul>
+                {% for url in post.sameAs %}
+                    <li><a class="u-syndication" href="{{ url }}">{{ url }}</a></li>
+                {% endfor %}
+                </ul>
+            </p>
+            {% endif %}
 
 {% if post.subjectOf %}
             <p class="h-event vevent">

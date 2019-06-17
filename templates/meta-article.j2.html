@@ -1,5 +1,5 @@
 <article class="h-entry hentry" lang="{{ post.inLanguage }}">
-    <header>
+    <header class="entry-header">
         <h3 class="p-name entry-title">
         {% if post.mentions %}
             <span>
@@ -38,7 +38,7 @@
     </div>
     {% endif %}
 
-    <footer aria-hidden="true" hidden="hidden">
+    <footer class="entry-footer" aria-hidden="true" hidden="hidden">
         Published at
         <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
         <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
