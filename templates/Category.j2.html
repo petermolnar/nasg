@@ -12,7 +12,7 @@
 
 {% block pagination %}
 {% if category.paginated %}
-<div class="pagination">
+<nav class="pagination">
     <ol>
         {% for y, url in category.years.items() %}
         {% if (y == category.year) or (not category.year and loop.first) %}
@@ -30,12 +30,12 @@
         {% endif %}
         {% endfor %}
     </ol>
-</div>
+</nav>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<main class="h-feed hatom">
+<main id="main" class="h-feed hatom">
 
 {% set year = [0] %}
 {% for post in posts %}

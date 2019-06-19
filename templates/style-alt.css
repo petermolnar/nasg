@@ -12,7 +12,7 @@ a:hover {
   border-bottom-color: #014384;
 }
 
-.header a:hover {
+#header a:hover {
   border-bottom-color: #eee;
 }
 
@@ -46,15 +46,15 @@ pre > code::before {
   color: #222;
 }
 
-.header,
-.footer {
+#header,
+#footer {
   background-color: #333;
   color: #ccc;
 }
 
-.header a,
-.footer a,
-.theme input + label {
+#header a,
+#footer a,
+#theme input + label {
   color: #71B3F4;
 }
 
@@ -62,19 +62,17 @@ input {
   background-color: #222;
 }
 
-.footer a:hover {
+#footer a:hover {
   color: #fff;
   border-bottom: 1px solid #fff;
 }      
 
-.pagination a {
+#pagination a {
   border-bottom: 1px solid #3173b4;
 }
 
-.comments .u-url:hover,
-.footnotes a:hover,
-.h-feed aside a:hover,
-.h-feed article a:hover,
-body > nav > ul > li a:hover {
+#comments .u-url:hover,
+#main a:hover,
+#pagination a:hover {
   border-bottom: 1px solid #014384;
-}    
+}        

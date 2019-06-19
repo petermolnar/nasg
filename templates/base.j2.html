@@ -39,34 +39,38 @@
     or ( category is defined and category.name == name )%}class="active"{% endif %}
 {% endmacro %}
 
-<header class="header">
-    <ul>
-    {% for key, data in menu.items() %}
-        <li>
-            <a title="{{ data.text }}" href="{{ data.url|relurl(baseurl) }}" {{ activemenu(key) }} >
-                <svg width="16" height="16">
-                    <use xlink:href="#icon-{{ key }}" />
-                </svg>
-                {{ data.text }}
-            </a>
-        </li>
-    {% endfor %}
-    </ul>
+<header id="header">
+    <div>
+        <nav>
+            <ul>
+            {% for key, data in menu.items() %}
+                <li>
+                    <a title="{{ data.text }}" href="{{ data.url|relurl(baseurl) }}" {{ activemenu(key) }} >
+                        <svg width="16" height="16">
+                            <use xlink:href="#icon-{{ key }}" />
+                        </svg>
+                        {{ data.text }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+        </nav>
 
-    <div id="header-forms">
-        {% for action in site.potentialAction %}
-        {% if 'SearchAction' == action['@type'] %}
-        <form id="search" role="search" method="get" action="{{ action.url|relurl(baseurl) }}">
-            <label for="qsub">
-                <input type="submit" value="search" id="qsub" name="qsub" />
-                <svg width="16" height="16">
-                    <use xlink:href="#icon-search"></use>
-                </svg>
-            </label>
-            <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
-        </form>
-        {% endif %}
-        {% endfor %}
+        <div id="header-forms">
+            {% for action in site.potentialAction %}
+            {% if 'SearchAction' == action['@type'] %}
+            <form id="search" role="search" method="get" action="{{ action.url|relurl(baseurl) }}">
+                <label for="qsub">
+                    <input type="submit" value="search" id="qsub" name="qsub" />
+                    <svg width="16" height="16">
+                        <use xlink:href="#icon-search"></use>
+                    </svg>
+                </label>
+                <input type="search" placeholder="search..." value="" name="q" id="q" title="Search for:" />
+            </form>
+            {% endif %}
+            {% endfor %}
+        </div>
     </div>
 </header>
 
@@ -76,7 +80,8 @@
 {% block pagination %}
 {% endblock %}
 
-<footer class="footer p-author h-card vcard">
+<footer id="footer" class="p-author h-card vcard">
+    <div>
         <p>
             <a href="https://creativecommons.org/">CC</a>,
             1999-2019,
@@ -107,19 +112,21 @@
                 </a>
             </li>
             {% for url in site.author.sameAs %}
+            {% if 'cv.html' in url %}
             <li>
-                {% if 'cv.html' in url %}
                 <a href="{{ url }}" class="u-url">
                     <svg width="16" height="16"><use xlink:href="#icon-resume" /></svg>
                     resume
                 </a>
-                {% elif 'github' in url %}
+            </li>
+            {% elif 'github' in url %}
+            <li>
                 <a rel="me" href="{{ url }}">
                     <svg width="16" height="16"><use xlink:href="#icon-github" /></svg>
                     github
                 </a>
-                {% endif %}
             </li>
+            {% endif %}
             {% endfor %}
         </ul>
         <p>
@@ -142,51 +149,7 @@
                 {% endfor %}
             </ul>
         </div>
-
-
-<!--
-    <section>
-        <nav>
-            <ul>
-                <li>
-                    <a href="https://indieweb.org/">
-                        <svg width="80" height="15">
-                            <use xlink:href="#button-indieweb"/>
-                        </svg>
-                    </a>
-                </li>
-                <li>
-                    <a href="http://microformats.org/">
-                        <svg width="80" height="15">
-                            <use xlink:href="#button-microformats"/>
-                        </svg>
-                    </a>
-                </li>
-                <li>
-                    <a href="https://www.w3.org/TR/webmention/">
-                        <svg width="80" height="15">
-                            <use xlink:href="#button-webmention"/>
-                        </svg>
-                    </a>
-                </li>
-{% block cc %}
-                <li>
-                    <a href="{{ site.license }}">
-                        <svg width="80" height="15">
-                            <use xlink:href="#button-cc"/>
-                        </svg>
-                    </a>
-                </li>
-{% endblock %}
-                <li>
-                    <svg width="80" height="15">
-                        <use xlink:href="#button-nojs"/>
-                    </svg>
-                </li>
-            </ul>
-        </nav>
-    </section>
--->
+    </div>
 </footer>
 
 <script>

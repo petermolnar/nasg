@@ -24,18 +24,18 @@
     </header>
 
     {% if post.description|length %}
-    <div class="e-summary entry-summary">
+    <section class="e-summary entry-summary">
         {{ post.description|relurl(baseurl) }}
         <span class="more">
             <a href="{{ post.url|relurl(baseurl) }}">
             {% if post.inLanguage == 'hu' %}Tovább »{% else %}Continue »{% endif %}
             </a>
         </span>
-    </div>
+    </section>
     {% else %}
-    <div class="e-content entry-content">
+    <section class="e-content entry-content">
         {{ post.text|relurl(baseurl) }}
-    </div>
+    </section>
     {% endif %}
 
     <footer class="entry-footer" aria-hidden="true" hidden="hidden">

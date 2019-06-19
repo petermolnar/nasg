@@ -58,7 +58,7 @@ function autoTheme(e) {
 
 function doTheme() {
     var themeform = document.createElement('form');
-    themeform.className = "theme";
+    themeform.id = "theme";
     themeform.innerHTML='<svg width="16" height="16"><use xlink:href="#icon-contrast"></use></svg>';
     theme_container.insertBefore(themeform, theme_insbefore);
     var schemes = ["dark", "light"];

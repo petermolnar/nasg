@@ -60,7 +60,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="main">
+<main id="main">
     <article class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
         <header class="entry-header">
             <h1 class="p-name entry-title">
@@ -145,7 +145,7 @@
         </header>
 
         {% if post.review %}
-        <div class="h-review hreview">
+        <section class="h-review hreview">
             <strong>Review summary of: <a href="{{ post.review.url }}" class="p-name u-url p-item h-product item fn url">{{ post.review.name }}</a></strong>
             <p>
                 By
@@ -162,18 +162,18 @@
                 </span>
             </p>
             <p class="p-summary summary">{{ post.review.text }}</p>
-        </div>
+        </section>
         {% endif %}
 
         {% if post.description|length %}
-        <div class="e-summary entry-summary">
+        <section class="e-summary entry-summary">
             {{ post.description|relurl(baseurl) }}
-        </div>
+        </section>
         {% endif %}
 
-        <div class="e-content entry-content">
+        <section class="e-content entry-content">
             {{ post.text|relurl(baseurl) }}
-        </div>
+        </section>
 
     {% if 'WebPage' != post['@type'] %}
         <section class="syndication">
