@@ -8,6 +8,10 @@
   line-height: 1.5em;
 }
 
+article, aside, footer, header, nav, section {
+  display:block;
+}
+
 body {
   color: #eee;
   background-color: #222;
@@ -262,21 +266,28 @@ li p {
   border-bottom-style: solid;
 }
 
+#header {
+  padding: 0.6em 1em;
+}
+
 #header,
 #footer {
   background-color: #111;
-  
-  padding: 0.6em 1em;
 }
 
 #footer {
   text-align: center;
+  padding: 1em;
 }
 
 #header > *,
 #footer > * {
   max-width: 54em;
   margin: 0 auto;
+}
+
+.tip {
+  margin: 1em 0 0 0;
 }
 
 #pagination,
@@ -330,7 +341,7 @@ li p {
     display: block;
     float:unset;
   }
-    
+
   #search {
     margin-top: 0.6em;
   }
@@ -345,4 +356,4 @@ li p {
     display: block;
     margin: 0 auto;
   }
-}            
+}    

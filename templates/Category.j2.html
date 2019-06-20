@@ -12,7 +12,7 @@
 
 {% block pagination %}
 {% if category.paginated %}
-<nav class="pagination">
+<section id="pagination">
     <ol>
         {% for y, url in category.years.items() %}
         {% if (y == category.year) or (not category.year and loop.first) %}
@@ -30,7 +30,7 @@
         {% endif %}
         {% endfor %}
     </ol>
-</nav>
+</section>
 {% endif %}
 {% endblock %}
 
