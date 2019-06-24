@@ -24,6 +24,7 @@ pagination = 42
 notinfeed = ['note']
 flat = ['article', 'journal']
 displaydate = 'YYYY-MM-DD HH:mm'
+mementostartime = 1561192582
 
 licence = struct({
     'article': 'CC-BY-4.0',
@@ -169,7 +170,9 @@ filenames = struct({
     'html': 'index.html',
     'gopher': 'gophermap',
     'oembed_xml': 'oembed.xml',
-    'oembed_json': 'oembed.json'
+    'oembed_json': 'oembed.json',
+    'memento': 'memento.html',
+    'sitemap': 'sitemap.xml'
 })
 
 datignore = [
@@ -212,7 +215,8 @@ _booleanparams = {
     'quiet': 'show only errors',
     'offline': 'offline mode - no syncing, no querying services, etc.',
     'noping': 'make dummy webmention entries and don\'t really send them',
-    'noservices': 'skip querying any service but do sync the website'
+    'noservices': 'skip querying any service but do sync the website',
+    'memento': 'try to fetch mementos from archive.org'
 }
 
 for k, v in _booleanparams.items():

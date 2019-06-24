@@ -16,6 +16,7 @@ import json
 import queue
 import base64
 from shutil import copy2 as cp
+from shutil import rmtree
 from math import ceil
 from urllib.parse import urlparse
 from collections import OrderedDict, namedtuple
@@ -438,9 +439,46 @@ class Gone(object):
         self.mtime = mtime(fpath)
 
     @property
+    def renderdir(self):
+        return os.path.join(
+            settings.paths.get('build'),
+            self.source
+        )
+
+    @property
+    def renderfile(self):
+        return os.path.join(
+            self.renderdir,
+            settings.filenames.html
+        )
+
+    @property
     def source(self):
         source, fext = os.path.splitext(os.path.basename(self.fpath))
         return source
+
+    @property
+    def template(self):
+        return "%s.j2.html" % (self.__class__.__name__)
+
+    @property
+    def tmplvars(self):
+        return {
+            'source': self.source
+        }
+
+    async def render(self):
+        if os.path.exists(self.renderfile):
+            rmtree(os.path.dirname(self.renderfile))
+        #logger.info(
+            #'rendering %s to %s',
+            #self.__class__.__name__,
+            #self.source
+        #)
+        #r = J2.get_template(self.template).render(
+            #self.tmplvars
+        #)
+        #writepath(self.renderfile, r)
 
 
 class Redirect(Gone):
@@ -455,6 +493,12 @@ class Redirect(Gone):
             target = f.read().strip()
         return target
 
+    @property
+    def tmplvars(self):
+        return {
+            'source': self.source,
+            'target': self.target
+        }
 
 class Singular(MarkdownDoc):
     """
@@ -878,6 +922,20 @@ class Singular(MarkdownDoc):
         )
 
     @property
+    def mementofile(self):
+        return os.path.join(
+            os.path.dirname(self.fpath),
+            settings.filenames.memento
+        )
+
+    @property
+    def has_memento(self):
+        if os.path.exists(self.mementofile):
+            if os.path.getsize(self.mementofile) > 0:
+                return True
+        return False
+
+    @property
     def gopherfile(self):
         return os.path.join(
             self.renderdir,
@@ -980,9 +1038,100 @@ class Singular(MarkdownDoc):
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
 
+    async def make_memento(self):
+        cp(self.renderfile, self.mementofile)
+        return
+
+    async def wayback_save(self):
+        requests.get('http://web.archive.org/save/%s' % (self.url))
+
+    def try_memento(self, url):
+        try:
+            params = {
+                'url': url,
+                'timestamp': '%s' % (self.published.format('YYYY-MM-DD'))
+            }
+            waybackmachine = 'http://archive.org/wayback/available'
+            snapshots = requests.get(waybackmachine, params=params).json()
+            # no archived version...
+            if not len(snapshots.get('archived_snapshots', None)):
+                logger.warning('no snapshot found for %s', url)
+                return None
+            else:
+                logger.info('snapshot FOUND for %s', url)
+
+            snapshot = snapshots.get('archived_snapshots').get('closest')
+            logger.info('getting %s', snapshot['url'])
+            original = requests.get(snapshot['url'])
+            return original.text
+        except Exception as e:
+            logger.warning('wayback memento failed for %s: %s', url, e)
+            return None
+
+
+    def waybackmemento(self):
+        if self.has_memento:
+            return
+
+        # this commented out part is extremely specific to my old site
+        # but it helps anyone who had multiple domains and/or taxonomy
+        # structures
+        # formerdomains = [
+            # 'cadeyrn.webporfolio.hu',
+            # 'blog.petermolnar.eu',
+            # 'petermolnar.eu',
+            # 'petermolnar.net',
+        # ]
+
+        # formercategories = [
+            # 'linux-tech-coding',
+            # 'diy-do-it-yourself',
+            # 'photoblog',
+            # 'it',
+            # 'sysadmin-blog',
+            # 'sysadmin',
+            # 'fotography',
+            # 'blips',
+            # 'blog',
+            # 'r'
+        # ]
+
+        # for domain in formerdomains:
+            # maybe = None
+            # url = url = 'http://%s/%s/' % (domain, self.name)
+            # maybe = self.try_memento(url)
+            # if maybe:
+                # break
+            # for formercategory in formercategories:
+                # url = 'http://%s/%s/%s/' % (domain, formercategory, self.name)
+                # maybe = self.try_memento(url)
+                # if maybe:
+                    # break
+            # if maybe:
+                # break
+
+        maybe = self.try_memento(self.url)
+        if maybe:
+            with open(self.mementofile, 'wt') as f:
+                logger.info(
+                    'saving memento for %s to %s',
+                    self.name,
+                    self.mementofile
+                )
+                f.write(maybe)
+
+
     async def render(self):
+        if settings.args.get('memento'):
+            self.waybackmemento()
+
         if self.exists:
             return
+
+        memento = False
+        if self.has_memento:
+            memento = "%s%s" % (self.url, settings.filenames.memento)
+
         logger.info("rendering %s", self.name)
         v = {
             'baseurl': self.url,
@@ -990,7 +1139,8 @@ class Singular(MarkdownDoc):
             'site': settings.site,
             'menu': settings.menu,
             'meta': settings.meta,
-            'fnames': settings.filenames
+            'fnames': settings.filenames,
+            'memento': memento
         }
         writepath(
             self.renderfile,
@@ -1018,6 +1168,10 @@ class Singular(MarkdownDoc):
             json.dumps(j, indent=4, ensure_ascii=False)
         )
         del(j)
+        if not os.path.exists(self.mementofile):
+            if self.published.timestamp >= settings.mementostartime:
+                copy(self.renderfile, self.mementofile)
+
         # oembed
         # writepath(
             # os.path.join(self.renderdir, settings.filenames.oembed_json),
@@ -1796,7 +1950,7 @@ class Category(dict):
     def feedpath(self, fname):
         return os.path.join(
             self.dpath,
-            settings.paths.category,
+            settings.paths.feed,
             fname
         )
 
@@ -2099,9 +2253,35 @@ class Sitemap(dict):
 
     @property
     def renderfile(self):
-        return os.path.join(settings.paths.get('build'), 'sitemap.txt')
+        return os.path.join(
+            settings.paths.get('build'),
+            settings.filenames.sitemap
+        )
 
     async def render(self):
+        if not len(self):
+            return
+
+        if self.mtime >= sorted(self.values())[-1]:
+            return
+
+        sitemap = etree.Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+        xmldoc = etree.ElementTree(sitemap)
+        for url, mtime in self.items():
+            e = etree.SubElement(sitemap, "url")
+            loc = etree.SubElement(e, "loc").text = url
+            lastmod = etree.SubElement(e, "lastmod").text = str(arrow.get(mtime))
+        s = etree.tostring(
+            xmldoc,
+            encoding='utf-8',
+            xml_declaration=True,
+            pretty_print=True
+        )
+
+        with open(self.renderfile, 'wb') as f:
+            f.write(s)
+
+    async def render_txt(self):
         if len(self) > 0:
             if self.mtime >= sorted(self.values())[-1]:
                 return
@@ -2270,6 +2450,7 @@ def make():
 
     queue = AQ()
     send = []
+    firsttimepublished = []
 
     content = settings.paths.get('content')
     rules = IndexPHP()
@@ -2303,6 +2484,9 @@ def make():
         if post.is_future:
             logger.info('%s is for the future', post.name)
             continue
+        elif not os.path.exists(post.renderfile):
+            logger.debug('%s seems to be fist time published', post.name)
+            firsttimepublished.append(post)
 
         # add post to search database
         search.append(post)
@@ -2363,9 +2547,6 @@ def make():
             continue
         cp(e, t)
 
-    # dat data
-    #dat()
-
     end = int(round(time.time() * 1000))
     logger.info('process took %d ms' % (end - start))
 
@@ -2391,6 +2572,9 @@ def make():
         queue.run()
         logger.info('sending webmentions finished')
 
+    for post in firsttimepublished:
+        queue.put(post.make_memento())
+        queue.put(post.wayback_save())
 
 if __name__ == '__main__':
     make()

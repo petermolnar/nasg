@@ -2,18 +2,23 @@
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  font-family: "Courier New", monospace;
+  font-family: "Ubuntu", "Roboto", "Segoe UI", "San Francisco", "Droid Sans", "Tahoma", "Helvetica Neue", "Lucida Grande", sans-serif;
   margin: 0;
   padding: 0;
   line-height: 1.5em;
+  letter-spacing: 0.02em;
 }
 
 article, aside, footer, header, nav, section {
   display:block;
 }
 
+html {
+  background-color: #111;
+}
+
 body {
-  color: #eee;
+  color: #ddd;
   background-color: #222;
 }
 
@@ -132,6 +137,7 @@ figcaption {
 }
 
 code, pre {
+  font-family: "Courier New", monospace;
   color: #3c3;
   border: 1px solid #666;
   direction: ltr;
@@ -222,7 +228,6 @@ li p {
 }
 
 #pagination ol,
-.footnotes ol,
 #header ul,
 #footer ul {
   list-style-type: none;
@@ -232,6 +237,11 @@ li p {
 #header li,
 #footer li {
   display: inline-block;
+  margin: 0 0.8em 0 0;
+}
+
+#header li {
+  font-weight: bold;
 }
 
 #footer p {
@@ -259,7 +269,7 @@ li p {
 
 #pagination li {
   display: inline-block;
-  padding: 0.3em;
+  padding: 0.3em 0.6em;
 }
 
 #pagination a {
@@ -329,6 +339,26 @@ li p {
 
 .h-feed .exif {
   display: none;
+}
+
+.entry-footer {
+  border-top: 1px dashed #999;
+  margin: 2em 0;
+}
+
+.h-feed .entry-footer {
+  display: none;
+  visibility: hidden;
+}
+
+.h-feed .h-entry {
+
+  padding: 1em;
+  margin:1em 0;
+}
+
+.h-feed .h-entry h3 {
+  margin:0;
 }
 
 @media all and (max-width: 47em) {

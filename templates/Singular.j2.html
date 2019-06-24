@@ -62,87 +62,30 @@
 {% block content %}
 <main id="main">
     <article class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
-        <header class="entry-header">
-            <h1 class="p-name entry-title">
-                {% if post.mentions %}
-                <span>
-                    <svg width="16" height="16">
-                        <use xlink:href="#icon-reply" />
-                    </svg>
-                    <a href="{{ post.url|relurl(baseurl) }}">
-                        RE:
-                    </a>
-                    <a href="{{ post.mentions.url }}" class="u-in-reply-to">
-                        {{ post.mentions.url }}
-                    </a>
-                </span>
-                {% else %}
+        {% if memento %}
+        <aside id="memento">
+            <span>current version</span> | <a href="{{ memento|relurl(baseurl) }}">how it originally looked in {{ post.copyrightYear }}</a>
+        </aside>
+        {% endif %}
+        <h1 class="p-name entry-title">
+            {% if post.mentions %}
+            <span>
+                <svg width="16" height="16">
+                    <use xlink:href="#icon-reply" />
+                </svg>
                 <a href="{{ post.url|relurl(baseurl) }}">
-                    {{ post.headline }}
+                    RE:
                 </a>
-                {% endif %}
-            </h1>
-
-            <p>Licenced under
-                <a rel="license" href="{{ post.license }}" class="u-license">{{ post.license | extractlicense }}</a>,
-                created by
-                <span class="p-author h-card vcard">
-                    <img class="u-photo photo" src="{{ post.author.image|relurl(baseurl) }}" alt="" />
-                    <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
-                    (<a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>),
-                </span>
-                published at
-                <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
-                <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
-                to canonical URL
-                <a class="u-url u-uuid bookmark" href="{{ post.url }}">{{ post.url }}</a>
-                {% if post.keywords|length > 0 %}
-                    with keywords
-                    {% for keyword in post.keywords %}
-                    #<span class="p-category">{{ keyword }}</span>{% if not loop.last %} {% endif %}
-                    {% endfor %}
-                {% endif %}
-                {% if post['@type'] == 'Photograph' %}
-                    {% if post.image[0].locationCreated %}
-                    from the location
-                    <a class="h-geo" href="https://www.openstreetmap.org/#map=14/{{ post.image[0].locationCreated.geo.longitude }}/{{ post.image[0].locationCreated.geo.latitude }}">
-                        <span class="p-longitude">{{ post.image[0].locationCreated.geo.longitude }}</span>,
-                        <span class="p-latitude">{{ post.image[0].locationCreated.geo.latitude }}</span>
-                    </a>
-                    {% endif %}
-                {% endif %}
-            </p>
-            {% if post.sameAs|length %}
-            <p>
-                This post was also syndicated to:
-                <ul>
-                {% for url in post.sameAs %}
-                    <li><a class="u-syndication" href="{{ url }}">{{ url }}</a></li>
-                {% endfor %}
-                </ul>
-            </p>
+                <a href="{{ post.mentions.url }}" class="u-in-reply-to">
+                    {{ post.mentions.url }}
+                </a>
+            </span>
+            {% else %}
+            <a href="{{ post.url|relurl(baseurl) }}">
+                {{ post.headline }}
+            </a>
             {% endif %}
-
-{% if post.subjectOf %}
-            <p class="h-event vevent">
-                <span class="summary">
-                    Journey from
-                        <time class="dt-start dtstart" datetime="{{ post.subjectOf.startDate }}">
-                            {{ post.subjectOf.startDate|printdate }}
-                        </time>
-                        to
-                        <time class="dt-end dtend" datetime="{{ post.subjectOf.endDate }}">
-                            {{ post.subjectOf.endDate|printdate }}
-                        </time>, in
-                        <span class="p-location location">
-                            {{ post.subjectOf.location.name }}
-                        </span>
-                    </span>
-                    <a class="u-url url" href="{{ post.url }}"></a>
-                </p>
-{% endif %}
-
-        </header>
+        </h1>
 
         {% if post.review %}
         <section class="h-review hreview">
@@ -232,6 +175,68 @@
         {% endif %}
 
     {% endif %}
+
+        <footer class="entry-footer">
+            <p>Licenced under
+                <a rel="license" href="{{ post.license }}" class="u-license">{{ post.license | extractlicense }}</a>,
+                created by
+                <span class="p-author h-card vcard">
+                    <img class="u-photo photo" src="{{ post.author.image|relurl(baseurl) }}" alt="" />
+                    <a class="p-name u-url fn url" href="{{ post.author.url }}">{{ post.author.name }}</a>
+                    (<a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>),
+                </span>
+                published at
+                <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
+                <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
+                to canonical URL
+                <a class="u-url u-uuid bookmark" href="{{ post.url }}">{{ post.url }}</a>
+                {% if post.keywords|length > 0 %}
+                    with keywords
+                    {% for keyword in post.keywords %}
+                    "<span class="p-category">{{ keyword }}</span>"{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if post['@type'] == 'Photograph' %}
+                    {% if post.image[0].locationCreated %}
+                    from the location
+                    <a class="h-geo" href="https://www.openstreetmap.org/#map=14/{{ post.image[0].locationCreated.geo.longitude }}/{{ post.image[0].locationCreated.geo.latitude }}">
+                        <span class="p-longitude">{{ post.image[0].locationCreated.geo.longitude }}</span>,
+                        <span class="p-latitude">{{ post.image[0].locationCreated.geo.latitude }}</span>
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </p>
+            {% if post.sameAs|length %}
+            <p>
+                This post was also syndicated to:
+                <ul>
+                {% for url in post.sameAs %}
+                    <li><a class="u-syndication" href="{{ url }}">{{ url }}</a></li>
+                {% endfor %}
+                </ul>
+            </p>
+            {% endif %}
+
+{% if post.subjectOf %}
+            <p class="h-event vevent">
+                <span class="summary">
+                    Journey from
+                        <time class="dt-start dtstart" datetime="{{ post.subjectOf.startDate }}">
+                            {{ post.subjectOf.startDate|printdate }}
+                        </time>
+                        to
+                        <time class="dt-end dtend" datetime="{{ post.subjectOf.endDate }}">
+                            {{ post.subjectOf.endDate|printdate }}
+                        </time>, in
+                        <span class="p-location location">
+                            {{ post.subjectOf.location.name }}
+                        </span>
+                    </span>
+                    <a class="u-url url" href="{{ post.url }}"></a>
+                </p>
+{% endif %}
+        </footer>
+
     </article>
 </main>
 {% endblock %}
