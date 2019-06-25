@@ -14,9 +14,10 @@ import keys
 import settings
 
 EXIFDATE = re.compile(
-    r'^(?P<year>[0-9]{4}):(?P<month>[0-9]{2}):(?P<day>[0-9]{2})\s+'
-    r'(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2})$'
+    r"^(?P<year>[0-9]{4}):(?P<month>[0-9]{2}):(?P<day>[0-9]{2})\s+"
+    r"(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2})$"
 )
+
 
 class CachedMeta(dict):
     def __init__(self, fpath):
@@ -25,15 +26,11 @@ class CachedMeta(dict):
     @property
     def cfile(self):
         fname = os.path.basename(self.fpath)
-        if fname == 'index.md':
+        if fname == "index.md":
             fname = os.path.basename(os.path.dirname(self.fpath))
 
         return os.path.join(
-            settings.tmpdir,
-            "%s.%s.json" % (
-                fname,
-                self.__class__.__name__,
-            )
+            settings.tmpdir, "%s.%s.json" % (fname, self.__class__.__name__)
         )
 
     @property
@@ -53,16 +50,14 @@ class CachedMeta(dict):
             self._cache_read()
 
     def _cache_update(self):
-        with open(self.cfile, 'wt') as f:
+        with open(self.cfile, "wt") as f:
             logging.debug(
-                "writing cached meta file of %s to %s",
-                self.fpath,
-                self.cfile
+                "writing cached meta file of %s to %s", self.fpath, self.cfile
             )
             f.write(json.dumps(self, indent=4, sort_keys=True))
 
     def _cache_read(self):
-        with open(self.cfile, 'rt') as f:
+        with open(self.cfile, "rt") as f:
             data = json.loads(f.read())
             for k, v in data.items():
                 self[k] = v
@@ -85,57 +80,55 @@ class Exif(CachedMeta):
         """
         cmd = (
             "exiftool",
-            '-sort',
-            '-json',
-            '-MIMEType',
-            '-FileType',
-            '-FileName',
-            '-FileSize#',
-            '-ModifyDate',
-            '-CreateDate',
-            '-DateTimeOriginal',
-            '-ImageHeight',
-            '-ImageWidth',
-            '-Aperture',
-            '-FOV',
-            '-ISO',
-            '-FocalLength',
-            '-FNumber',
-            '-FocalLengthIn35mmFormat',
-            '-ExposureTime',
-            '-Model',
-            '-GPSLongitude#',
-            '-GPSLatitude#',
-            '-LensID',
-            '-LensSpec',
-            '-Lens',
-            '-ReleaseDate',
-            '-Description',
-            '-Headline',
-            '-HierarchicalSubject',
-            '-Copyright',
-            '-Artist',
-            self.fpath
+            "-sort",
+            "-json",
+            "-MIMEType",
+            "-FileType",
+            "-FileName",
+            "-FileSize#",
+            "-ModifyDate",
+            "-CreateDate",
+            "-DateTimeOriginal",
+            "-ImageHeight",
+            "-ImageWidth",
+            "-Aperture",
+            "-FOV",
+            "-ISO",
+            "-FocalLength",
+            "-FNumber",
+            "-FocalLengthIn35mmFormat",
+            "-ExposureTime",
+            "-Model",
+            "-GPSLongitude#",
+            "-GPSLatitude#",
+            "-LensID",
+            "-LensSpec",
+            "-Lens",
+            "-ReleaseDate",
+            "-Description",
+            "-Headline",
+            "-HierarchicalSubject",
+            "-Copyright",
+            "-Artist",
+            self.fpath,
         )
 
         p = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
 
         stdout, stderr = p.communicate()
         if stderr:
             raise OSError("Error reading EXIF:\n\t%s\n\t%s", cmd, stderr)
 
-        exif = json.loads(stdout.decode('utf-8').strip()).pop()
-        if 'ReleaseDate' in exif and 'ReleaseTime' in exif:
-            exif['DateTimeRelease'] = "%s %s" % (
-                exif.get('ReleaseDate'), exif.get('ReleaseTime')[:8]
+        exif = json.loads(stdout.decode("utf-8").strip()).pop()
+        if "ReleaseDate" in exif and "ReleaseTime" in exif:
+            exif["DateTimeRelease"] = "%s %s" % (
+                exif.get("ReleaseDate"),
+                exif.get("ReleaseTime")[:8],
             )
-            del(exif['ReleaseDate'])
-            del(exif['ReleaseTime'])
+            del exif["ReleaseDate"]
+            del exif["ReleaseTime"]
 
         for k, v in exif.items():
             self[k] = self.exifdate2rfc(v)
@@ -154,8 +147,8 @@ class Exif(CachedMeta):
         if not match:
             return value
         return "%s-%s-%sT%s+00:00" % (
-            match.group('year'),
-            match.group('month'),
-            match.group('day'),
-            match.group('time')
+            match.group("year"),
+            match.group("month"),
+            match.group("day"),
+            match.group("time"),
         )
