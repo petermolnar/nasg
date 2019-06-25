@@ -1038,11 +1038,11 @@ class Singular(MarkdownDoc):
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
 
-    async def make_memento(self):
+    async def save_memento(self):
         cp(self.renderfile, self.mementofile)
         return
 
-    async def wayback_save(self):
+    async def save_to_archiveorg(self):
         requests.get('http://web.archive.org/save/%s' % (self.url))
 
     def try_memento(self, url):
@@ -1069,7 +1069,7 @@ class Singular(MarkdownDoc):
             return None
 
 
-    def waybackmemento(self):
+    def maybe_fetch_memento(self):
         if self.has_memento:
             return
 
@@ -1123,7 +1123,7 @@ class Singular(MarkdownDoc):
 
     async def render(self):
         if settings.args.get('memento'):
-            self.waybackmemento()
+            self.maybe_fetch_memento()
 
         if self.exists:
             return
@@ -2573,8 +2573,9 @@ def make():
         logger.info('sending webmentions finished')
 
     for post in firsttimepublished:
-        queue.put(post.make_memento())
-        queue.put(post.wayback_save())
+        queue.put(post.save_memento())
+        queue.put(post.save_to_archiveorg())
+    queue.run()
 
 if __name__ == '__main__':
     make()

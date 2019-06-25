@@ -13,6 +13,7 @@ langdetect = "*"
 jinja2 = "*"
 feedgen = "*"
 filetype = "*"
+gumbo = "*"
 
 [dev-packages]
 
