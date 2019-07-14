@@ -24,7 +24,7 @@ pagination = 42
 notinfeed = ["note"]
 flat = ["article", "journal"]
 displaydate = "YYYY-MM-DD HH:mm"
-mementostartime = 1561192582
+mementostartime = 1560992400
 
 licence = struct(
     {"article": "CC-BY-4.0", "journal": "CC-BY-NC-4.0", "_default": "CC-BY-NC-ND-4.0"}
@@ -115,7 +115,7 @@ site = struct(
 )
 
 
-menu = stuct(
+menu = struct(
     {
         "home": {"url": "%s/" % site["url"], "text": "home"},
         "photo": {"url": "%s/category/photo/" % site["url"], "text": "photos"},
@@ -165,7 +165,7 @@ filenames = struct(
         "oembed_xml": "oembed.xml",
         "oembed_json": "oembed.json",
         "memento": "memento.html",
-        "sitemap": "sitemap.xml",
+        "sitemap": "sitemap.txt",
     }
 )
 

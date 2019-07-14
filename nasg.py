@@ -29,11 +29,14 @@ import wand.image
 import filetype
 import jinja2
 import yaml
+
+# python-frontmatter
 import frontmatter
 from feedgen.feed import FeedGenerator
+
+# unicode-slugify
 from slugify import slugify
 import requests
-import lxml.etree as etree
 
 from pandoc import PandocMD2HTML, PandocMD2TXT, PandocHTML2TXT
 from meta import Exif
@@ -874,46 +877,18 @@ class Singular(MarkdownDoc):
     def corpus(self):
         return "\n".join([self.title, self.name, self.summary, self.content])
 
-    @cached_property
-    def oembed_xml(self):
-        oembed = etree.Element("oembed", version="1.0")
-        xmldoc = etree.ElementTree(oembed)
-        for k, v in self.oembed_json.items():
-            x = etree.SubElement(oembed, k)
-            t = "%s" % (v)
-            if "html" == k:
-                x.text = etree.CDATA(t)
-            else:
-                x.text = t
-        s = etree.tostring(
-            xmldoc, encoding="utf-8", xml_declaration=True, pretty_print=True
-        )
-        return s
-
-    @cached_property
-    def oembed_json(self):
-        r = {
-            "version": "1.0",
-            "provider_name": settings.site.name,
-            "provider_url": settings.site.url,
-            "author_name": settings.author.name,
-            "author_url": settings.author.url,
-            "title": self.title,
-            "type": "link",
-        }
-        if self.is_photo:
-            r.update(
-                {
-                    "type": "photo",
-                    "url": self.photo.jsonld.thumbnail.url,
-                    "width": self.photo.jsonld.thumbnail.width,
-                    "height": self.photo.jsonld.thumbnail.height,
-                }
-            )
-        return r
-
-    async def copyfiles(self):
-        exclude = [".md", ".jpg", ".png", ".gif", ".ping", ".url", ".del", ".copy"]
+    async def copy_files(self):
+        exclude = [
+            ".md",
+            ".jpg",
+            ".png",
+            ".gif",
+            ".ping",
+            ".url",
+            ".del",
+            ".copy",
+            ".cache",
+        ]
         files = glob.glob(os.path.join(os.path.dirname(self.fpath), "*.*"))
         for f in files:
             fname, fext = os.path.splitext(f)
@@ -1009,6 +984,10 @@ class Singular(MarkdownDoc):
         if settings.args.get("memento"):
             self.maybe_fetch_memento()
 
+        if self.exists and not self.has_memento:
+            if self.published.timestamp >= settings.mementostartime:
+                cp(self.renderfile, self.mementofile)
+
         if self.exists:
             return
 
@@ -1044,9 +1023,6 @@ class Singular(MarkdownDoc):
             json.dumps(j, indent=4, ensure_ascii=False),
         )
         del j
-        if not os.path.exists(self.mementofile):
-            if self.published.timestamp >= settings.mementostartime:
-                copy(self.renderfile, self.mementofile)
 
         # oembed
         # writepath(
@@ -2062,28 +2038,6 @@ class Sitemap(dict):
         return os.path.join(settings.paths.get("build"), settings.filenames.sitemap)
 
     async def render(self):
-        if not len(self):
-            return
-
-        if self.mtime >= sorted(self.values())[-1]:
-            return
-
-        sitemap = etree.Element(
-            "urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        )
-        xmldoc = etree.ElementTree(sitemap)
-        for url, mtime in self.items():
-            e = etree.SubElement(sitemap, "url")
-            loc = etree.SubElement(e, "loc").text = url
-            lastmod = etree.SubElement(e, "lastmod").text = str(arrow.get(mtime))
-        s = etree.tostring(
-            xmldoc, encoding="utf-8", xml_declaration=True, pretty_print=True
-        )
-
-        with open(self.renderfile, "wb") as f:
-            f.write(s)
-
-    async def render_txt(self):
         if len(self) > 0:
             if self.mtime >= sorted(self.values())[-1]:
                 return
@@ -2258,7 +2212,7 @@ def make():
 
         # render and arbitrary file copy tasks for this very post
         queue.put(post.render())
-        queue.put(post.copyfiles())
+        queue.put(post.copy_files())
 
         # skip draft posts from anything further
         if post.is_future:
