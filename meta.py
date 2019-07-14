@@ -9,7 +9,6 @@ import subprocess
 import json
 import os
 import logging
-import requests
 import keys
 import settings
 
@@ -22,6 +21,7 @@ EXIFDATE = re.compile(
 class CachedMeta(dict):
     def __init__(self, fpath):
         self.fpath = fpath
+        self.suffix = "cache"
 
     @property
     def cfile(self):
@@ -30,7 +30,8 @@ class CachedMeta(dict):
             fname = os.path.basename(os.path.dirname(self.fpath))
 
         return os.path.join(
-            settings.tmpdir, "%s.%s.json" % (fname, self.__class__.__name__)
+            os.path.dirname(self.fpath),
+            "%s.%s.%s" % (fname, self.__class__.__name__, self.suffix),
         )
 
     @property
@@ -66,6 +67,7 @@ class CachedMeta(dict):
 class Exif(CachedMeta):
     def __init__(self, fpath):
         self.fpath = fpath
+        self.suffix = "json.cache"
         self._read()
 
     def _call_tool(self):
