@@ -6,13 +6,10 @@ $redirects = array(
 {% endfor %}
 );
 
-$redirects_re = array(
-    '^(?:sysadmin|it|linux-tech-coding|sysadmin-blog)\/?(page.*)?$' => 'category/article/',
-    '^(?:fotography|photoblog)\/?(page.*)?$' => '/category/photo/$1',
-    '^blog\/?(page.*)?$' => '/category/journal/',
-    '^blips\/?(page.*)?$' => '/category/note/$1',
-    '^r\/?(page.*)?$' => '/category/note/$1',
-    '^(?:linux-tech-coding|it|sysadmin-blog|sysadmin|fotography|blips|blog|photoblog|article|journal|photo|note|r)\/((?!page).*)' => '/$1',
+$rewrites = array(
+{% for from, to in rewrites.items() %}
+    "{{ from }}" => "{{ to }}",
+{% endfor %}
 );
 
 $gone = array(
@@ -22,12 +19,9 @@ $gone = array(
 );
 
 $gone_re = array(
-    '^cache\/.*$',
-    '^tag\/.*$',
-    '^comment\/.*$',
-    '^files\/.*$',
-    '^wp-content\/.*$',
-    '^broadcast\/wp-ffpc\.message$',
+{% for gone in gone_re %}
+    "{{ gone }}",
+{% endfor %}
 );
 
 function redirect_to($uri) {
@@ -103,7 +97,7 @@ foreach ($gone_re as $pattern) {
     }
 }
 
-foreach ($redirects_re as $pattern => $target) {
+foreach ($rewrites as $pattern => $target) {
     $maybe = preg_match(sprintf('/%s/i', $pattern), $uri, $matches);
     if ($maybe) {
         $target = str_replace('$1', $matches[1], $target);
@@ -116,9 +110,6 @@ if (isset($gone[$uri])) {
 }
 elseif (isset($redirects[$uri])) {
     redirect_to($redirects[$uri]);
-}
-elseif (preg_match('/^\.well-known\/(host-meta|webfinger).*$/', $uri)) {
-    redirect_to("https://fed.brid.gy/{$uri}");
 }
 elseif (strstr($uri, '_')) {
     maybe_redirect(str_replace('_', '-', $uri));

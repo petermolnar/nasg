@@ -62,11 +62,29 @@
 {% block content %}
 <main id="main">
     <article class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
-        {% if memento %}
-        <aside id="memento">
-            <span>current version</span> | <a href="{{ memento|relurl(baseurl) }}">how it originally looked in {{ post.copyrightYear }}</a>
+        <aside id="entry-meta">
+            {% if memento %}
+                <span id="memento">
+                    <a href="{{ memento|relurl(baseurl) }}">How this entry originally looked in {{ post.copyrightYear }}</a>
+                </span>
+            {% endif %}
+            {% if post.sameAs|length %}
+            <span id="syndication">
+                Post syndicated to:
+                {% for url in post.sameAs %}
+                    <a class="u-syndication" href="{{ url }}"><svg width="16" height="16" aria-label="{{ url|extractdomain }}"><use xlink:href="#icon-{{ url|extractdomain }}"</svg></a>
+                {% endfor %}
+            </span>
+            {% endif %}
+            {% if 'WebPage' != post['@type'] %}
+                {% for action in post.potentialAction %}
+                    {% if  'InteractAction' == action['@type'] %}
+                        <a href="{{ action.url }}"></a>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
         </aside>
-        {% endif %}
+
         <h1 class="p-name entry-title">
             {% if post.mentions %}
             <span>
@@ -119,14 +137,6 @@
         </section>
 
     {% if 'WebPage' != post['@type'] %}
-        <section class="syndication">
-        {% for action in post.potentialAction %}
-            {% if  'InteractAction' == action['@type'] %}
-                <a href="{{ action.url }}"></a>
-            {% endif %}
-        {% endfor %}
-        </section>
-
         {% if post.comment|length %}
         <section class="comments">
             <h2><a id="comments"></a>Responses</h2>
@@ -206,16 +216,6 @@
                     {% endif %}
                 {% endif %}
             </p>
-            {% if post.sameAs|length %}
-            <p>
-                This post was also syndicated to:
-                <ul>
-                {% for url in post.sameAs %}
-                    <li><a class="u-syndication" href="{{ url }}">{{ url }}</a></li>
-                {% endfor %}
-                </ul>
-            </p>
-            {% endif %}
 
 {% if post.subjectOf %}
             <p class="h-event vevent">

@@ -6,7 +6,7 @@
   margin: 0;
   padding: 0;
   line-height: 1.5em;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 article, aside, footer, header, nav, section {
@@ -291,8 +291,10 @@ li p {
 }
 
 #header > *,
-#footer > * {
-  max-width: 54em;
+#footer > *,
+#pagination,
+#main {
+  max-width: 58em;
   margin: 0 auto;
 }
 
@@ -302,8 +304,6 @@ li p {
 
 #pagination,
 #main {
-  margin:0 auto;
-  max-width: 54em;
   padding: 1em 0.3em;
 }
 
@@ -361,7 +361,11 @@ li p {
   margin:0;
 }
 
-@media all and (max-width: 47em) {
+#syndication {
+    float:right;
+}
+
+@media all and (max-width: 51em) {
   #header > * {
     display: block;
     text-align:center;
@@ -386,4 +390,4 @@ li p {
     display: block;
     margin: 0 auto;
   }
-}    
+}

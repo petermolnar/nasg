@@ -30,7 +30,7 @@ class CachedMeta(dict):
             fname = os.path.basename(os.path.dirname(self.fpath))
 
         return os.path.join(
-            os.path.dirname(self.fpath),
+            settings.tmpdir,
             "%s.%s.%s" % (fname, self.__class__.__name__, self.suffix),
         )
 
