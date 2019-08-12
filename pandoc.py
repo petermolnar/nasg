@@ -6,7 +6,6 @@ __email__ = "mail@petermolnar.net"
 
 import subprocess
 import logging
-from tempfile import gettempdir
 import hashlib
 import os
 import settings
@@ -43,11 +42,11 @@ class Pandoc(str):
             return
         conv_to = "--to=%s" % (self.out_format)
         if len(self.out_options):
-            conv_to = "%s+%s" % (conv_to, "+".join(self.out_options))
+            conv_to = "%s%s" % (conv_to, "".join(self.out_options))
 
         conv_from = "--from=%s" % (self.in_format)
         if len(self.in_options):
-            conv_from = "%s+%s" % (conv_from, "+".join(self.in_options))
+            conv_from = "%s%s" % (conv_from, "".join(self.in_options))
 
         is_pandoc_version2 = False
         try:
@@ -90,18 +89,19 @@ class Pandoc(str):
 class PandocMD2HTML(Pandoc):
     in_format = "markdown"
     in_options = [
-        "footnotes",
-        "pipe_tables",
-        "strikeout",
+        "+footnotes",
+        "+pipe_tables",
+        "+strikeout",
         # 'superscript',
         # 'subscript',
-        "raw_html",
-        "definition_lists",
-        "backtick_code_blocks",
-        "fenced_code_attributes",
-        "shortcut_reference_links",
-        "lists_without_preceding_blankline",
-        "autolink_bare_uris",
+        "+raw_html",
+        "+definition_lists",
+        "+backtick_code_blocks",
+        "+fenced_code_attributes",
+        "+shortcut_reference_links",
+        "+lists_without_preceding_blankline",
+        "+autolink_bare_uris",
+        "-smart",
     ]
     out_format = "html5"
     out_options = []
@@ -112,32 +112,34 @@ class PandocHTML2MD(Pandoc):
     in_options = []
     out_format = "markdown"
     out_options = [
-        "footnotes",
-        "pipe_tables",
-        "strikeout",
-        "raw_html",
-        "definition_lists",
-        "backtick_code_blocks",
-        "fenced_code_attributes",
-        "shortcut_reference_links",
-        "lists_without_preceding_blankline",
-        "autolink_bare_uris",
+        "+footnotes",
+        "+pipe_tables",
+        "+strikeout",
+        "+raw_html",
+        "+definition_lists",
+        "+backtick_code_blocks",
+        "+fenced_code_attributes",
+        "+shortcut_reference_links",
+        "+lists_without_preceding_blankline",
+        "+autolink_bare_uris",
+        "-smart",
     ]
 
 
 class PandocMD2TXT(Pandoc):
     in_format = "markdown"
     in_options = [
-        "footnotes",
-        "pipe_tables",
-        "strikeout",
-        "raw_html",
-        "definition_lists",
-        "backtick_code_blocks",
-        "fenced_code_attributes",
-        "shortcut_reference_links",
-        "lists_without_preceding_blankline",
-        "autolink_bare_uris",
+        "+footnotes",
+        "+pipe_tables",
+        "+strikeout",
+        "+raw_html",
+        "+definition_lists",
+        "+backtick_code_blocks",
+        "+fenced_code_attributes",
+        "+shortcut_reference_links",
+        "+lists_without_preceding_blankline",
+        "+autolink_bare_uris",
+        "-smart",
     ]
     out_format = "plain"
     out_options = []
