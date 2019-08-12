@@ -179,7 +179,7 @@ photo = struct(
         "default": 720,
         "sizes": {
             # 90 = s
-            # 360 = m
+            240: "_m",
             720: "",
             1280: "_b",
         },
@@ -187,17 +187,30 @@ photo = struct(
     }
 )
 
-# symlinks = {
-#'files/a-view-from-barbican-1280x720.jpg':  'a-view-from-barbican/a-view-from-barbican_b.jpg',
-#'files/hills_from_beachy_head-540x226.jpg': 'hills-from-beachy-head/hills-from-beachy-head.jpg',
-#'files/seven_sisters_from_beachy_head-540x304.jpg': 'seven-sisters-from-beachy-head/seven-sisters-from-beachy-head.jpg',
-#'files/the_countryside-540x304.jpg': 'the-countryside/the-countryside.jpg',
-#'files/MGP0538-540x358.jpg': '',
-#'files/IMGP0539-540x358.jpg': '',
-#'files/IMGP0538-540x358.jpg': '',
-# }
+rewrites = {
+    "^/(?:sysadmin|it|linux-tech-coding|sysadmin-blog)/?(page.*)?$": "category/article/",
+    "^/(?:fotography|photoblog)/?(page.*)?$": "/category/photo/",
+    "^blog/?(page.*)?$": "/category/journal/",
+    "^blips/?(page.*)?$": "/category/note/",
+    "^/r/?(page.*)?$": "/category/note/",
+    "^/(?:linux-tech-coding|it|sysadmin-blog|sysadmin|fotography|blips|blog|photoblog|article|journal|photo|note|r)/((?!page).*)": "/",
+    "^(/.well-known/(host-meta|webfinger).*)": "https://fed.brid.gy$1",
+}
 
-tmpdir = os.path.join(gettempdir(), "nasg")
+gones = [
+    "^/cache/.*$",
+    "^/tag/.*$",
+    "^/comment/.*$",
+    "^/files/.*$",
+    "^/wp-content/.*$",
+    "^/broadcast/wp-ffpc\.message$",
+]
+
+if os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK):
+    tmpdir = "/dev/shm/nasg"
+else:
+    tmpdir = os.path.join(gettempdir(), "nasg")
+
 if not os.path.isdir(tmpdir):
     os.makedirs(tmpdir)
 
