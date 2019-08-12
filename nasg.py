@@ -48,22 +48,24 @@ logger = logging.getLogger("NASG")
 
 MarkdownImage = namedtuple("MarkdownImage", ["match", "alt", "fname", "title", "css"])
 
-J2 = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(searchpath=settings.paths.get("tmpl")),
-    lstrip_blocks=True,
-    trim_blocks=True,
-)
-
 RE_MDIMG = re.compile(
     r"(?P<match>!\[(?P<alt>[^\]]+)?\]\((?P<fname>[^\s\]]+)"
     r"(?:\s[\'\"](?P<title>[^\"\']+)[\'\"])?\)(?:{(?P<css>[^\}]+)\})?)",
     re.IGNORECASE,
 )
 
-RE_CODE = re.compile(r"^(?:[~`]{3,4}).+$", re.MULTILINE)
+RE_CODE = re.compile(
+    r'^(?:[~`]{3,4}).+$',
+    re.MULTILINE
+)
 
-RE_PRECODE = re.compile(r'<pre class="([^"]+)"><code>')
+RE_PRECODE = re.compile(
+    r'<pre class="([^"]+)"><code>'
+)
 
+RE_MYURL = re.compile(
+    r'(^(%s[^"]+)$|"(%s[^"]+)")' % (settings.site.url, settings.site.url)
+)
 
 def mtime(path):
     """ return seconds level mtime or 0 (chomp microsecs) """
@@ -83,31 +85,15 @@ def url2slug(url, limit=200):
         :limit
     ]
 
-
-J2.filters["url2slug"] = url2slug
-
-
 def rfc3339todt(rfc3339):
     """ nice dates for humans """
     t = arrow.get(rfc3339).format("YYYY-MM-DD HH:mm ZZZ")
     return "%s" % (t)
 
-
-J2.filters["printdate"] = rfc3339todt
-
-
 def extractlicense(url):
     """ extract license name """
     n, e = os.path.splitext(os.path.basename(url))
     return n.upper()
-
-
-J2.filters["extractlicense"] = extractlicense
-
-RE_MYURL = re.compile(
-    r'(^(%s[^"]+)$|"(%s[^"]+)")' % (settings.site.url, settings.site.url)
-)
-
 
 def relurl(text, baseurl=None):
     if not baseurl:
@@ -130,9 +116,6 @@ def relurl(text, baseurl=None):
     return text
 
 
-J2.filters["relurl"] = relurl
-
-
 def writepath(fpath, content, mtime=0):
     """ f.write with extras """
     d = os.path.dirname(fpath)
@@ -147,6 +130,27 @@ def writepath(fpath, content, mtime=0):
         logger.info("writing file %s", fpath)
         f.write(content)
 
+#def maybe_copy(source, target):
+    #""" copy only if target mtime is smaller, than source mtime """
+    #if os.path.exists(target) and mtime(source) <= mtime(target):
+        #return
+    #logger.info("copying '%s' to '%s'", source, target)
+    #cp(source, target)
+
+def extractdomain(url):
+    url = urlparse(url)
+    return url.netloc
+
+J2 = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(searchpath=settings.paths.get("tmpl")),
+    lstrip_blocks=True,
+    trim_blocks=True,
+)
+J2.filters["relurl"] = relurl
+J2.filters["url2slug"] = url2slug
+J2.filters["printdate"] = rfc3339todt
+J2.filters["extractlicense"] = extractlicense
+J2.filters["extractdomain"] = extractdomain
 
 class cached_property(object):
     """ extermely simple cached_property decorator:
@@ -1640,6 +1644,8 @@ class IndexPHP(PHPFile):
                 "menu": settings.menu,
                 "gones": self.gone,
                 "redirects": self.redirect,
+                "rewrites": settings.rewrites,
+                "gone_re": settings.gones
             }
         )
         writepath(self.renderfile, r)
