@@ -9,3 +9,6 @@ if [ ! -f 'keys.py' ]; then
 fi
 
 python3 nasg.py "$@"
+if [ -f 'post-run.sh' ]; then
+    bash 'post-run.sh'
+fi
