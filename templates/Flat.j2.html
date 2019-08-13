@@ -1,0 +1,33 @@
+{% extends "base.j2.html" %}
+{% block lang %}{% endblock %}
+
+{% block title %}{{ category.title }}{% endblock %}
+{% block meta %}
+    <link rel="canonical" href="{{ category.url }}" />
+    <link rel="alternate" type="application/rss+xml" title="{{ category.title }} RSS feed" href="{{ category.feed }}{{ fnames.rss }}" />
+    <link rel="alternate" type="application/atom+xml" title="{{ category.title }} ATOM feed" href="{{ category.feed }}{{ fnames.atom }}" />
+    <link rel="alternate" type="application/json" title="{{ category.title }} JSON feed" href="{{ category.feed }}{{ fnames.json }}" />
+    <link rel="feed" title="{{ category.title}} feed" href="http://www.unmung.com/feed?feed={{ category.feed|urlencode }}" />
+{% endblock %}
+
+{% block content %}
+<main id="main" class="h-feed hatom">
+
+{% set year = [0] %}
+{% for post in posts %}
+    {% set _year = year.pop() %}
+    {% if _year != post.copyrightYear %}
+        {% if not loop.first %}
+        </section>
+        {% endif %}
+        <section class="year">
+        <h2>{{ post.copyrightYear }}</h2>
+    {% endif %}
+    {% set _ = year.append(post.copyrightYear)%}
+        {% include 'meta-article.j2.html' %}
+    {% if loop.last %}
+    </section>
+    {% endif %}
+{% endfor %}
+</main>
+{% endblock %}

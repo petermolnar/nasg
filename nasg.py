@@ -398,7 +398,8 @@ class WebImage(object):
         self.fpath = fpath
         self.parent = parent
         self.mtime = mtime(self.fpath)
-        self.fname, self.fext = os.path.splitext(os.path.basename(fpath))
+        self.name = os.path.basename(self.fpath)
+        self.fname, self.fext = os.path.splitext(self.name)
         self.resized_images = [
             (k, self.Resized(self, k))
             for k in settings.photo.get("sizes").keys()
@@ -434,7 +435,7 @@ class WebImage(object):
                     "height": self.displayed.height,
                 }
             ),
-            "name": os.path.basename(self.fpath),
+            "name": self.name,
             "encodingFormat": self.mime_type,
             "contentSize": self.mime_size,
             "width": self.linked.width,
@@ -1544,114 +1545,36 @@ class WebhookPHP(PHPFile):
 class Category(dict):
     def __init__(self, name=""):
         self.name = name
-        self.trange = "YYYY"
 
     def __setitem__(self, key, value):
         if key in self:
             raise LookupError(
-                "key '%s' already exists, colliding posts are: %s vs %s"
-                % (key, self[key].fpath, value.fpath)
+                f"key '{key}' already exists, colliding posts are: {self[key].fpath} vs {value.fpath}"
             )
         dict.__setitem__(self, key, value)
 
     @property
-    def sortedkeys(self):
-        return list(sorted(self.keys(), reverse=True))
-
-    @property
-    def is_paginated(self):
-        if self.name in settings.flat:
-            return False
-        return True
-
-    @property
     def title(self):
         if len(self.name):
-            return "%s - %s" % (self.name, settings.site.name)
+            return f"{self.name} - {settings.site.name}"
         else:
             return settings.site.headline
 
     @property
     def url(self):
         if len(self.name):
-            url = "%s/%s/%s/" % (
-                settings.site.url,
-                settings.paths.category,
-                self.name,
-            )
+            url = f"{settings.site.url}/{settings.paths.category}/{self.name}/"
         else:
-            url = "%s/" % (settings.site.url)
+            url = f"{settings.site.url}/"
         return url
 
     @property
     def feedurl(self):
-        return "%s%s/" % (self.url, settings.paths.feed)
+        return f"{self.url}{settings.paths.feed}/"
 
     @property
-    def template(self):
-        return "%s.j2.html" % (self.__class__.__name__)
-
-    @property
-    def dpath(self):
-        if len(self.name):
-            return os.path.join(
-                settings.paths.build, settings.paths.category, self.name
-            )
-        else:
-            return settings.paths.build
-
-    @property
-    def newest_year(self):
-        return int(
-            self[self.sortedkeys[0]].published.format(self.trange)
-        )
-
-    @property
-    def years(self):
-        years = {}
-        for k in self.sortedkeys:
-            y = int(self[k].published.format(self.trange))
-            if y not in years:
-                if y == self.newest_year:
-                    url = self.url
-                else:
-                    url = "%s%d/" % (self.url, y)
-                years.update({y: url})
-        return years
-
-    @property
-    def mtime(self):
-        if len(self.sortedkeys) > 0:
-            return self[self.sortedkeys[0]].published.timestamp
-        else:
-            return 0
-
-    def feedpath(self, fname):
-        return os.path.join(self.dpath, settings.paths.feed, fname)
-
-    def get_posts(self, start=0, end=-1):
-        return [self[k].jsonld for k in self.sortedkeys[start:end]]
-
-    def is_uptodate(self, fpath, dt):
-        if settings.args.get("force"):
-            return False
-        if not os.path.exists(fpath):
-            return False
-        if mtime(fpath) >= dt.timestamp:
-            return True
-        return False
-
-    def newest(self, start=0, end=-1):
-        if start == end:
-            end = -1
-        s = sorted(
-            [self[k].dt for k in self.sortedkeys[start:end]],
-            reverse=True,
-        )
-        if len(s) > 0:
-            return s[0]  # Timestamp in seconds since epoch
-        else:
-            return 0
+    def sortedkeys(self):
+        return list(sorted(self.keys(), reverse=True))
 
     @property
     def ctmplvars(self):
@@ -1662,265 +1585,403 @@ class Category(dict):
             "title": self.title,
         }
 
-    def tmplvars(self, posts=[], year=None):
-        baseurl = self.url
-        if year:
-            baseurl = "%s%s/" % (baseurl, year)
-        return {
-            "baseurl": baseurl,
-            "site": settings.site,
-            "menu": settings.menu,
-            "meta": settings.meta,
-            "category": {
-                "name": self.name,
-                "paginated": self.is_paginated,
-                "url": self.url,
-                "feed": self.feedurl,
-                "title": self.title,
-                "year": year,
-                "years": self.years,
-            },
-            "posts": posts,
-            "fnames": settings.filenames,
-        }
+    @property
+    def renderdir(self):
+        b = settings.paths.build
+        if len(self.name):
+            b = os.path.join(b,settings.paths.category, self.name)
+        return b
 
-    def indexfpath(self, subpath=None, fname=settings.filenames.html):
-        if subpath:
-            return os.path.join(self.dpath, subpath, fname)
+    @property
+    def newest_year(self):
+        return arrow.get(max(self.keys())).format("YYYY")
+
+    @cached_property
+    def years(self):
+        years = {}
+        for key in list(sorted(self.keys(), reverse=True)):
+            year = arrow.get(int(key)).format("YYYY")
+            if year in years:
+                continue
+            if year == self.newest_year:
+                url = f"{self.url}{settings.filenames.html}"
+            else:
+                url = f"{self.url}{year}/{settings.filenames.html}"
+            years.update({year: url})
+        return years
+
+    async def render(self):
+        await self.XMLFeed(self, "rss").render()
+        await self.XMLFeed(self, "atom").render()
+        await self.JSONFeed(self).render()
+        await self.Gopher(self).render()
+        if self.name in settings.flat:
+            await self.Flat(self).render()
         else:
-            return os.path.join(self.dpath, fname)
+            for year in sorted(self.years.keys()):
+                await self.Year(self, year).render()
 
-    async def render_feed(self, xmlformat):
-        if "json" == xmlformat:
-            await self.render_json()
-            return
+    class JSONFeed(object):
+        def __init__(self, parent):
+            self.parent = parent
 
-        logger.info(
-            'rendering category "%s" %s feed', self.name, xmlformat
-        )
+        @property
+        def mtime(self):
+            return max(list(sorted(self.parent.keys(), reverse=True))[0:settings.pagination])
 
-        start = 0
-        end = int(settings.pagination)
+        @property
+        def renderfile(self):
+            return os.path.join(self.parent.renderdir, settings.paths.feed, settings.filenames.json)
 
-        fg = FeedGenerator()
-        fg.id(self.feedurl)
-        fg.title(self.title)
-        fg.author(
-            {
-                "name": settings.author.name,
-                "email": settings.author.email,
+        @property
+        def exists(self):
+            if settings.args.get("force"):
+                return False
+            if not os.path.exists(self.renderfile):
+                return False
+            if mtime(self.renderfile) >= self.mtime:
+                return True
+            return False
+
+        async def render(self):
+            if self.exists:
+                logger.debug("category %s is up to date", self.parent.name)
+                return
+
+            logger.info("rendering JSON feed for category %s", self.parent.name)
+
+            js = {
+                "version": "https://jsonfeed.org/version/1",
+                "title": self.parent.title,
+                "home_page_url": settings.site.url,
+                "feed_url": f"{self.parent.url}{settings.filenames.json}",
+                "author": {
+                    "name": settings.author.name,
+                    "url": settings.author.url,
+                    "avatar": settings.author.image,
+                },
+                "items": [],
             }
-        )
-        fg.logo("%s/favicon.png" % settings.site.url)
-        fg.updated(arrow.get(self.mtime).to("utc").datetime)
-        fg.description(settings.site.headline)
 
-        for k in reversed(self.sortedkeys[start:end]):
-            post = self[k]
-            fe = fg.add_entry()
+            for key in list(sorted(self.parent.keys(), reverse=True))[0:settings.pagination]:
+                post = self.parent[key]
+                pjs = {
+                    "id": post.url,
+                    "content_text": post.txt_content,
+                    "content_html": post.html_content,
+                    "url": post.url,
+                    "date_published": str(post.published),
+                }
+                if len(post.summary):
+                    pjs.update({"summary": post.txt_summary})
+                if post.is_photo:
+                    pjs.update(
+                        {
+                            "attachment": {
+                                "url": post.photo.href,
+                                "mime_type": post.photo.mime_type,
+                                "size_in_bytes": f"{post.photo.mime_size}"
+                            }
+                        }
+                    )
+                js["items"].append(pjs)
+            writepath(self.renderfile,json.dumps(js, indent=4, ensure_ascii=False))
 
-            fe.id(post.url)
-            fe.title(post.title)
-            fe.author(
+    class XMLFeed(object):
+        def __init__(self, parent, feedformat="rss"):
+            self.parent = parent
+            self.feedformat = feedformat
+
+        @property
+        def mtime(self):
+            return max(list(sorted(self.parent.keys(), reverse=True))[0:settings.pagination])
+
+        @property
+        def renderfile(self):
+            if "rss" == self.feedformat:
+                fname = settings.filenames.rss
+            elif "atom" == self.feedformat:
+                fname = settings.filenames.atom
+            else:
+                fname = "index.xml"
+            return os.path.join(self.parent.renderdir, settings.paths.feed, fname)
+
+        @property
+        def exists(self):
+            if settings.args.get("force"):
+                return False
+            if not os.path.exists(self.renderfile):
+                return False
+            if mtime(self.renderfile) >= self.mtime:
+                return True
+            return False
+
+        async def render(self):
+            if self.exists:
+                logger.debug("category %s is up to date", self.parent.name)
+                return
+
+            logger.info("rendering %s feed for category %s", self.feedformat, self.parent.name)
+
+            fg = FeedGenerator()
+            fg.id(self.parent.feedurl)
+            fg.title(self.parent.title)
+            fg.logo(settings.site.image)
+            fg.updated(arrow.get(self.mtime).to("utc").datetime)
+            fg.description(settings.site.headline)
+            fg.author(
                 {
                     "name": settings.author.name,
                     "email": settings.author.email,
                 }
             )
-            fe.category(
-                {
-                    "term": post.category,
-                    "label": post.category,
-                    "scheme": "%s/%s/%s/"
-                    % (
-                        settings.site.url,
-                        settings.paths.category,
-                        post.category,
-                    ),
-                }
-            )
+            if self.feedformat == "rss":
+                fg.link(href=self.feedurl)
+            elif self.feedformat == "atom":
+                fg.link(href=self.feedurl, rel="self")
+                fg.link(href=settings.meta.get("hub"), rel="hub")
 
-            fe.published(post.published.datetime)
-            fe.updated(arrow.get(post.dt).datetime)
+            for key in list(sorted(self.parent.keys(), reverse=True))[0:settings.pagination]:
+                post = self.parent[key]
+                fe = fg.add_entry()
 
-            fe.rights(
-                "%s %s %s"
-                % (
-                    post.licence.upper(),
-                    settings.author.name,
-                    post.published.format("YYYY"),
-                )
-            )
-
-            if xmlformat == "rss":
-                fe.link(href=post.url)
-                fe.content(post.html_content, type="CDATA")
-                if post.is_photo:
-                    fe.enclosure(
-                        post.photo.href,
-                        "%d" % post.photo.mime_size,
-                        post.photo.mime_type,
-                    )
-            elif xmlformat == "atom":
-                fe.link(
-                    href=post.url, rel="alternate", type="text/html"
-                )
-                fe.content(src=post.url, type="text/html")
-                fe.summary(post.summary)
-
-        if xmlformat == "rss":
-            fg.link(href=self.feedurl)
-            writepath(
-                self.feedpath(settings.filenames.rss),
-                fg.rss_str(pretty=True),
-            )
-        elif xmlformat == "atom":
-            fg.link(href=self.feedurl, rel="self")
-            fg.link(href=settings.meta.get("hub"), rel="hub")
-            writepath(
-                self.feedpath(settings.filenames.atom),
-                fg.atom_str(pretty=True),
-            )
-
-    async def render_json(self):
-        logger.info('rendering category "%s" JSON feed', self.name)
-
-        js = {
-            "version": "https://jsonfeed.org/version/1",
-            "title": self.title,
-            "home_page_url": settings.site.url,
-            "feed_url": "%s%s" % (self.url, settings.filenames.json),
-            "author": {
-                "name": settings.author.name,
-                "url": settings.author.url,
-                "avatar": settings.author.image,
-            },
-            "items": [],
-        }
-
-        for k in reversed(
-            self.sortedkeys[0 : int(settings.pagination)]
-        ):
-            post = self[k]
-            pjs = {
-                "id": post.url,
-                "content_text": post.txt_content,
-                "content_html": post.html_content,
-                "url": post.url,
-                "date_published": str(post.published),
-            }
-            if len(post.summary):
-                pjs.update({"summary": post.txt_summary})
-            if post.is_photo:
-                pjs.update(
+                fe.id(post.url)
+                fe.title(post.title)
+                fe.author(
                     {
-                        "attachment": {
-                            "url": post.photo.href,
-                            "mime_type": post.photo.mime_type,
-                            "size_in_bytes": "%d"
-                            % post.photo.mime_size,
-                        }
+                        "name": settings.author.name,
+                        "email": settings.author.email,
                     }
                 )
-            js["items"].append(pjs)
-        writepath(
-            self.feedpath(settings.filenames.json),
-            json.dumps(js, indent=4, ensure_ascii=False),
-        )
-
-    async def render_flat(self):
-        logger.info("rendering flat archive for %s", self.name)
-        r = J2.get_template(self.template).render(
-            self.tmplvars(self.get_posts())
-        )
-        writepath(self.indexfpath(), r)
-
-    async def render_gopher(self):
-        lines = ["%s - %s" % (self.name, settings.site.name), "", ""]
-        for post in self.get_posts():
-            line = "0%s\t/%s/%s\t%s\t70" % (
-                post.headline,
-                post.name,
-                settings.filenames.txt,
-                settings.site.name,
-            )
-            lines.append(line)
-            if len(post.description):
-                lines.extend(
-                    str(PandocHTML2TXT(post.description)).split("\n")
+                fe.category(
+                    {
+                        "term": post.category,
+                        "label": post.category,
+                        "scheme": f"{settings.site.url}/{settings.paths.category}/{post.category}/",
+                    }
                 )
-            if isinstance(post["image"], list):
-                for img in post["image"]:
+
+                fe.published(post.published.datetime)
+                fe.updated(arrow.get(post.dt).datetime)
+
+                fe.rights(
+                    "%s %s %s"
+                    % (
+                        post.licence.upper(),
+                        settings.author.name,
+                        post.published.format("YYYY"),
+                    )
+                )
+
+                if self.feedformat == "rss":
+                    fe.link(href=post.url)
+                    fe.content(post.html_content, type="CDATA")
+                    if post.is_photo:
+                        fe.enclosure(
+                            post.photo.href,
+                            "%d" % post.photo.mime_size,
+                            post.photo.mime_type,
+                        )
+                elif self.feedformat == "atom":
+                    fe.link(
+                        href=post.url, rel="alternate", type="text/html"
+                    )
+                    fe.content(src=post.url, type="text/html")
+                    fe.summary(post.summary)
+
+            writepath(self.renderfile, fg.atom_str(pretty=True))
+
+
+    class Year(object):
+        def __init__(self, parent, year=str(arrow.utcnow().format("YYYY"))):
+            self.parent = parent
+            self.year = str(year)
+
+        @cached_property
+        def keys(self):
+            year = arrow.get(self.year, "YYYY").to("utc")
+            keys = []
+            for key in list(sorted(self.parent.keys(), reverse=True)):
+                ts = arrow.get(int(key))
+                if ts <= year.ceil("year") and ts >= year.floor("year"):
+                    keys.append(int(key))
+            return keys
+
+        @property
+        def posttmplvars(self):
+            return [self.parent[key].jsonld for key in self.keys]
+
+        @property
+        def mtime(self):
+            return max(self.keys)
+
+        @property
+        def renderfile(self):
+            if self.year == self.parent.newest_year:
+                return os.path.join(self.parent.renderdir, settings.filenames.html)
+            else:
+                return os.path.join(self.parent.renderdir, self.year, settings.filenames.html)
+
+        @property
+        def baseurl(self):
+            if self.year == self.parent.newest_year:
+                return self.parent.url
+            else:
+                return f"{self.parent.url}{self.year}/"
+
+        @property
+        def template(self):
+            return "%s.j2.html" % (self.__class__.__name__)
+
+        @property
+        def exists(self):
+            if settings.args.get("force"):
+                return False
+            if not os.path.exists(self.renderfile):
+                return False
+            if mtime(self.renderfile) >= self.mtime:
+                return True
+            return False
+
+        @property
+        def tmplvars(self):
+            return {
+                "baseurl": self.baseurl,
+                "site": settings.site,
+                "menu": settings.menu,
+                "meta": settings.meta,
+                "fnames": settings.filenames,
+                "category": {
+                    "name": self.parent.name,
+                    "url": self.parent.url,
+                    "feed": self.parent.feedurl,
+                    "title": self.parent.title,
+                    "paginated": True,
+                    "years": self.parent.years,
+                    "year": self.year
+                },
+                "posts": self.posttmplvars
+            }
+
+        async def render(self):
+            if self.exists:
+                logger.debug("category %s is up to date", self.parent.name)
+                return
+            logger.info("rendering year %s for category %s", self.year, self.parent.name)
+            r = J2.get_template(self.template).render(self.tmplvars)
+            writepath(self.renderfile, r)
+            del(r)
+
+    class Flat(object):
+        def __init__(self, parent):
+            self.parent = parent
+
+        @property
+        def posttmplvars(self):
+            return [
+                self.parent[key].jsonld
+                for key in list(sorted(self.parent.keys(), reverse=True))
+            ]
+
+        @property
+        def mtime(self):
+            return max(self.parent.keys())
+
+        @property
+        def renderfile(self):
+            return os.path.join(self.parent.renderdir, settings.filenames.html)
+
+        @property
+        def template(self):
+            return "%s.j2.html" % (self.__class__.__name__)
+
+        @property
+        def exists(self):
+            if settings.args.get("force"):
+                return False
+            if not os.path.exists(self.renderfile):
+                return False
+            if mtime(self.renderfile) >= self.mtime:
+                return True
+            return False
+
+        @property
+        def tmplvars(self):
+            return {
+                "baseurl": self.parent.url,
+                "site": settings.site,
+                "menu": settings.menu,
+                "meta": settings.meta,
+                "fnames": settings.filenames,
+                "category": {
+                    "name": self.parent.name,
+                    "url": self.parent.url,
+                    "feed": self.parent.feedurl,
+                    "title": self.parent.title,
+                },
+                "posts": self.posttmplvars
+            }
+
+        async def render(self):
+            if self.exists:
+                logger.debug("category %s is up to date", self.parent.name)
+                return
+            logger.info("rendering category %s", self.parent.name)
+            r = J2.get_template(self.template).render(self.tmplvars)
+            writepath(self.renderfile, r)
+            del(r)
+
+    class Gopher(object):
+        def __init__(self, parent):
+            self.parent = parent
+
+        @property
+        def mtime(self):
+            return max(self.parent.keys())
+
+        @property
+        def exists(self):
+            if settings.args.get("force"):
+                return False
+            if not os.path.exists(self.renderfile):
+                return False
+            if mtime(self.renderfile) >= self.mtime:
+                return True
+            return False
+
+        @property
+        def renderfile(self):
+            return os.path.join(self.parent.renderdir, settings.filenames.gopher)
+
+        async def render(self):
+            if self.exists:
+                logger.debug("category %s is up to date", self.parent.name)
+                return
+
+            lines = ["%s - %s" % (self.parent.name, settings.site.name), "", ""]
+            for post in [
+                self.parent[key]
+                for key in list(sorted(self.parent.keys(), reverse=True))
+            ]:
+                line = "0%s\t/%s/%s\t%s\t70" % (
+                    post.title,
+                    post.name,
+                    settings.filenames.txt,
+                    settings.site.name,
+                )
+                lines.append(line)
+                if len(post.txt_summary):
+                    lines.extend(post.txt_summary.split("\n"))
+                for img in post.images.values():
                     line = "I%s\t/%s/%s\t%s\t70" % (
-                        img.headline,
+                        img.title,
                         post.name,
                         img.name,
                         settings.site.name,
                     )
                     lines.append(line)
-            lines.append("")
-        writepath(
-            self.indexfpath(fname=settings.filenames.gopher),
-            "\r\n".join(lines),
-        )
-
-    async def render_archives(self):
-        for year in self.years.keys():
-            if year == self.newest_year:
-                fpath = self.indexfpath()
-                tyear = None
-            else:
-                fpath = self.indexfpath("%d" % (year))
-                tyear = year
-            y = arrow.get("%d" % year, self.trange).to("utc")
-            tsmin = y.floor("year").timestamp
-            tsmax = y.ceil("year").timestamp
-            start = len(self.sortedkeys)
-            end = 0
-
-            for index, value in enumerate(self.sortedkeys):
-                if value <= tsmax and index < start:
-                    start = index
-                if value >= tsmin and index > end:
-                    end = index
-
-            if self.is_uptodate(fpath, self[self.sortedkeys[start]].dt):
-                logger.info("%s / %d is up to date", self.name, year)
-            else:
-                logger.info("updating %s / %d", self.name, year)
-                logger.info("getting posts from %d to %d", start, end)
-                r = J2.get_template(self.template).render(
-                    self.tmplvars(
-                        # I don't know why end needs the +1, but without that
-                        # some posts disappear
-                        # TODO figure this out...
-                        self.get_posts(start, end + 1),
-                        tyear,
-                    )
-                )
-                writepath(fpath, r)
-
-    async def render_feeds(self):
-        m = {
-            "rss": self.feedpath(settings.filenames.rss),
-            "atom": self.feedpath(settings.filenames.atom),
-            "json": self.feedpath(settings.filenames.json),
-        }
-        for ft, path in m.items():
-            if not self.is_uptodate(path, self.newest()):
-                logger.info("%s outdated, generating new", ft)
-                await self.render_feed(ft)
-
-    async def render(self):
-        await self.render_feeds()
-        if not self.is_uptodate(self.indexfpath(), self.newest()):
-            await self.render_gopher()
-        if not self.is_paginated:
-            if not self.is_uptodate(self.indexfpath(), self.newest()):
-                await self.render_flat()
-        else:
-            await self.render_archives()
-
+                lines.append("")
+            writepath(self.renderfile, "\r\n".join(lines))
 
 class Sitemap(dict):
     @property
@@ -2273,7 +2334,7 @@ def make():
         home.add(category, category.get(category.sortedkeys[0]))
         queue.put(category.render())
 
-    queue.put(frontposts.render_feeds())
+    #queue.put(frontposts.render_feeds())
     queue.put(home.render())
     # actually run all the render & copy tasks
     queue.run()
