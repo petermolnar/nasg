@@ -13,15 +13,11 @@ import re
 import asyncio
 import sqlite3
 import json
-import queue
-import base64
+#import base64
 from shutil import copy2 as cp
-from shutil import rmtree
-from math import ceil
 from urllib.parse import urlparse
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 import logging
-import csv
 
 import arrow
 import langdetect
@@ -685,14 +681,14 @@ class WebImage(object):
             self.size = size
             self.crop = crop
 
-        @property
-        def data(self):
-            with open(self.fpath, "rb") as f:
-                encoded = base64.b64encode(f.read())
-            return "data:%s;base64,%s" % (
-                self.parent.mime_type,
-                encoded.decode("utf-8"),
-            )
+        #@property
+        #def data(self):
+            #with open(self.fpath, "rb") as f:
+                #encoded = base64.b64encode(f.read())
+            #return "data:%s;base64,%s" % (
+                #self.parent.mime_type,
+                #encoded.decode("utf-8"),
+            #)
 
         @property
         def suffix(self):
@@ -1793,7 +1789,7 @@ class Category(dict):
 
 
     class Year(object):
-        def __init__(self, parent, year=str(arrow.utcnow().format("YYYY"))):
+        def __init__(self, parent, year):
             self.parent = parent
             self.year = str(year)
 
