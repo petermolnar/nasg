@@ -11,11 +11,10 @@ import logging
 from tempfile import gettempdir
 
 
-class struct(dict):
+class nameddict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
-
 
 base = os.path.abspath(os.path.expanduser("~/Projects/petermolnar.net"))
 syncserver = "liveserver:/web/petermolnar.net"
@@ -26,11 +25,11 @@ flat = ["article", "journal"]
 displaydate = "YYYY-MM-DD HH:mm"
 mementostartime = 1560992400
 
-licence = struct(
+licence = nameddict(
     {"article": "CC-BY-4.0", "journal": "CC-BY-NC-4.0", "_default": "CC-BY-NC-ND-4.0"}
 )
 
-author = struct(
+author = nameddict(
     {
         "@context": "http://schema.org",
         "@type": "Person",
@@ -41,7 +40,7 @@ author = struct(
     }
 )
 
-site = struct(
+site = nameddict(
     {
         "@context": "http://schema.org",
         "@type": "WebSite",
@@ -115,7 +114,7 @@ site = struct(
 )
 
 
-menu = struct(
+menu = nameddict(
     {
         "home": {"url": "%s/" % site["url"], "text": "home"},
         "photo": {"url": "%s/category/photo/" % site["url"], "text": "photos"},
@@ -125,7 +124,7 @@ menu = struct(
     }
 )
 
-meta = struct(
+meta = nameddict(
     {
         "webmention": "https://webmention.io/petermolnar.net/webmention",
         "pingback": "https://webmention.io/petermolnar.net/xmlrpc",
@@ -137,7 +136,7 @@ meta = struct(
     }
 )
 
-paths = struct(
+paths = nameddict(
     {
         "content": os.path.join(base, "content"),
         "tmpl": os.path.join(base, "nasg", "templates"),
@@ -153,7 +152,7 @@ paths = struct(
     }
 )
 
-filenames = struct(
+filenames = nameddict(
     {
         "rss": "index.xml",
         "atom": "atom.xml",
@@ -171,7 +170,7 @@ filenames = struct(
 
 datignore = [".git", ".dat", "**.php"]
 
-photo = struct(
+photo = nameddict(
     {
         "re_author": re.compile(
             r"(?:P[eé]ter Moln[aá]r)|(?:Moln[aá]r P[eé]ter)|(?:petermolnar\.(?:eu|net))"

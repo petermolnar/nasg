@@ -63,14 +63,9 @@
 <main id="main">
     <article class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
         <aside id="entry-meta">
-            {% if memento %}
-                <span id="memento">
-                    <a href="{{ memento|relurl(baseurl) }}">How this entry originally looked in {{ post.copyrightYear }}</a>
-                </span>
-            {% endif %}
             {% if post.sameAs|length %}
             <span id="syndication">
-                Post syndicated to:
+                Also on:
                 {% for url in post.sameAs %}
                     <a class="u-syndication" href="{{ url }}"><svg width="16" height="16" aria-label="{{ url|extractdomain }}"><use xlink:href="#icon-{{ url|extractdomain }}"</svg></a>
                 {% endfor %}

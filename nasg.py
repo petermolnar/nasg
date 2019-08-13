@@ -41,12 +41,13 @@ import requests
 from pandoc import PandocMD2HTML, PandocMD2TXT, PandocHTML2TXT
 from meta import Exif
 import settings
-from settings import struct
 import keys
 
 logger = logging.getLogger("NASG")
 
-MarkdownImage = namedtuple("MarkdownImage", ["match", "alt", "fname", "title", "css"])
+MarkdownImage = namedtuple(
+    "MarkdownImage", ["match", "alt", "fname", "title", "css"]
+)
 
 RE_MDIMG = re.compile(
     r"(?P<match>!\[(?P<alt>[^\]]+)?\]\((?P<fname>[^\s\]]+)"
@@ -54,18 +55,15 @@ RE_MDIMG = re.compile(
     re.IGNORECASE,
 )
 
-RE_CODE = re.compile(
-    r'^(?:[~`]{3,4}).+$',
-    re.MULTILINE
-)
+RE_CODE = re.compile(r"^(?:[~`]{3,4}).+$", re.MULTILINE)
 
-RE_PRECODE = re.compile(
-    r'<pre class="([^"]+)"><code>'
-)
+RE_PRECODE = re.compile(r'<pre class="([^"]+)"><code>')
 
 RE_MYURL = re.compile(
-    r'(^(%s[^"]+)$|"(%s[^"]+)")' % (settings.site.url, settings.site.url)
+    r'(^(%s[^"]+)$|"(%s[^"]+)")'
+    % (settings.site.url, settings.site.url)
 )
+
 
 def mtime(path):
     """ return seconds level mtime or 0 (chomp microsecs) """
@@ -76,24 +74,29 @@ def mtime(path):
 
 def utfyamldump(data):
     """ dump YAML with actual UTF-8 chars """
-    return yaml.dump(data, default_flow_style=False, indent=4, allow_unicode=True)
+    return yaml.dump(
+        data, default_flow_style=False, indent=4, allow_unicode=True
+    )
 
 
 def url2slug(url, limit=200):
     """ convert URL to max 200 char ASCII string """
-    return slugify(re.sub(r"^https?://(?:www)?", "", url), only_ascii=True, lower=True)[
-        :limit
-    ]
+    url = re.sub(r"^https?://(?:www)?", "", url)
+    url = slugify(url, only_ascii=True, lower=True)
+    return url[:limit]
+
 
 def rfc3339todt(rfc3339):
     """ nice dates for humans """
     t = arrow.get(rfc3339).format("YYYY-MM-DD HH:mm ZZZ")
-    return "%s" % (t)
+    return str(t)
+
 
 def extractlicense(url):
     """ extract license name """
     n, e = os.path.splitext(os.path.basename(url))
     return n.upper()
+
 
 def relurl(text, baseurl=None):
     if not baseurl:
@@ -130,19 +133,24 @@ def writepath(fpath, content, mtime=0):
         logger.info("writing file %s", fpath)
         f.write(content)
 
-#def maybe_copy(source, target):
-    #""" copy only if target mtime is smaller, than source mtime """
-    #if os.path.exists(target) and mtime(source) <= mtime(target):
-        #return
-    #logger.info("copying '%s' to '%s'", source, target)
-    #cp(source, target)
+
+def maybe_copy(source, target):
+    """ copy only if target mtime is smaller, than source mtime """
+    if os.path.exists(target) and mtime(source) <= mtime(target):
+        return
+    logger.info("copying '%s' to '%s'", source, target)
+    cp(source, target)
+
 
 def extractdomain(url):
     url = urlparse(url)
     return url.netloc
 
+
 J2 = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(searchpath=settings.paths.get("tmpl")),
+    loader=jinja2.FileSystemLoader(
+        searchpath=settings.paths.get("tmpl")
+    ),
     lstrip_blocks=True,
     trim_blocks=True,
 )
@@ -151,6 +159,7 @@ J2.filters["url2slug"] = url2slug
 J2.filters["printdate"] = rfc3339todt
 J2.filters["extractlicense"] = extractlicense
 J2.filters["extractdomain"] = extractdomain
+
 
 class cached_property(object):
     """ extermely simple cached_property decorator:
@@ -192,217 +201,6 @@ class AQ:
         self.loop.run_until_complete(consumer)
 
 
-class Webmention(object):
-    """ outgoing webmention class """
-
-    def __init__(self, source, target, dpath, mtime=0):
-        self.source = source
-        self.target = target
-        self.dpath = dpath
-        if not mtime:
-            mtime = arrow.utcnow().timestamp
-        self.mtime = mtime
-
-    @property
-    def fpath(self):
-        return os.path.join(self.dpath, "%s.ping" % (url2slug(self.target, 200)))
-
-    def check_syndication(self):
-        """ this is very specific to webmention.io and brid.gy publish """
-
-        if "fed.brid.gy" in self.target:
-            return
-        if "brid.gy" not in self.target:
-            return
-        if not self.exists:
-            return
-
-        with open(self.fpath) as f:
-            txt = f.read()
-
-        if "telegraph.p3k.io" not in txt:
-            return
-
-        try:
-            maybe = json.loads(txt)
-            if "location" not in maybe:
-                return
-            if "http_body" not in maybe:
-                logger.debug(
-                    "trying to re-fetch %s for %s", maybe["location"], self.fpath
-                )
-                wio = requests.get(maybe["location"])
-                if wio.status_code != requests.codes.ok:
-                    return
-                maybe = wio.json()
-                logger.debug("response: %s", maybe)
-                with open(self.fpath, "wt") as update:
-                    update.write(json.dumps(maybe, sort_keys=True, indent=4))
-            if "url" in maybe["http_body"]:
-                data = json.loads(maybe["http_body"])
-                url = data["url"]
-                sp = os.path.join(self.dpath, "%s.copy" % url2slug(url, 200))
-                if os.path.exists(sp):
-                    return
-                with open(sp, "wt") as f:
-                    logger.info("writing syndication copy %s to %s", url, sp)
-                    f.write(url)
-        except Exception as e:
-            logger.error("failed to fetch syndication URL for %s: %s", self.dpath, e)
-            pass
-
-    @property
-    def exists(self):
-        if not os.path.isfile(self.fpath):
-            return False
-        elif mtime(self.fpath) > self.mtime:
-            return True
-        else:
-            return False
-
-    def save(self, content):
-        writepath(self.fpath, content)
-
-    async def send(self):
-        if self.exists:
-            self.check_syndication()
-            return
-        elif settings.args.get("noping"):
-            self.save("noping entry at %s" % arrow.now())
-            return
-
-        telegraph_url = "https://telegraph.p3k.io/webmention"
-        telegraph_params = {
-            "token": "%s" % (keys.telegraph.get("token")),
-            "source": "%s" % (self.source),
-            "target": "%s" % (self.target),
-        }
-        r = requests.post(telegraph_url, data=telegraph_params)
-        logger.info(
-            "sent webmention to telegraph from %s to %s", self.source, self.target
-        )
-        if r.status_code not in [200, 201, 202]:
-            logger.error("sending failed: %s %s", r.status_code, r.text)
-        else:
-            self.save(r.text)
-
-
-class MarkdownDoc(object):
-    """ Base class for anything that is stored as .md """
-
-    @property
-    def mtime(self):
-        return mtime(self.fpath)
-
-    @property
-    def dt(self):
-        """ this returns a timestamp, not an arrow object """
-        maybe = self.mtime
-        for key in ["published", "date"]:
-            t = self.meta.get(key, None)
-            if t and "null" != t:
-                try:
-                    t = arrow.get(t)
-                    if t.timestamp > maybe:
-                        maybe = t.timestamp
-                except Exception as e:
-                    logger.error(
-                        "failed to parse date: %s for key %s in %s", t, key, self.fpath
-                    )
-        return maybe
-
-    @cached_property
-    def _parsed(self):
-        with open(self.fpath, mode="rt") as f:
-            logger.debug("parsing YAML+MD file %s", self.fpath)
-            meta, txt = frontmatter.parse(f.read())
-        return (meta, txt)
-
-    @cached_property
-    def meta(self):
-        return self._parsed[0]
-
-    @cached_property
-    def content(self):
-        return self._parsed[1]
-
-    @cached_property
-    def html_content(self):
-        c = "%s" % (self.content)
-        if not len(c):
-            return c
-
-        if hasattr(self, "images") and len(self.images):
-            for match, img in self.images.items():
-                c = c.replace(match, str(img))
-        c = str(PandocMD2HTML(c))
-        c = RE_PRECODE.sub('<pre><code lang="\g<1>" class="language-\g<1>">', c)
-        return c
-
-
-class Comment(MarkdownDoc):
-    def __init__(self, fpath):
-        self.fpath = fpath
-
-    @property
-    def dt(self):
-        maybe = self.meta.get("date")
-        if maybe and "null" != maybe:
-            dt = arrow.get(maybe)
-        else:
-            dt = arrow.get(mtime(self.fpath))
-        return dt
-
-    @property
-    def targetname(self):
-        t = urlparse(self.meta.get("target"))
-        return os.path.split(t.path.lstrip("/"))[0]
-        # t = urlparse(self.meta.get('target'))
-        # return t.path.rstrip('/').strip('/').split('/')[-1]
-
-    @property
-    def source(self):
-        return self.meta.get("source")
-
-    @property
-    def author(self):
-        r = {
-            "@context": "http://schema.org",
-            "@type": "Person",
-            "name": urlparse(self.source).hostname,
-            "url": self.source,
-        }
-        author = self.meta.get("author")
-        if not author:
-            return r
-        if "name" in author:
-            r.update({"name": self.meta.get("author").get("name")})
-        elif "url" in author:
-            r.update({"name": urlparse(self.meta.get("author").get("url")).hostname})
-        return r
-
-    @property
-    def type(self):
-        return self.meta.get("type", "webmention")
-        # if len(self.content):
-        # maybe = clean(self.content, strip=True)
-        # if maybe in UNICODE_EMOJI:
-        # return maybe
-
-    @cached_property
-    def jsonld(self):
-        r = {
-            "@context": "http://schema.org",
-            "@type": "Comment",
-            "author": self.author,
-            "url": self.source,
-            "discussionUrl": self.meta.get("target"),
-            "datePublished": str(self.dt),
-            "disambiguatingDescription": self.type,
-        }
-        return r
-
-
 class Gone(object):
     """
     Gone object for delete entries
@@ -410,7 +208,19 @@ class Gone(object):
 
     def __init__(self, fpath):
         self.fpath = fpath
-        self.mtime = mtime(fpath)
+
+    @property
+    def mtime(self):
+        return mtime(self.fpath)
+
+    @property
+    def exists(self):
+        if (
+            os.path.exists(self.renderfile)
+            and mtime(self.renderfile) >= self.mtime
+        ):
+            return True
+        return False
 
     @property
     def renderdir(self):
@@ -434,17 +244,15 @@ class Gone(object):
         return {"source": self.source}
 
     async def render(self):
-        if os.path.exists(self.renderfile):
-            rmtree(os.path.dirname(self.renderfile))
-        # logger.info(
-        #'rendering %s to %s',
-        # self.__class__.__name__,
-        # self.source
+        """ this is disabled for now """
+        return
+
+        # if self.exists:
+        # return
+        # logger.info("rendering %s to %s", self.__class__, self.renderfile)
+        # writepath(
+        # self.renderfile, J2.get_template(self.template).render()
         # )
-        # r = J2.get_template(self.template).render(
-        # self.tmplvars
-        # )
-        # writepath(self.renderfile, r)
 
 
 class Redirect(Gone):
@@ -464,6 +272,532 @@ class Redirect(Gone):
         return {"source": self.source, "target": self.target}
 
 
+class MarkdownDoc(object):
+    """ Base class for anything that is stored as .md """
+
+    def __init__(self, fpath):
+        self.fpath = fpath
+
+    @property
+    def mtime(self):
+        return mtime(self.fpath)
+
+    @property
+    def dt(self):
+        """ returns an arrow object; tries to get the published date of the
+        markdown doc. The pubdate can be in the future, which is why it's
+        done the way it is """
+        maybe = arrow.get(self.mtime)
+        for key in ["published", "date"]:
+            t = self.meta.get(key, None)
+            if t and "null" != t:
+                try:
+                    t = arrow.get(t)
+                    if t.timestamp > maybe.timestamp:
+                        maybe = t
+                except Exception as e:
+                    logger.error(
+                        "failed to parse date: %s for key %s in %s",
+                        t,
+                        key,
+                        self.fpath,
+                    )
+                    continue
+        return maybe
+
+    @cached_property
+    def _parsed(self):
+        with open(self.fpath, mode="rt") as f:
+            logger.debug("parsing YAML+MD file %s", self.fpath)
+            meta, txt = frontmatter.parse(f.read())
+        return (meta, txt)
+
+    @cached_property
+    def meta(self):
+        return self._parsed[0]
+
+    @cached_property
+    def content(self):
+        maybe = self._parsed[1]
+        if not maybe or not len(maybe):
+            maybe = str("")
+        return maybe
+
+    @cached_property
+    def html_content(self):
+        if not len(self.content):
+            return self.content
+
+        c = self.content
+        if hasattr(self, "images") and len(self.images):
+            for match, img in self.images.items():
+                c = c.replace(match, str(img))
+        c = str(PandocMD2HTML(c))
+        c = RE_PRECODE.sub(
+            '<pre><code lang="\g<1>" class="language-\g<1>">', c
+        )
+        return c
+
+    @cached_property
+    def txt_content(self):
+        if not len(self.content):
+            return ""
+        else:
+            return PandocMD2TXT(self.content)
+
+
+class Comment(MarkdownDoc):
+    @property
+    def source(self):
+        return self.meta.get("source")
+
+    @property
+    def author(self):
+        r = {
+            "@context": "http://schema.org",
+            "@type": "Person",
+            "name": urlparse(self.source).hostname,
+            "url": self.source,
+        }
+        author = self.meta.get("author")
+        if not author:
+            return r
+        if "name" in author:
+            r.update({"name": self.meta.get("author").get("name")})
+        elif "url" in author:
+            r.update(
+                {
+                    "name": urlparse(
+                        self.meta.get("author").get("url")
+                    ).hostname
+                }
+            )
+        return r
+
+    @property
+    def type(self):
+        return self.meta.get("type", "webmention")
+
+    @cached_property
+    def jsonld(self):
+        r = {
+            "@context": "http://schema.org",
+            "@type": "Comment",
+            "author": self.author,
+            "url": self.source,
+            "discussionUrl": self.meta.get("target"),
+            "datePublished": str(self.dt),
+            "disambiguatingDescription": self.type,
+        }
+        return r
+
+class WebImage(object):
+    def __init__(self, fpath, mdimg, parent):
+        logger.debug("loading image: %s", fpath)
+        self.mdimg = mdimg
+        self.fpath = fpath
+        self.parent = parent
+        self.mtime = mtime(self.fpath)
+        self.fname, self.fext = os.path.splitext(os.path.basename(fpath))
+        self.resized_images = [
+            (k, self.Resized(self, k))
+            for k in settings.photo.get("sizes").keys()
+            if k < max(self.width, self.height)
+        ]
+        if not len(self.resized_images):
+            self.resized_images.append(
+                (
+                    max(self.width, self.height),
+                    self.Resized(self, max(self.width, self.height)),
+                )
+            )
+
+    @property
+    def is_mainimg(self):
+        if self.fname == self.parent.name:
+            return True
+        return False
+
+    @property
+    def jsonld(self):
+        r = {
+            "@context": "http://schema.org",
+            "@type": "ImageObject",
+            "url": self.href,
+            "image": self.href,
+            "thumbnail": settings.nameddict(
+                {
+                    "@context": "http://schema.org",
+                    "@type": "ImageObject",
+                    "url": self.src,
+                    "width": self.displayed.width,
+                    "height": self.displayed.height,
+                }
+            ),
+            "name": os.path.basename(self.fpath),
+            "encodingFormat": self.mime_type,
+            "contentSize": self.mime_size,
+            "width": self.linked.width,
+            "height": self.linked.height,
+            "dateCreated": self.exif.get("CreateDate"),
+            "exifData": [],
+            "caption": self.caption,
+            "headline": self.title,
+            "representativeOfPage": False,
+        }
+        for k, v in self.exif.items():
+            r["exifData"].append(
+                {"@type": "PropertyValue", "name": k, "value": v}
+            )
+        if self.is_photo:
+            r.update(
+                {
+                    "creator": settings.author,
+                    "copyrightHolder": settings.author,
+                    "license": settings.licence["_default"],
+                }
+            )
+        if self.is_mainimg:
+            r.update({"representativeOfPage": True})
+
+        if (
+            self.exif["GPSLatitude"] != 0
+            and self.exif["GPSLongitude"] != 0
+        ):
+            r.update(
+                {
+                    "locationCreated": settings.nameddict(
+                        {
+                            "@context": "http://schema.org",
+                            "@type": "Place",
+                            "geo": settings.nameddict(
+                                {
+                                    "@context": "http://schema.org",
+                                    "@type": "GeoCoordinates",
+                                    "latitude": self.exif[
+                                        "GPSLatitude"
+                                    ],
+                                    "longitude": self.exif[
+                                        "GPSLongitude"
+                                    ],
+                                }
+                            ),
+                        }
+                    )
+                }
+            )
+        return settings.nameddict(r)
+
+    def __str__(self):
+        if len(self.mdimg.css):
+            return self.mdimg.match
+        tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
+        return tmpl.render(self.jsonld)
+
+    @cached_property
+    def meta(self):
+        return Exif(self.fpath)
+
+    @property
+    def caption(self):
+        if len(self.mdimg.alt):
+            return self.mdimg.alt
+        else:
+            return self.meta.get("Description", "")
+
+    @property
+    def title(self):
+        if len(self.mdimg.title):
+            return self.mdimg.title
+        else:
+            return self.meta.get("Headline", self.fname)
+
+    @property
+    def tags(self):
+        return list(set(self.meta.get("Subject", [])))
+
+    @property
+    def published(self):
+        return arrow.get(
+            self.meta.get("ReleaseDate", self.meta.get("ModifyDate"))
+        )
+
+    @property
+    def width(self):
+        return int(self.meta.get("ImageWidth"))
+
+    @property
+    def height(self):
+        return int(self.meta.get("ImageHeight"))
+
+    @property
+    def mime_type(self):
+        return str(self.meta.get("MIMEType", "image/jpeg"))
+
+    @property
+    def mime_size(self):
+        try:
+            size = os.path.getsize(self.linked.fpath)
+        except Exception as e:
+            logger.error(
+                "Failed to get mime size of %s", self.linked.fpath
+            )
+            size = self.meta.get("FileSize", 0)
+        return size
+
+    @property
+    def displayed(self):
+        ret = self.resized_images[0][1]
+        for size, r in self.resized_images:
+            if size == settings.photo.get("default"):
+                ret = r
+        return ret
+
+    @property
+    def linked(self):
+        m = 0
+        ret = self.resized_images[0][1]
+        for size, r in self.resized_images:
+            if size > m:
+                m = size
+                ret = r
+        return ret
+
+    @property
+    def src(self):
+        return self.displayed.url
+
+    @property
+    def href(self):
+        return self.linked.url
+
+    @property
+    def is_photo(self):
+        r = settings.photo.get("re_author", None)
+        if not r:
+            return False
+        cpr = self.meta.get("Copyright", "")
+        art = self.meta.get("Artist", "")
+        # both Artist and Copyright missing from EXIF
+        if not cpr and not art:
+            return False
+        # we have regex, Artist and Copyright, try matching them
+        if r.search(cpr) or r.search(art):
+            return True
+        return False
+
+    @property
+    def exif(self):
+        exif = {
+            "Model": "",
+            "FNumber": "",
+            "ExposureTime": "",
+            "FocalLength": "",
+            "ISO": "",
+            "LensID": "",
+            "CreateDate": str(arrow.get(self.mtime)),
+            "GPSLatitude": 0,
+            "GPSLongitude": 0,
+        }
+        if not self.is_photo:
+            return exif
+
+        mapping = {
+            "Model": ["Model"],
+            "FNumber": ["FNumber", "Aperture"],
+            "ExposureTime": ["ExposureTime"],
+            "FocalLength": [
+                "FocalLength"
+            ],
+            "ISO": ["ISO"],
+            "LensID": ["LensID", "LensSpec", "Lens"],
+            "CreateDate": ["CreateDate", "DateTimeOriginal"],
+            "GPSLatitude": ["GPSLatitude"],
+            "GPSLongitude": ["GPSLongitude"],
+        }
+
+        for ekey, candidates in mapping.items():
+            for candidate in candidates:
+                maybe = self.meta.get(candidate, None)
+                if not maybe:
+                    continue
+                else:
+                    exif[ekey] = maybe
+                break
+        return settings.nameddict(exif)
+
+    def _maybe_watermark(self, img):
+        if not self.is_photo:
+            return img
+
+        wmarkfile = settings.paths.get("watermark")
+        if not os.path.exists(wmarkfile):
+            return img
+
+        with wand.image.Image(filename=wmarkfile) as wmark:
+            w = self.height * 0.2
+            h = wmark.height * (w / wmark.width)
+            if self.width > self.height:
+                x = self.width - w - (self.width * 0.01)
+                y = self.height - h - (self.height * 0.01)
+            else:
+                x = self.width - h - (self.width * 0.01)
+                y = self.height - w - (self.height * 0.01)
+
+            w = round(w)
+            h = round(h)
+            x = round(x)
+            y = round(y)
+
+            wmark.resize(w, h)
+            if self.width <= self.height:
+                wmark.rotate(-90)
+            img.composite(image=wmark, left=x, top=y)
+        return img
+
+    async def downsize(self):
+        need = False
+        for size, resized in self.resized_images:
+            if not resized.exists or settings.args.get("regenerate"):
+                need = True
+                break
+        if not need:
+            return
+
+        with wand.image.Image(filename=self.fpath) as img:
+            img.auto_orient()
+            img = self._maybe_watermark(img)
+            for size, resized in self.resized_images:
+                if not resized.exists or settings.args.get(
+                    "regenerate"
+                ):
+                    logger.info(
+                        "resizing image: %s to size %d",
+                        os.path.basename(self.fpath),
+                        size,
+                    )
+                    await resized.make(img)
+
+    class Resized:
+        def __init__(self, parent, size, crop=False):
+            self.parent = parent
+            self.size = size
+            self.crop = crop
+
+        @property
+        def data(self):
+            with open(self.fpath, "rb") as f:
+                encoded = base64.b64encode(f.read())
+            return "data:%s;base64,%s" % (
+                self.parent.mime_type,
+                encoded.decode("utf-8"),
+            )
+
+        @property
+        def suffix(self):
+            return settings.photo.get("sizes").get(self.size, "")
+
+        @property
+        def fname(self):
+            return "%s%s%s" % (
+                self.parent.fname,
+                self.suffix,
+                self.parent.fext,
+            )
+
+        @property
+        def fpath(self):
+            return os.path.join(
+                self.parent.parent.renderdir, self.fname
+            )
+
+        @property
+        def url(self):
+            return "%s/%s/%s" % (
+                settings.site.get("url"),
+                self.parent.parent.name,
+                "%s%s%s"
+                % (self.parent.fname, self.suffix, self.parent.fext),
+            )
+
+        @property
+        def relpath(self):
+            return "%s/%s" % (
+                self.parent.parent.renderdir.replace(
+                    settings.paths.get("build"), ""
+                ),
+                self.fname,
+            )
+
+        @property
+        def exists(self):
+            if os.path.isfile(self.fpath):
+                if mtime(self.fpath) >= self.parent.mtime:
+                    return True
+            return False
+
+        @property
+        def width(self):
+            return self.dimensions[0]
+
+        @property
+        def height(self):
+            return self.dimensions[1]
+
+        @property
+        def dimensions(self):
+            width = self.parent.width
+            height = self.parent.height
+            size = self.size
+
+            ratio = max(width, height) / min(width, height)
+            horizontal = True if (width / height) >= 1 else False
+
+            # panorama: reverse "horizontal" because the limit should be on
+            # the shorter side, not the longer, and make it a bit smaller, than
+            # the actual limit
+            # 2.39 is the wide angle cinematic view: anything wider, than that
+            # is panorama land
+            if ratio > 2.4 and not self.crop:
+                size = int(size * 0.6)
+                horizontal = not horizontal
+
+            if (horizontal and not self.crop) or (
+                not horizontal and self.crop
+            ):
+                w = size
+                h = int(float(size / width) * height)
+            else:
+                h = size
+                w = int(float(size / height) * width)
+            return (w, h)
+
+        async def make(self, original):
+            if not os.path.isdir(os.path.dirname(self.fpath)):
+                os.makedirs(os.path.dirname(self.fpath))
+
+            with original.clone() as thumb:
+                thumb.resize(self.width, self.height)
+
+                if self.crop:
+                    thumb.liquid_rescale(self.size, self.size, 1, 1)
+
+                if (
+                    self.parent.meta.get("FileType", "jpeg").lower()
+                    == "jpeg"
+                ):
+                    thumb.compression_quality = 88
+                    thumb.unsharp_mask(
+                        radius=1, sigma=0.5, amount=0.7, threshold=0.5
+                    )
+                    thumb.format = "pjpeg"
+
+                # this is to make sure pjpeg happens
+                with open(self.fpath, "wb") as f:
+                    logger.info("writing %s", self.fpath)
+                    thumb.save(file=f)
+
+
 class Singular(MarkdownDoc):
     """
     A Singular object: a complete representation of a post, including
@@ -472,9 +806,9 @@ class Singular(MarkdownDoc):
 
     def __init__(self, fpath):
         self.fpath = fpath
-        n = os.path.dirname(fpath)
-        self.name = os.path.basename(n)
-        self.category = os.path.basename(os.path.dirname(n))
+        self.dirpath = os.path.dirname(fpath)
+        self.name = os.path.basename(self.dirpath)
+        self.category = os.path.basename(os.path.dirname(self.dirpath))
 
     @cached_property
     def files(self):
@@ -485,34 +819,9 @@ class Singular(MarkdownDoc):
         """
         return [
             k
-            for k in glob.glob(os.path.join(os.path.dirname(self.fpath), "*.*"))
+            for k in glob.glob(os.path.join(self.dirpath, "*.*"))
             if not k.startswith(".")
         ]
-
-    @property
-    def updated(self):
-        maybe = self.dt
-        if len(self.comments):
-            for c in self.comments.values():
-                if c.dt > maybe:
-                    maybe = c.dt
-        return maybe
-
-    @property
-    def dt(self):
-        dt = int(MarkdownDoc.dt.fget(self))
-        for maybe in self.comments.keys():
-            if int(dt) < int(maybe):
-                dt = int(maybe)
-        return dt
-
-    @property
-    def sameas(self):
-        r = {}
-        for k in glob.glob(os.path.join(os.path.dirname(self.fpath), "*.copy")):
-            with open(k, "rt") as f:
-                r.update({f.read(): True})
-        return list(r.keys())
 
     @cached_property
     def comments(self):
@@ -521,12 +830,14 @@ class Singular(MarkdownDoc):
         same directory level as the Singular objects
         """
         comments = {}
-        files = [
+        for f in [
             k
-            for k in glob.glob(os.path.join(os.path.dirname(self.fpath), "*.md"))
-            if os.path.basename(k) != settings.filenames.md
-        ]
-        for f in files:
+            for k in glob.glob(os.path.join(self.dirpath, "*.md"))
+            if (
+                os.path.basename(k) != settings.filenames.md
+                and not k.startswith(".")
+            )
+        ]:
             c = Comment(f)
             comments[c.dt.timestamp] = c
         return comments
@@ -542,98 +853,39 @@ class Singular(MarkdownDoc):
         images = {}
         for match, alt, fname, title, css in RE_MDIMG.findall(self.content):
             mdimg = MarkdownImage(match, alt, fname, title, css)
-            imgpath = os.path.join(os.path.dirname(self.fpath), fname)
+            imgpath = os.path.join(self.dirpath, fname)
             if imgpath in self.files:
                 kind = filetype.guess(imgpath)
                 if kind and "image" in kind.mime.lower():
-                    images.update({match: WebImage(imgpath, mdimg, self)})
+                    images.update(
+                        {match: WebImage(imgpath, mdimg, self)}
+                    )
             else:
-                logger.error("Missing image: %s, referenced in %s", imgpath, self.fpath)
+                logger.error(
+                    "Missing image: %s, referenced in %s",
+                    imgpath,
+                    self.fpath,
+                )
+                continue
         return images
 
     @property
-    def is_page(self):
-        if self.category.startswith("_"):
-            return True
-        return False
-
-    @property
-    def is_front(self):
-        """
-        Returns if the post should be displayed on the front
-        """
-        if self.category in settings.notinfeed:
-            return False
-        return True
-
-    @property
-    def is_photo(self):
-        """
-        This is true if there is a file, with the same name as the entry's
-        directory - so, it's slug -, and that that image believes it's a a
-        photo.
-        """
-        if len(self.images) != 1:
-            return False
-        photo = next(iter(self.images.values()))
-        maybe = self.fpath.replace(settings.filenames.md, "%s.jpg" % (self.name))
-        if photo.fpath == maybe:
-            return True
-        return False
-
-    @property
-    def photo(self):
-        if not self.is_photo:
-            return None
-        return next(iter(self.images.values()))
-
-    @property
     def summary(self):
-        return self.meta.get("summary", "")
+        return str(self.meta.get("summary", ""))
 
     @cached_property
     def html_summary(self):
-        c = "%s" % (self.summary)
-        return PandocMD2HTML(c)
+        if not len(self.summary):
+            return ""
+        else:
+            return PandocMD2HTML(self.summary)
 
     @cached_property
     def txt_summary(self):
-        return PandocMD2TXT(self.summary)
-
-    @cached_property
-    def txt_content(self):
-        return PandocMD2TXT(self.content)
-
-    @property
-    def title(self):
-        if self.is_reply:
-            return "RE: %s" % self.is_reply
-        return self.meta.get("title", self.published.format(settings.displaydate))
-
-    @property
-    def tags(self):
-        return self.meta.get("tags", [])
-
-    @property
-    def syndicate(self):
-        urls = self.meta.get("syndicate", [])
-        urls.append("https://fed.brid.gy/")
-        if self.is_photo:
-            urls.append("https://brid.gy/publish/flickr")
-        return urls
-
-    def baseN(self, num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"):
-        """
-        Creates short, lowercase slug for a number (an epoch) passed
-        """
-        num = int(num)
-        return ((num == 0) and numerals[0]) or (
-            self.baseN(num // b, b, numerals).lstrip(numerals[0]) + numerals[num % b]
-        )
-
-    @property
-    def shortslug(self):
-        return self.baseN(self.published.timestamp)
+        if not len(self.summary):
+            return ""
+        else:
+            return PandocMD2TXT(self.summary)
 
     @property
     def published(self):
@@ -648,6 +900,51 @@ class Singular(MarkdownDoc):
         return pub
 
     @property
+    def updated(self):
+        if "updated" in self.meta:
+            return arrow.get(self.meta.get("updated"))
+        else:
+            return self.dt
+
+    @property
+    def sameas(self):
+        r = {}
+        for k in glob.glob(os.path.join(self.dirpath, "*.copy")):
+            with open(k, "rt") as f:
+                r.update({f.read(): True})
+        return list(r.keys())
+
+    @property
+    def is_page(self):
+        """ all the categories starting with _ are pages """
+        if self.category.startswith("_"):
+            return True
+        return False
+
+    @property
+    def is_front(self):
+        if self.category in settings.notinfeed:
+            return False
+        return True
+
+    @property
+    def is_photo(self):
+        """
+        This is true if there is a file, with the same name as the entry's
+        directory - so, it's slug -, and that that image believes it's a a
+        photo.
+        """
+        if len(self.images) != 1:
+            return False
+        photo = next(iter(self.images.values()))
+        maybe = self.fpath.replace(
+            settings.filenames.md, "%s.jpg" % (self.name)
+        )
+        if photo.fpath == maybe:
+            return True
+        return False
+
+    @property
     def is_reply(self):
         return self.meta.get("in-reply-to", False)
 
@@ -658,27 +955,68 @@ class Singular(MarkdownDoc):
         return False
 
     @property
-    def to_ping(self):
-        urls = []
-        if not self.is_page and self.is_front:
-            w = Webmention(
-                self.url, "https://fed.brid.gy/", os.path.dirname(self.fpath), self.dt
-            )
-            urls.append(w)
+    def photo(self):
+        if not self.is_photo:
+            return None
+        return next(iter(self.images.values()))
+
+    @property
+    def title(self):
         if self.is_reply:
-            w = Webmention(
-                self.url, self.is_reply, os.path.dirname(self.fpath), self.dt
-            )
-            urls.append(w)
-        elif self.is_photo:
+            return "RE: %s" % self.is_reply
+        return self.meta.get(
+            "title", self.published.format(settings.displaydate)
+        )
+
+    @property
+    def tags(self):
+        return self.meta.get("tags", [])
+
+    def baseN(
+        self, num, b=36, numerals="0123456789abcdefghijklmnopqrstuvwxyz"
+    ):
+        """
+        Creates short, lowercase slug for a number (an epoch) passed
+        """
+        num = int(num)
+        return ((num == 0) and numerals[0]) or (
+            self.baseN(num // b, b, numerals).lstrip(numerals[0])
+            + numerals[num % b]
+        )
+
+    @property
+    def shortslug(self):
+        return self.baseN(self.published.timestamp)
+
+    @property
+    def to_syndicate(self):
+        urls = self.meta.get("syndicate", [])
+        if not self.is_page:
+            urls.append("https://fed.brid.gy/")
+        if self.is_photo:
+            urls.append("https://brid.gy/publish/flickr")
+        return urls
+
+    @property
+    def to_ping(self):
+        webmentions = []
+        for url in self.to_syndicate:
             w = Webmention(
                 self.url,
-                "https://brid.gy/publish/flickr",
+                url,
                 os.path.dirname(self.fpath),
-                self.dt,
+                self.dt.timestamp
             )
-            urls.append(w)
-        return urls
+            webmentions.append(w)
+        if self.is_reply:
+            w = Webmention(
+                self.url,
+                self.is_reply,
+                os.path.dirname(self.fpath),
+                self.dt.timestamp
+            )
+            webmentions.append(w)
+        return webmentions
 
     @property
     def licence(self):
@@ -762,11 +1100,11 @@ class Singular(MarkdownDoc):
             "headline": self.title,
             "url": self.url,
             "genre": self.category,
-            "mainEntityOfPage": "%s#article" % (self.url),
-            "dateModified": str(arrow.get(self.dt)),
+            "mainEntityOfPage": f"{self.url}#article",
+            "dateModified": str(self.dt),
             "datePublished": str(self.published),
             "copyrightYear": str(self.published.format("YYYY")),
-            "license": "https://spdx.org/licenses/%s.html" % (self.licence),
+            "license": f"https://spdx.org/licenses/{self.licence}.html",
             "image": settings.site.image,
             "author": settings.author,
             "sameAs": self.sameas,
@@ -781,12 +1119,7 @@ class Singular(MarkdownDoc):
         }
 
         if self.is_photo:
-            r.update(
-                {
-                    "@type": "Photograph",
-                    # "image": self.photo.jsonld,
-                }
-            )
+            r.update({"@type": "Photograph"})
         elif self.has_code:
             r.update({"@type": "TechArticle"})
         elif self.is_page:
@@ -795,11 +1128,6 @@ class Singular(MarkdownDoc):
             r["image"] = []
             for img in list(self.images.values()):
                 r["image"].append(img.jsonld)
-        # if not self.is_photo and len(self.images):
-        # img = list(self.images.values())[0]
-        # r.update({
-        # "image": img.jsonld,
-        # })
 
         if self.is_reply:
             r.update(
@@ -818,26 +1146,28 @@ class Singular(MarkdownDoc):
         if self.event:
             r.update({"subjectOf": self.event})
 
-        # for donation in settings.donateActions:
-        # r["potentialAction"].append(donation)
 
-        for url in list(set(self.syndicate)):
+        for url in list(set(self.to_syndicate)):
             r["potentialAction"].append(
-                {"@context": "http://schema.org", "@type": "InteractAction", "url": url}
+                {
+                    "@context": "http://schema.org",
+                    "@type": "InteractAction",
+                    "url": url,
+                }
             )
 
         for mtime in sorted(self.comments.keys()):
             r["comment"].append(self.comments[mtime].jsonld)
 
-        return struct(r)
+        return settings.nameddict(r)
 
     @property
     def template(self):
-        return "%s.j2.html" % (self.__class__.__name__)
+        return f"{self.__class__.__name__}.j2.html"
 
     @property
-    def gophertemplate(self):
-        return "%s.j2.txt" % (self.__class__.__name__)
+    def txttemplate(self):
+        return f"{self.__class__.__name__}.j2.txt"
 
     @property
     def renderdir(self):
@@ -848,18 +1178,7 @@ class Singular(MarkdownDoc):
         return os.path.join(self.renderdir, settings.filenames.html)
 
     @property
-    def mementofile(self):
-        return os.path.join(os.path.dirname(self.fpath), settings.filenames.memento)
-
-    @property
-    def has_memento(self):
-        if os.path.exists(self.mementofile):
-            if os.path.getsize(self.mementofile) > 0:
-                return True
-        return False
-
-    @property
-    def gopherfile(self):
+    def txtfile(self):
         return os.path.join(self.renderdir, settings.filenames.txt)
 
     @property
@@ -867,15 +1186,19 @@ class Singular(MarkdownDoc):
         if settings.args.get("force"):
             logger.debug("rendering required: force mode on")
             return False
-        elif not os.path.exists(self.renderfile):
-            logger.debug("rendering required: no html yet")
-            return False
-        elif self.dt > mtime(self.renderfile):
-            logger.debug("rendering required: self.dt > html mtime")
-            return False
-        else:
-            logger.debug("rendering not required")
-            return True
+        maybe = self.dt.timestamp
+        if len(self.files):
+            for f in self.files:
+                maybe = max(maybe, mtime(f))
+        for f in [self.renderfile, self.txtfile]:
+            if not os.path.exists(f):
+                logger.debug(f"rendering required: no {f} yet")
+                return False
+            elif maybe > mtime(f):
+                logger.debug(f"rendering required: self.dt > {f} mtime")
+                return False
+        logger.debug("rendering not required")
+        return True
 
     @property
     def corpus(self):
@@ -893,111 +1216,32 @@ class Singular(MarkdownDoc):
             ".copy",
             ".cache",
         ]
-        files = glob.glob(os.path.join(os.path.dirname(self.fpath), "*.*"))
+        files = glob.glob(
+            os.path.join(os.path.dirname(self.fpath), "*.*")
+        )
         for f in files:
             fname, fext = os.path.splitext(f)
             if fext.lower() in exclude:
                 continue
 
             t = os.path.join(
-                settings.paths.get("build"), self.name, os.path.basename(f)
+                settings.paths.get("build"),
+                self.name,
+                os.path.basename(f),
             )
             if os.path.exists(t) and mtime(f) <= mtime(t):
                 continue
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
 
-    async def save_memento(self):
-        cp(self.renderfile, self.mementofile)
-        return
 
     async def save_to_archiveorg(self):
-        requests.get("http://web.archive.org/save/%s" % (self.url))
+        requests.get(f"http://web.archive.org/save/{self.url}")
 
-    def try_memento(self, url):
-        try:
-            params = {
-                "url": url,
-                "timestamp": "%s" % (self.published.format("YYYY-MM-DD")),
-            }
-            waybackmachine = "http://archive.org/wayback/available"
-            snapshots = requests.get(waybackmachine, params=params).json()
-            # no archived version...
-            if not len(snapshots.get("archived_snapshots", None)):
-                logger.warning("no snapshot found for %s", url)
-                return None
-            else:
-                logger.info("snapshot FOUND for %s", url)
-
-            snapshot = snapshots.get("archived_snapshots").get("closest")
-            logger.info("getting %s", snapshot["url"])
-            original = requests.get(snapshot["url"])
-            return original.text
-        except Exception as e:
-            logger.warning("wayback memento failed for %s: %s", url, e)
-            return None
-
-    def maybe_fetch_memento(self):
-        if self.has_memento:
-            return
-
-        # this commented out part is extremely specific to my old site
-        # but it helps anyone who had multiple domains and/or taxonomy
-        # structures
-        # formerdomains = [
-        # 'cadeyrn.webporfolio.hu',
-        # 'blog.petermolnar.eu',
-        # 'petermolnar.eu',
-        # 'petermolnar.net',
-        # ]
-
-        # formercategories = [
-        # 'linux-tech-coding',
-        # 'diy-do-it-yourself',
-        # 'photoblog',
-        # 'it',
-        # 'sysadmin-blog',
-        # 'sysadmin',
-        # 'fotography',
-        # 'blips',
-        # 'blog',
-        # 'r'
-        # ]
-
-        # for domain in formerdomains:
-        # maybe = None
-        # url = url = 'http://%s/%s/' % (domain, self.name)
-        # maybe = self.try_memento(url)
-        # if maybe:
-        # break
-        # for formercategory in formercategories:
-        # url = 'http://%s/%s/%s/' % (domain, formercategory, self.name)
-        # maybe = self.try_memento(url)
-        # if maybe:
-        # break
-        # if maybe:
-        # break
-
-        maybe = self.try_memento(self.url)
-        if maybe:
-            with open(self.mementofile, "wt") as f:
-                logger.info("saving memento for %s to %s", self.name, self.mementofile)
-                f.write(maybe)
 
     async def render(self):
-        if settings.args.get("memento"):
-            self.maybe_fetch_memento()
-
-        if self.exists and not self.has_memento:
-            if self.published.timestamp >= settings.mementostartime:
-                cp(self.renderfile, self.mementofile)
-
         if self.exists:
-            return
-
-        memento = False
-        if self.has_memento:
-            memento = "%s%s" % (self.url, settings.filenames.memento)
+            return True
 
         logger.info("rendering %s", self.name)
         v = {
@@ -1006,10 +1250,11 @@ class Singular(MarkdownDoc):
             "site": settings.site,
             "menu": settings.menu,
             "meta": settings.meta,
-            "fnames": settings.filenames,
-            "memento": memento,
+            "fnames": settings.filenames
         }
-        writepath(self.renderfile, J2.get_template(self.template).render(v))
+        writepath(
+            self.renderfile, J2.get_template(self.template).render(v)
+        )
         del v
 
         g = {
@@ -1017,7 +1262,10 @@ class Singular(MarkdownDoc):
             "summary": self.txt_summary,
             "content": self.txt_content,
         }
-        writepath(self.gopherfile, J2.get_template(self.gophertemplate).render(g))
+        writepath(
+            self.txtfile,
+            J2.get_template(self.txttemplate).render(g),
+        )
         del g
 
         j = settings.site.copy()
@@ -1027,16 +1275,6 @@ class Singular(MarkdownDoc):
             json.dumps(j, indent=4, ensure_ascii=False),
         )
         del j
-
-        # oembed
-        # writepath(
-        # os.path.join(self.renderdir, settings.filenames.oembed_json),
-        # json.dumps(self.oembed_json, indent=4, ensure_ascii=False)
-        # )
-        # writepath(
-        # os.path.join(self.renderdir, settings.filenames.oembed_xml),
-        # self.oembed_xml
-        # )
 
 
 class Home(Singular):
@@ -1053,20 +1291,21 @@ class Home(Singular):
 
     @property
     def renderfile(self):
-        return os.path.join(settings.paths.get("build"), settings.filenames.html)
+        return os.path.join(
+            settings.paths.get("build"), settings.filenames.html
+        )
 
     @property
     def dt(self):
-        maybe = super().dt
+        ts = 0
         for cat, post in self.posts:
-            pts = arrow.get(post["dateModified"]).timestamp
-            if pts > maybe:
-                maybe = pts
-        return maybe
+            ts = max(ts, arrow.get(post["dateModified"]).timestamp)
+        return arrow.get(ts)
 
     async def render_gopher(self):
         lines = [
-            "%s's gopherhole - phlog, if you prefer" % (settings.site.name),
+            "%s's gopherhole"
+            % (settings.site.name),
             "",
             "",
         ]
@@ -1081,7 +1320,9 @@ class Home(Singular):
             lines.append(line)
         lines.append("")
         writepath(
-            self.renderfile.replace(settings.filenames.html, settings.filenames.gopher),
+            self.renderfile.replace(
+                settings.filenames.html, settings.filenames.gopher
+            ),
             "\r\n".join(lines),
         )
 
@@ -1104,388 +1345,6 @@ class Home(Singular):
         await self.render_gopher()
 
 
-class WebImage(object):
-    def __init__(self, fpath, mdimg, parent):
-        logger.debug("loading image: %s", fpath)
-        self.mdimg = mdimg
-        self.fpath = fpath
-        self.parent = parent
-        self.mtime = mtime(self.fpath)
-        self.fname, self.fext = os.path.splitext(os.path.basename(fpath))
-        self.resized_images = [
-            (k, self.Resized(self, k))
-            for k in settings.photo.get("sizes").keys()
-            if k < max(self.width, self.height)
-        ]
-        if not len(self.resized_images):
-            self.resized_images.append(
-                (
-                    max(self.width, self.height),
-                    self.Resized(self, max(self.width, self.height)),
-                )
-            )
-
-    @property
-    def is_mainimg(self):
-        if self.fname == self.parent.name:
-            return True
-        return False
-
-    @property
-    def jsonld(self):
-        r = {
-            "@context": "http://schema.org",
-            "@type": "ImageObject",
-            "url": self.href,
-            "image": self.href,
-            "thumbnail": struct(
-                {
-                    "@context": "http://schema.org",
-                    "@type": "ImageObject",
-                    "url": self.src,
-                    "width": self.displayed.width,
-                    "height": self.displayed.height,
-                }
-            ),
-            "name": os.path.basename(self.fpath),
-            "encodingFormat": self.mime_type,
-            "contentSize": self.mime_size,
-            "width": self.linked.width,
-            "height": self.linked.height,
-            "dateCreated": self.exif.get("CreateDate"),
-            "exifData": [],
-            "caption": self.caption,
-            "headline": self.title,
-            "representativeOfPage": False,
-        }
-        for k, v in self.exif.items():
-            r["exifData"].append({"@type": "PropertyValue", "name": k, "value": v})
-        if self.is_photo:
-            r.update(
-                {
-                    "creator": settings.author,
-                    "copyrightHolder": settings.author,
-                    "license": settings.licence["_default"],
-                }
-            )
-        if self.is_mainimg:
-            r.update({"representativeOfPage": True})
-
-        if self.exif["GPSLatitude"] != 0 and self.exif["GPSLongitude"] != 0:
-            r.update(
-                {
-                    "locationCreated": struct(
-                        {
-                            "@context": "http://schema.org",
-                            "@type": "Place",
-                            "geo": struct(
-                                {
-                                    "@context": "http://schema.org",
-                                    "@type": "GeoCoordinates",
-                                    "latitude": self.exif["GPSLatitude"],
-                                    "longitude": self.exif["GPSLongitude"],
-                                }
-                            ),
-                        }
-                    )
-                }
-            )
-        return struct(r)
-
-    def __str__(self):
-        if len(self.mdimg.css):
-            return self.mdimg.match
-        tmpl = J2.get_template("%s.j2.html" % (self.__class__.__name__))
-        return tmpl.render(self.jsonld)
-
-    @cached_property
-    def meta(self):
-        return Exif(self.fpath)
-
-    @property
-    def caption(self):
-        if len(self.mdimg.alt):
-            return self.mdimg.alt
-        else:
-            return self.meta.get("Description", "")
-
-    @property
-    def title(self):
-        if len(self.mdimg.title):
-            return self.mdimg.title
-        else:
-            return self.meta.get("Headline", self.fname)
-
-    @property
-    def tags(self):
-        return list(set(self.meta.get("Subject", [])))
-
-    @property
-    def published(self):
-        return arrow.get(self.meta.get("ReleaseDate", self.meta.get("ModifyDate")))
-
-    @property
-    def width(self):
-        return int(self.meta.get("ImageWidth"))
-
-    @property
-    def height(self):
-        return int(self.meta.get("ImageHeight"))
-
-    @property
-    def mime_type(self):
-        return str(self.meta.get("MIMEType", "image/jpeg"))
-
-    @property
-    def mime_size(self):
-        try:
-            size = os.path.getsize(self.linked.fpath)
-        except Exception as e:
-            logger.error("Failed to get mime size of %s", self.linked.fpath)
-            size = self.meta.get("FileSize", 0)
-        return size
-
-    @property
-    def displayed(self):
-        ret = self.resized_images[0][1]
-        for size, r in self.resized_images:
-            if size == settings.photo.get("default"):
-                ret = r
-        return ret
-
-    @property
-    def linked(self):
-        m = 0
-        ret = self.resized_images[0][1]
-        for size, r in self.resized_images:
-            if size > m:
-                m = size
-                ret = r
-        return ret
-
-    @property
-    def src(self):
-        return self.displayed.url
-
-    @property
-    def href(self):
-        return self.linked.url
-
-    @property
-    def is_photo(self):
-        r = settings.photo.get("re_author", None)
-        if not r:
-            return False
-        cpr = self.meta.get("Copyright", "")
-        art = self.meta.get("Artist", "")
-        # both Artist and Copyright missing from EXIF
-        if not cpr and not art:
-            return False
-        # we have regex, Artist and Copyright, try matching them
-        if r.search(cpr) or r.search(art):
-            return True
-        return False
-
-    @property
-    def exif(self):
-        exif = {
-            "Model": "",
-            "FNumber": "",
-            "ExposureTime": "",
-            "FocalLength": "",
-            "ISO": "",
-            "LensID": "",
-            "CreateDate": str(arrow.get(self.mtime)),
-            "GPSLatitude": 0,
-            "GPSLongitude": 0,
-        }
-        if not self.is_photo:
-            return exif
-
-        mapping = {
-            "Model": ["Model"],
-            "FNumber": ["FNumber", "Aperture"],
-            "ExposureTime": ["ExposureTime"],
-            "FocalLength": ["FocalLength"],  # ['FocalLengthIn35mmFormat'],
-            "ISO": ["ISO"],
-            "LensID": ["LensID", "LensSpec", "Lens"],
-            "CreateDate": ["CreateDate", "DateTimeOriginal"],
-            "GPSLatitude": ["GPSLatitude"],
-            "GPSLongitude": ["GPSLongitude"],
-        }
-
-        for ekey, candidates in mapping.items():
-            for candidate in candidates:
-                maybe = self.meta.get(candidate, None)
-                if not maybe:
-                    continue
-                else:
-                    exif[ekey] = maybe
-                break
-        return struct(exif)
-
-    def _maybe_watermark(self, img):
-        if not self.is_photo:
-            return img
-
-        wmarkfile = settings.paths.get("watermark")
-        if not os.path.exists(wmarkfile):
-            return img
-
-        with wand.image.Image(filename=wmarkfile) as wmark:
-            w = self.height * 0.2
-            h = wmark.height * (w / wmark.width)
-            if self.width > self.height:
-                x = self.width - w - (self.width * 0.01)
-                y = self.height - h - (self.height * 0.01)
-            else:
-                x = self.width - h - (self.width * 0.01)
-                y = self.height - w - (self.height * 0.01)
-
-            w = round(w)
-            h = round(h)
-            x = round(x)
-            y = round(y)
-
-            wmark.resize(w, h)
-            if self.width <= self.height:
-                wmark.rotate(-90)
-            img.composite(image=wmark, left=x, top=y)
-        return img
-
-    async def downsize(self):
-        need = False
-        for size, resized in self.resized_images:
-            if not resized.exists or settings.args.get("regenerate"):
-                need = True
-                break
-        if not need:
-            return
-
-        with wand.image.Image(filename=self.fpath) as img:
-            img.auto_orient()
-            img = self._maybe_watermark(img)
-            for size, resized in self.resized_images:
-                if not resized.exists or settings.args.get("regenerate"):
-                    logger.info(
-                        "resizing image: %s to size %d",
-                        os.path.basename(self.fpath),
-                        size,
-                    )
-                    await resized.make(img)
-
-    class Resized:
-        def __init__(self, parent, size, crop=False):
-            self.parent = parent
-            self.size = size
-            self.crop = crop
-
-        @property
-        def data(self):
-            with open(self.fpath, "rb") as f:
-                encoded = base64.b64encode(f.read())
-            return "data:%s;base64,%s" % (
-                self.parent.mime_type,
-                encoded.decode("utf-8"),
-            )
-
-        @property
-        def suffix(self):
-            return settings.photo.get("sizes").get(self.size, "")
-
-        @property
-        def fname(self):
-            return "%s%s%s" % (self.parent.fname, self.suffix, self.parent.fext)
-
-        @property
-        def fpath(self):
-            return os.path.join(self.parent.parent.renderdir, self.fname)
-
-        @property
-        def url(self):
-            return "%s/%s/%s" % (
-                settings.site.get("url"),
-                self.parent.parent.name,
-                "%s%s%s" % (self.parent.fname, self.suffix, self.parent.fext),
-            )
-
-        @property
-        def relpath(self):
-            return "%s/%s" % (
-                self.parent.parent.renderdir.replace(settings.paths.get("build"), ""),
-                self.fname,
-            )
-
-        @property
-        def exists(self):
-            if os.path.isfile(self.fpath):
-                if mtime(self.fpath) >= self.parent.mtime:
-                    return True
-            return False
-
-        @property
-        def width(self):
-            return self.dimensions[0]
-
-        @property
-        def height(self):
-            return self.dimensions[1]
-
-        @property
-        def dimensions(self):
-            width = self.parent.width
-            height = self.parent.height
-            size = self.size
-
-            ratio = max(width, height) / min(width, height)
-            horizontal = True if (width / height) >= 1 else False
-
-            # panorama: reverse "horizontal" because the limit should be on
-            # the shorter side, not the longer, and make it a bit smaller, than
-            # the actual limit
-            # 2.39 is the wide angle cinematic view: anything wider, than that
-            # is panorama land
-            if ratio > 2.4 and not self.crop:
-                size = int(size * 0.6)
-                horizontal = not horizontal
-
-            if (horizontal and not self.crop) or (not horizontal and self.crop):
-                w = size
-                h = int(float(size / width) * height)
-            else:
-                h = size
-                w = int(float(size / height) * width)
-            return (w, h)
-
-        async def make(self, original):
-            if not os.path.isdir(os.path.dirname(self.fpath)):
-                os.makedirs(os.path.dirname(self.fpath))
-
-            with original.clone() as thumb:
-                thumb.resize(self.width, self.height)
-
-                if self.crop:
-                    thumb.liquid_rescale(self.size, self.size, 1, 1)
-
-                if self.parent.meta.get("FileType", "jpeg").lower() == "jpeg":
-                    thumb.compression_quality = 88
-                    thumb.unsharp_mask(radius=1, sigma=0.5, amount=0.7, threshold=0.5)
-                    thumb.format = "pjpeg"
-
-                # this is to make sure pjpeg happens
-                with open(self.fpath, "wb") as f:
-                    logger.info("writing %s", self.fpath)
-                    thumb.save(file=f)
-
-                # n, e = os.path.splitext(os.path.basename(self.fpath))
-                # webppath = self.fpath.replace(e, '.webp')
-                # with open(webppath, 'wb') as f:
-                # logger.info("writing %s", webppath)
-                # thumb.format = 'webp'
-                # thumb.compression_quality = 88
-                # thumb.save(file=f)
-
-
 class PHPFile(object):
     @property
     def exists(self):
@@ -1499,7 +1358,9 @@ class PHPFile(object):
 
     @property
     def mtime(self):
-        return mtime(os.path.join(settings.paths.get("tmpl"), self.templatefile))
+        return mtime(
+            os.path.join(settings.paths.get("tmpl"), self.templatefile)
+        )
 
     @property
     def renderfile(self):
@@ -1517,7 +1378,9 @@ class PHPFile(object):
 
 class Search(PHPFile):
     def __init__(self):
-        self.fpath = os.path.join(settings.paths.get("build"), "search.sqlite")
+        self.fpath = os.path.join(
+            settings.paths.get("build"), "search.sqlite"
+        )
         self.db = sqlite3.connect(self.fpath)
         self.db.execute("PRAGMA auto_vacuum = INCREMENTAL;")
         self.db.execute("PRAGMA journal_mode = MEMORY;")
@@ -1588,7 +1451,14 @@ class Search(PHPFile):
                 VALUES
                     (?,?,?,?,?,?);
             """,
-                (post.url, mtime, post.name, post.title, post.category, post.content),
+                (
+                    post.url,
+                    mtime,
+                    post.name,
+                    post.title,
+                    post.category,
+                    post.content,
+                ),
             )
             self.is_changed = True
 
@@ -1607,7 +1477,8 @@ class Search(PHPFile):
                 }
             )
             target = os.path.join(
-                settings.paths.get("build"), template.replace(".j2", "").lower()
+                settings.paths.get("build"),
+                template.replace(".j2", "").lower(),
             )
             writepath(target, r)
 
@@ -1645,7 +1516,7 @@ class IndexPHP(PHPFile):
                 "gones": self.gone,
                 "redirects": self.redirect,
                 "rewrites": settings.rewrites,
-                "gone_re": settings.gones
+                "gone_re": settings.gones,
             }
         )
         writepath(self.renderfile, r)
@@ -1662,23 +1533,10 @@ class WebhookPHP(PHPFile):
 
     async def _render(self):
         r = J2.get_template(self.templatefile).render(
-            {"author": settings.author, "webmentionio": keys.webmentionio}
-        )
-        writepath(self.renderfile, r)
-
-
-class MicropubPHP(PHPFile):
-    @property
-    def renderfile(self):
-        return os.path.join(settings.paths.get("build"), "micropub.php")
-
-    @property
-    def templatefile(self):
-        return "Micropub.j2.php"
-
-    async def _render(self):
-        r = J2.get_template(self.templatefile).render(
-            {"site": settings.site, "menu": settings.menu, "paths": settings.paths}
+            {
+                "author": settings.author,
+                "webmentionio": keys.webmentionio,
+            }
         )
         writepath(self.renderfile, r)
 
@@ -1701,13 +1559,6 @@ class Category(dict):
         return list(sorted(self.keys(), reverse=True))
 
     @property
-    def is_photos(self):
-        r = True
-        for i in self.values():
-            r = r & i.is_photo
-        return r
-
-    @property
     def is_paginated(self):
         if self.name in settings.flat:
             return False
@@ -1723,14 +1574,18 @@ class Category(dict):
     @property
     def url(self):
         if len(self.name):
-            url = "%s/%s/%s/" % (settings.site.url, settings.paths.category, self.name)
+            url = "%s/%s/%s/" % (
+                settings.site.url,
+                settings.paths.category,
+                self.name,
+            )
         else:
             url = "%s/" % (settings.site.url)
         return url
 
     @property
     def feedurl(self):
-        return "%sfeed/" % (self.url)
+        return "%s%s/" % (self.url, settings.paths.feed)
 
     @property
     def template(self):
@@ -1747,7 +1602,9 @@ class Category(dict):
 
     @property
     def newest_year(self):
-        return int(self[self.sortedkeys[0]].published.format(self.trange))
+        return int(
+            self[self.sortedkeys[0]].published.format(self.trange)
+        )
 
     @property
     def years(self):
@@ -1775,19 +1632,22 @@ class Category(dict):
     def get_posts(self, start=0, end=-1):
         return [self[k].jsonld for k in self.sortedkeys[start:end]]
 
-    def is_uptodate(self, fpath, ts):
+    def is_uptodate(self, fpath, dt):
         if settings.args.get("force"):
             return False
         if not os.path.exists(fpath):
             return False
-        if mtime(fpath) >= ts:
+        if mtime(fpath) >= dt.timestamp:
             return True
         return False
 
     def newest(self, start=0, end=-1):
         if start == end:
             end = -1
-        s = sorted([self[k].dt for k in self.sortedkeys[start:end]], reverse=True)
+        s = sorted(
+            [self[k].dt for k in self.sortedkeys[start:end]],
+            reverse=True,
+        )
         if len(s) > 0:
             return s[0]  # Timestamp in seconds since epoch
         else:
@@ -1835,7 +1695,9 @@ class Category(dict):
             await self.render_json()
             return
 
-        logger.info('rendering category "%s" %s feed', self.name, xmlformat)
+        logger.info(
+            'rendering category "%s" %s feed', self.name, xmlformat
+        )
 
         start = 0
         end = int(settings.pagination)
@@ -1843,7 +1705,12 @@ class Category(dict):
         fg = FeedGenerator()
         fg.id(self.feedurl)
         fg.title(self.title)
-        fg.author({"name": settings.author.name, "email": settings.author.email})
+        fg.author(
+            {
+                "name": settings.author.name,
+                "email": settings.author.email,
+            }
+        )
         fg.logo("%s/favicon.png" % settings.site.url)
         fg.updated(arrow.get(self.mtime).to("utc").datetime)
         fg.description(settings.site.headline)
@@ -1854,13 +1721,22 @@ class Category(dict):
 
             fe.id(post.url)
             fe.title(post.title)
-            fe.author({"name": settings.author.name, "email": settings.author.email})
+            fe.author(
+                {
+                    "name": settings.author.name,
+                    "email": settings.author.email,
+                }
+            )
             fe.category(
                 {
                     "term": post.category,
                     "label": post.category,
                     "scheme": "%s/%s/%s/"
-                    % (settings.site.url, settings.paths.category, post.category),
+                    % (
+                        settings.site.url,
+                        settings.paths.category,
+                        post.category,
+                    ),
                 }
             )
 
@@ -1886,17 +1762,25 @@ class Category(dict):
                         post.photo.mime_type,
                     )
             elif xmlformat == "atom":
-                fe.link(href=post.url, rel="alternate", type="text/html")
+                fe.link(
+                    href=post.url, rel="alternate", type="text/html"
+                )
                 fe.content(src=post.url, type="text/html")
                 fe.summary(post.summary)
 
         if xmlformat == "rss":
             fg.link(href=self.feedurl)
-            writepath(self.feedpath(settings.filenames.rss), fg.rss_str(pretty=True))
+            writepath(
+                self.feedpath(settings.filenames.rss),
+                fg.rss_str(pretty=True),
+            )
         elif xmlformat == "atom":
             fg.link(href=self.feedurl, rel="self")
             fg.link(href=settings.meta.get("hub"), rel="hub")
-            writepath(self.feedpath(settings.filenames.atom), fg.atom_str(pretty=True))
+            writepath(
+                self.feedpath(settings.filenames.atom),
+                fg.atom_str(pretty=True),
+            )
 
     async def render_json(self):
         logger.info('rendering category "%s" JSON feed', self.name)
@@ -1914,7 +1798,9 @@ class Category(dict):
             "items": [],
         }
 
-        for k in reversed(self.sortedkeys[0 : int(settings.pagination)]):
+        for k in reversed(
+            self.sortedkeys[0 : int(settings.pagination)]
+        ):
             post = self[k]
             pjs = {
                 "id": post.url,
@@ -1931,7 +1817,8 @@ class Category(dict):
                         "attachment": {
                             "url": post.photo.href,
                             "mime_type": post.photo.mime_type,
-                            "size_in_bytes": "%d" % post.photo.mime_size,
+                            "size_in_bytes": "%d"
+                            % post.photo.mime_size,
                         }
                     }
                 )
@@ -1943,7 +1830,9 @@ class Category(dict):
 
     async def render_flat(self):
         logger.info("rendering flat archive for %s", self.name)
-        r = J2.get_template(self.template).render(self.tmplvars(self.get_posts()))
+        r = J2.get_template(self.template).render(
+            self.tmplvars(self.get_posts())
+        )
         writepath(self.indexfpath(), r)
 
     async def render_gopher(self):
@@ -1957,7 +1846,9 @@ class Category(dict):
             )
             lines.append(line)
             if len(post.description):
-                lines.extend(str(PandocHTML2TXT(post.description)).split("\n"))
+                lines.extend(
+                    str(PandocHTML2TXT(post.description)).split("\n")
+                )
             if isinstance(post["image"], list):
                 for img in post["image"]:
                     line = "I%s\t/%s/%s\t%s\t70" % (
@@ -1968,7 +1859,10 @@ class Category(dict):
                     )
                     lines.append(line)
             lines.append("")
-        writepath(self.indexfpath(fname=settings.filenames.gopher), "\r\n".join(lines))
+        writepath(
+            self.indexfpath(fname=settings.filenames.gopher),
+            "\r\n".join(lines),
+        )
 
     async def render_archives(self):
         for year in self.years.keys():
@@ -2041,7 +1935,9 @@ class Sitemap(dict):
 
     @property
     def renderfile(self):
-        return os.path.join(settings.paths.get("build"), settings.filenames.sitemap)
+        return os.path.join(
+            settings.paths.get("build"), settings.filenames.sitemap
+        )
 
     async def render(self):
         if len(self) > 0:
@@ -2050,6 +1946,125 @@ class Sitemap(dict):
             with open(self.renderfile, "wt") as f:
                 f.write("\n".join(sorted(self.keys())))
 
+
+class Webmention(object):
+    """ outgoing webmention class """
+
+    def __init__(self, source, target, dpath, mtime=0):
+        self.source = source
+        self.target = target
+        self.dpath = dpath
+        if not mtime:
+            mtime = arrow.utcnow().timestamp
+        self.mtime = mtime
+
+    @property
+    def fpath(self):
+        return os.path.join(
+            self.dpath, "%s.ping" % (url2slug(self.target))
+        )
+
+    @property
+    def exists(self):
+        if not os.path.isfile(self.fpath):
+            return False
+        elif mtime(self.fpath) > self.mtime:
+            return True
+        else:
+            return False
+
+    def save(self, content):
+        writepath(self.fpath, content)
+
+    async def send(self):
+        if self.exists:
+            self.backfill_syndication()
+            return
+        elif settings.args.get("noping"):
+            self.save("noping entry at %s" % arrow.now())
+            return
+
+        telegraph_url = "https://telegraph.p3k.io/webmention"
+        telegraph_params = {
+            "token": "%s" % (keys.telegraph.get("token")),
+            "source": "%s" % (self.source),
+            "target": "%s" % (self.target),
+        }
+        r = requests.post(telegraph_url, data=telegraph_params)
+        logger.info(
+            "sent webmention to telegraph from %s to %s",
+            self.source,
+            self.target,
+        )
+        if r.status_code not in [200, 201, 202]:
+            logger.error("sending failed: %s %s", r.status_code, r.text)
+        else:
+            self.save(r.text)
+
+
+    def backfill_syndication(self):
+        """ this is very specific to webmention.io and brid.gy publish """
+
+        if "fed.brid.gy" in self.target:
+            return
+        if "brid.gy" not in self.target:
+            return
+        if not self.exists:
+            return
+
+        with open(self.fpath) as f:
+            txt = f.read()
+
+        if "telegraph.p3k.io" not in txt:
+            return
+
+        try:
+            maybe = json.loads(txt)
+            if "status" in maybe and "error" == maybe["status"]:
+                logger.error(
+                    "errored webmention found at %s: %s",
+                    self.dpath,
+                    maybe,
+                )
+                return
+
+            if "location" not in maybe:
+                return
+            if "http_body" not in maybe:
+                logger.debug(
+                    "trying to re-fetch %s for %s",
+                    maybe["location"],
+                    self.fpath,
+                )
+                wio = requests.get(maybe["location"])
+                if wio.status_code != requests.codes.ok:
+                    return
+                maybe = wio.json()
+                logger.debug("response: %s", maybe)
+                with open(self.fpath, "wt") as update:
+                    update.write(
+                        json.dumps(maybe, sort_keys=True, indent=4)
+                    )
+            if "url" in maybe["http_body"]:
+                data = json.loads(maybe["http_body"])
+                url = data["url"]
+                sp = os.path.join(
+                    self.dpath, "%s.copy" % url2slug(url)
+                )
+                if os.path.exists(sp):
+                    return
+                with open(sp, "wt") as f:
+                    logger.info(
+                        "writing syndication copy %s to %s", url, sp
+                    )
+                    f.write(url)
+        except Exception as e:
+            logger.error(
+                "failed to fetch syndication URL for %s: %s",
+                self.dpath,
+                e,
+            )
+            pass
 
 class WebmentionIO(object):
     def __init__(self):
@@ -2071,7 +2086,9 @@ class WebmentionIO(object):
             try:
                 mtime = int(os.path.basename(e).split("-")[0])
             except Exception as exc:
-                logger.error("int conversation failed: %s, file was: %s", exc, e)
+                logger.error(
+                    "int conversation failed: %s, file was: %s", exc, e
+                )
                 continue
             if mtime > newest:
                 newest = mtime
@@ -2085,23 +2102,35 @@ class WebmentionIO(object):
             else:
                 dt = arrow.get(webmention.get("data").get("published"))
 
-        slug = os.path.split(urlparse(webmention.get("target")).path.lstrip("/"))[0]
+        slug = os.path.split(
+            urlparse(webmention.get("target")).path.lstrip("/")
+        )[0]
 
         # ignore selfpings
         if slug == settings.site.get("name"):
             return
 
-        fdir = glob.glob(os.path.join(settings.paths.get("content"), "*", slug))
+        fdir = glob.glob(
+            os.path.join(settings.paths.get("content"), "*", slug)
+        )
         if not len(fdir):
-            logger.error("couldn't find post for incoming webmention: %s", webmention)
+            logger.error(
+                "couldn't find post for incoming webmention: %s",
+                webmention,
+            )
             return
         elif len(fdir) > 1:
-            logger.error("multiple posts found for incoming webmention: %s", webmention)
+            logger.error(
+                "multiple posts found for incoming webmention: %s",
+                webmention,
+            )
             return
 
         fdir = fdir.pop()
         fpath = os.path.join(
-            fdir, "%d-%s.md" % (dt.timestamp, url2slug(webmention.get("source")))
+            fdir,
+            "%d-%s.md"
+            % (dt.timestamp, url2slug(webmention.get("source"))),
         )
 
         author = webmention.get("data", {}).get("author", None)
@@ -2117,7 +2146,9 @@ class WebmentionIO(object):
             "date": str(dt),
             "source": webmention.get("source"),
             "target": webmention.get("target"),
-            "type": webmention.get("activity").get("type", "webmention"),
+            "type": webmention.get("activity").get(
+                "type", "webmention"
+            ),
         }
 
         try:
@@ -2143,48 +2174,14 @@ class WebmentionIO(object):
             pass
 
 
-# class GranaryIO(dict):
-# granary = 'https://granary.io/url'
-# convert_to = ['as2', 'mf2-json', 'jsonfeed']
-
-# def __init__(self, source):
-# self.source = source
-
-# def run(self):
-# for c in self.convert_to:
-# p = {
-# 'url': self.source,
-# 'input': html,
-# 'output': c
-# }
-# r = requests.get(self.granary, params=p)
-# logger.info("queried granary.io for %s for url: %s", c, self.source)
-# if r.status_code != requests.codes.ok:
-# continue
-# try:
-# self[c] = webmentions.text
-# except ValueError as e:
-# logger.error('failed to query granary.io: %s', e)
-# pass
-
-
-def dat():
-    for url in settings.site.sameAs:
-        if "dat://" in url:
-            p = os.path.join(settings.paths.build, ".well-known")
-            if not os.path.isdir(p):
-                os.makedirs(p)
-            p = os.path.join(settings.paths.build, ".well-known", "dat")
-            if not os.path.exists(p) or settings.args.get("force"):
-                writepath(p, "%s\nTTL=3600" % (url))
-
-
 def make():
     start = int(round(time.time() * 1000))
     last = 0
 
     # this needs to be before collecting the 'content' itself
-    if not settings.args.get("offline") and not settings.args.get("noservices"):
+    if not settings.args.get("offline") and not settings.args.get(
+        "noservices"
+    ):
         incoming = WebmentionIO()
         incoming.run()
 
@@ -2195,9 +2192,6 @@ def make():
     content = settings.paths.get("content")
     rules = IndexPHP()
 
-    micropub = MicropubPHP()
-    queue.put(micropub.render())
-
     webhook = WebhookPHP()
     queue.put(webhook.render())
 
@@ -2207,7 +2201,11 @@ def make():
     frontposts = Category()
     home = Home(settings.paths.get("home"))
 
-    for e in sorted(glob.glob(os.path.join(content, "*", "*", settings.filenames.md))):
+    for e in sorted(
+        glob.glob(
+            os.path.join(content, "*", "*", settings.filenames.md)
+        )
+    ):
         post = Singular(e)
         # deal with images, if needed
         for i in post.images.values():
@@ -2225,7 +2223,9 @@ def make():
             logger.info("%s is for the future", post.name)
             continue
         elif not os.path.exists(post.renderfile):
-            logger.debug("%s seems to be fist time published", post.name)
+            logger.debug(
+                "%s seems to be fist time published", post.name
+            )
             firsttimepublished.append(post)
 
         # add post to search database
@@ -2282,7 +2282,9 @@ def make():
     for e in glob.glob(os.path.join(content, "*.*")):
         if e.endswith(".md"):
             continue
-        t = os.path.join(settings.paths.get("build"), os.path.basename(e))
+        t = os.path.join(
+            settings.paths.get("build"), os.path.basename(e)
+        )
         if os.path.exists(t) and mtime(e) <= mtime(t):
             continue
         cp(e, t)
@@ -2298,14 +2300,20 @@ def make():
                 "rsync -avuhH --delete-after %s/ %s/"
                 % (
                     settings.paths.get("build"),
-                    "%s/%s" % (settings.syncserver, settings.paths.get("remotewww")),
+                    "%s/%s"
+                    % (
+                        settings.syncserver,
+                        settings.paths.get("remotewww"),
+                    ),
                 )
             )
             logger.info("syncing finished")
         except Exception as e:
             logger.error("syncing failed: %s", e)
 
-    if not settings.args.get("offline") and not settings.args.get("noservices"):
+    if not settings.args.get("offline") and not settings.args.get(
+        "noservices"
+    ):
         logger.info("sending webmentions")
         for wm in send:
             queue.put(wm.send())

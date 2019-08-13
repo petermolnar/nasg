@@ -9,8 +9,18 @@ import subprocess
 import json
 import os
 import logging
-import keys
-import settings
+from tempfile import gettempdir
+
+TMPSUBDIR = "nasg"
+SHM = "/dev/shm"
+
+if os.path.isdir(SHM) and os.access(SHM, os.W_OK):
+    TMPDIR = f"{SHM}/{TMPSUBDIR}"
+else:
+    TMPDIR = os.path.join(gettempdir(), TMPSUBDIR)
+
+if not os.path.isdir(TMPDIR):
+    os.makedirs(TMPDIR)
 
 EXIFDATE = re.compile(
     r"^(?P<year>[0-9]{4}):(?P<month>[0-9]{2}):(?P<day>[0-9]{2})\s+"
@@ -30,7 +40,7 @@ class CachedMeta(dict):
             fname = os.path.basename(os.path.dirname(self.fpath))
 
         return os.path.join(
-            settings.tmpdir,
+            TMPDIR,
             "%s.%s.%s" % (fname, self.__class__.__name__, self.suffix),
         )
 
