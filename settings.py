@@ -205,6 +205,36 @@ gones = [
     "^/broadcast/wp-ffpc\.message$",
 ]
 
+formerdomains = [
+    "cadeyrn.webporfolio.hu",
+    "blog.petermolnar.eu",
+    "petermolnar.eu",
+]
+
+formercategories = {
+    "article": [
+        "linux-tech-coding",
+        "diy-do-it-yourself",
+        "sysadmin-blog",
+        "sysadmin",
+        "szubjektiv-technika",
+        "wordpress"
+    ],
+    "note": [
+        "blips",
+        "blog",
+        "r"
+    ],
+    "journal": [
+        "blog",
+    ],
+    "photo": [
+        "photoblog",
+        "fotography",
+    ]
+}
+
+
 if os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK):
     tmpdir = "/dev/shm/nasg"
 else:

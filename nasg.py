@@ -13,7 +13,8 @@ import re
 import asyncio
 import sqlite3
 import json
-#import base64
+
+# import base64
 from shutil import copy2 as cp
 from urllib.parse import urlparse
 from collections import namedtuple
@@ -38,6 +39,7 @@ from pandoc import PandocMD2HTML, PandocMD2TXT, PandocHTML2TXT
 from meta import Exif
 import settings
 import keys
+import wayback
 
 logger = logging.getLogger("NASG")
 
@@ -140,7 +142,7 @@ def maybe_copy(source, target):
 
 def extractdomain(url):
     url = urlparse(url)
-    return url.netloc
+    return url.hostname
 
 
 J2 = jinja2.Environment(
@@ -387,6 +389,7 @@ class Comment(MarkdownDoc):
         }
         return r
 
+
 class WebImage(object):
     def __init__(self, fpath, mdimg, parent):
         logger.debug("loading image: %s", fpath)
@@ -603,9 +606,7 @@ class WebImage(object):
             "Model": ["Model"],
             "FNumber": ["FNumber", "Aperture"],
             "ExposureTime": ["ExposureTime"],
-            "FocalLength": [
-                "FocalLength"
-            ],
+            "FocalLength": ["FocalLength"],
             "ISO": ["ISO"],
             "LensID": ["LensID", "LensSpec", "Lens"],
             "CreateDate": ["CreateDate", "DateTimeOriginal"],
@@ -681,14 +682,14 @@ class WebImage(object):
             self.size = size
             self.crop = crop
 
-        #@property
-        #def data(self):
-            #with open(self.fpath, "rb") as f:
-                #encoded = base64.b64encode(f.read())
-            #return "data:%s;base64,%s" % (
-                #self.parent.mime_type,
-                #encoded.decode("utf-8"),
-            #)
+        # @property
+        # def data(self):
+        # with open(self.fpath, "rb") as f:
+        # encoded = base64.b64encode(f.read())
+        # return "data:%s;base64,%s" % (
+        # self.parent.mime_type,
+        # encoded.decode("utf-8"),
+        # )
 
         @property
         def suffix(self):
@@ -806,6 +807,7 @@ class Singular(MarkdownDoc):
         self.dirpath = os.path.dirname(fpath)
         self.name = os.path.basename(self.dirpath)
         self.category = os.path.basename(os.path.dirname(self.dirpath))
+        self.pointers = []
 
     @cached_property
     def files(self):
@@ -848,7 +850,9 @@ class Singular(MarkdownDoc):
         the Singular object
         """
         images = {}
-        for match, alt, fname, title, css in RE_MDIMG.findall(self.content):
+        for match, alt, fname, title, css in RE_MDIMG.findall(
+            self.content
+        ):
             mdimg = MarkdownImage(match, alt, fname, title, css)
             imgpath = os.path.join(self.dirpath, fname)
             if imgpath in self.files:
@@ -1002,7 +1006,7 @@ class Singular(MarkdownDoc):
                 self.url,
                 url,
                 os.path.dirname(self.fpath),
-                self.dt.timestamp
+                self.dt.timestamp,
             )
             webmentions.append(w)
         if self.is_reply:
@@ -1010,7 +1014,7 @@ class Singular(MarkdownDoc):
                 self.url,
                 self.is_reply,
                 os.path.dirname(self.fpath),
-                self.dt.timestamp
+                self.dt.timestamp,
             )
             webmentions.append(w)
         return webmentions
@@ -1143,7 +1147,6 @@ class Singular(MarkdownDoc):
         if self.event:
             r.update({"subjectOf": self.event})
 
-
         for url in list(set(self.to_syndicate)):
             r["potentialAction"].append(
                 {
@@ -1199,7 +1202,9 @@ class Singular(MarkdownDoc):
 
     @property
     def corpus(self):
-        return "\n".join([self.title, self.name, self.summary, self.content])
+        return "\n".join(
+            [self.title, self.name, self.summary, self.content]
+        )
 
     async def copy_files(self):
         exclude = [
@@ -1231,12 +1236,35 @@ class Singular(MarkdownDoc):
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
 
-
     async def save_to_archiveorg(self):
         requests.get(f"http://web.archive.org/save/{self.url}")
 
+    async def get_from_archiveorg(self):
+        done = glob.glob(
+            os.path.join(self.dirpath, f"*archiveorg*.copy")
+        )
+        if done:
+            logger.debug(
+                "archive.org .copy exists for %s at %s",
+                self.name,
+                done[0],
+            )
+            return
+        logger.info("trying to get archive.org .copy for %s", self.name)
+        if len(self.category):
+            wb = wayback.FindWaybackURL(
+                self.name, self.category, self.pointers
+            )
+            wb.run()
+            if len(wb.oldest):
+                archiveurl = url2slug(wb.oldest)
+                t = os.path.join(self.dirpath, f"{archiveurl}.copy")
+                writepath(t, wb.oldest)
 
     async def render(self):
+        if settings.args.get("memento"):
+            await self.get_from_archiveorg()
+
         if self.exists:
             return True
 
@@ -1247,7 +1275,7 @@ class Singular(MarkdownDoc):
             "site": settings.site,
             "menu": settings.menu,
             "meta": settings.meta,
-            "fnames": settings.filenames
+            "fnames": settings.filenames,
         }
         writepath(
             self.renderfile, J2.get_template(self.template).render(v)
@@ -1260,8 +1288,7 @@ class Singular(MarkdownDoc):
             "content": self.txt_content,
         }
         writepath(
-            self.txtfile,
-            J2.get_template(self.txttemplate).render(g),
+            self.txtfile, J2.get_template(self.txttemplate).render(g)
         )
         del g
 
@@ -1300,12 +1327,7 @@ class Home(Singular):
         return arrow.get(ts)
 
     async def render_gopher(self):
-        lines = [
-            "%s's gopherhole"
-            % (settings.site.name),
-            "",
-            "",
-        ]
+        lines = ["%s's gopherhole" % (settings.site.name), "", ""]
 
         for category, post in self.posts:
             line = "1%s\t/%s/%s\t%s\t70" % (
@@ -1585,7 +1607,7 @@ class Category(dict):
     def renderdir(self):
         b = settings.paths.build
         if len(self.name):
-            b = os.path.join(b,settings.paths.category, self.name)
+            b = os.path.join(b, settings.paths.category, self.name)
         return b
 
     @property
@@ -1623,11 +1645,19 @@ class Category(dict):
 
         @property
         def mtime(self):
-            return max(list(sorted(self.parent.keys(), reverse=True))[0:settings.pagination])
+            return max(
+                list(sorted(self.parent.keys(), reverse=True))[
+                    0 : settings.pagination
+                ]
+            )
 
         @property
         def renderfile(self):
-            return os.path.join(self.parent.renderdir, settings.paths.feed, settings.filenames.json)
+            return os.path.join(
+                self.parent.renderdir,
+                settings.paths.feed,
+                settings.filenames.json,
+            )
 
         @property
         def exists(self):
@@ -1641,10 +1671,14 @@ class Category(dict):
 
         async def render(self):
             if self.exists:
-                logger.debug("category %s is up to date", self.parent.name)
+                logger.debug(
+                    "category %s is up to date", self.parent.name
+                )
                 return
 
-            logger.info("rendering JSON feed for category %s", self.parent.name)
+            logger.info(
+                "rendering JSON feed for category %s", self.parent.name
+            )
 
             js = {
                 "version": "https://jsonfeed.org/version/1",
@@ -1659,7 +1693,9 @@ class Category(dict):
                 "items": [],
             }
 
-            for key in list(sorted(self.parent.keys(), reverse=True))[0:settings.pagination]:
+            for key in list(sorted(self.parent.keys(), reverse=True))[
+                0 : settings.pagination
+            ]:
                 post = self.parent[key]
                 pjs = {
                     "id": post.url,
@@ -1676,12 +1712,15 @@ class Category(dict):
                             "attachment": {
                                 "url": post.photo.href,
                                 "mime_type": post.photo.mime_type,
-                                "size_in_bytes": f"{post.photo.mime_size}"
+                                "size_in_bytes": f"{post.photo.mime_size}",
                             }
                         }
                     )
                 js["items"].append(pjs)
-            writepath(self.renderfile,json.dumps(js, indent=4, ensure_ascii=False))
+            writepath(
+                self.renderfile,
+                json.dumps(js, indent=4, ensure_ascii=False),
+            )
 
     class XMLFeed(object):
         def __init__(self, parent, feedformat="rss"):
@@ -1690,7 +1729,11 @@ class Category(dict):
 
         @property
         def mtime(self):
-            return max(list(sorted(self.parent.keys(), reverse=True))[0:settings.pagination])
+            return max(
+                list(sorted(self.parent.keys(), reverse=True))[
+                    0 : settings.pagination
+                ]
+            )
 
         @property
         def renderfile(self):
@@ -1700,7 +1743,9 @@ class Category(dict):
                 fname = settings.filenames.atom
             else:
                 fname = "index.xml"
-            return os.path.join(self.parent.renderdir, settings.paths.feed, fname)
+            return os.path.join(
+                self.parent.renderdir, settings.paths.feed, fname
+            )
 
         @property
         def exists(self):
@@ -1714,10 +1759,16 @@ class Category(dict):
 
         async def render(self):
             if self.exists:
-                logger.debug("category %s is up to date", self.parent.name)
+                logger.debug(
+                    "category %s is up to date", self.parent.name
+                )
                 return
 
-            logger.info("rendering %s feed for category %s", self.feedformat, self.parent.name)
+            logger.info(
+                "rendering %s feed for category %s",
+                self.feedformat,
+                self.parent.name,
+            )
 
             fg = FeedGenerator()
             fg.id(self.parent.feedurl)
@@ -1732,12 +1783,14 @@ class Category(dict):
                 }
             )
             if self.feedformat == "rss":
-                fg.link(href=self.feedurl)
+                fg.link(href=self.parent.feedurl)
             elif self.feedformat == "atom":
-                fg.link(href=self.feedurl, rel="self")
+                fg.link(href=self.parent.feedurl, rel="self")
                 fg.link(href=settings.meta.get("hub"), rel="hub")
 
-            for key in list(sorted(self.parent.keys(), reverse=True))[0:settings.pagination]:
+            for key in list(sorted(self.parent.keys(), reverse=True))[
+                0 : settings.pagination
+            ]:
                 post = self.parent[key]
                 fe = fg.add_entry()
 
@@ -1787,7 +1840,6 @@ class Category(dict):
 
             writepath(self.renderfile, fg.atom_str(pretty=True))
 
-
     class Year(object):
         def __init__(self, parent, year):
             self.parent = parent
@@ -1814,9 +1866,15 @@ class Category(dict):
         @property
         def renderfile(self):
             if self.year == self.parent.newest_year:
-                return os.path.join(self.parent.renderdir, settings.filenames.html)
+                return os.path.join(
+                    self.parent.renderdir, settings.filenames.html
+                )
             else:
-                return os.path.join(self.parent.renderdir, self.year, settings.filenames.html)
+                return os.path.join(
+                    self.parent.renderdir,
+                    self.year,
+                    settings.filenames.html,
+                )
 
         @property
         def baseurl(self):
@@ -1854,19 +1912,25 @@ class Category(dict):
                     "title": self.parent.title,
                     "paginated": True,
                     "years": self.parent.years,
-                    "year": self.year
+                    "year": self.year,
                 },
-                "posts": self.posttmplvars
+                "posts": self.posttmplvars,
             }
 
         async def render(self):
             if self.exists:
-                logger.debug("category %s is up to date", self.parent.name)
+                logger.debug(
+                    "category %s is up to date", self.parent.name
+                )
                 return
-            logger.info("rendering year %s for category %s", self.year, self.parent.name)
+            logger.info(
+                "rendering year %s for category %s",
+                self.year,
+                self.parent.name,
+            )
             r = J2.get_template(self.template).render(self.tmplvars)
             writepath(self.renderfile, r)
-            del(r)
+            del r
 
     class Flat(object):
         def __init__(self, parent):
@@ -1876,7 +1940,9 @@ class Category(dict):
         def posttmplvars(self):
             return [
                 self.parent[key].jsonld
-                for key in list(sorted(self.parent.keys(), reverse=True))
+                for key in list(
+                    sorted(self.parent.keys(), reverse=True)
+                )
             ]
 
         @property
@@ -1885,7 +1951,9 @@ class Category(dict):
 
         @property
         def renderfile(self):
-            return os.path.join(self.parent.renderdir, settings.filenames.html)
+            return os.path.join(
+                self.parent.renderdir, settings.filenames.html
+            )
 
         @property
         def template(self):
@@ -1915,17 +1983,19 @@ class Category(dict):
                     "feed": self.parent.feedurl,
                     "title": self.parent.title,
                 },
-                "posts": self.posttmplvars
+                "posts": self.posttmplvars,
             }
 
         async def render(self):
             if self.exists:
-                logger.debug("category %s is up to date", self.parent.name)
+                logger.debug(
+                    "category %s is up to date", self.parent.name
+                )
                 return
             logger.info("rendering category %s", self.parent.name)
             r = J2.get_template(self.template).render(self.tmplvars)
             writepath(self.renderfile, r)
-            del(r)
+            del r
 
     class Gopher(object):
         def __init__(self, parent):
@@ -1947,17 +2017,27 @@ class Category(dict):
 
         @property
         def renderfile(self):
-            return os.path.join(self.parent.renderdir, settings.filenames.gopher)
+            return os.path.join(
+                self.parent.renderdir, settings.filenames.gopher
+            )
 
         async def render(self):
             if self.exists:
-                logger.debug("category %s is up to date", self.parent.name)
+                logger.debug(
+                    "category %s is up to date", self.parent.name
+                )
                 return
 
-            lines = ["%s - %s" % (self.parent.name, settings.site.name), "", ""]
+            lines = [
+                "%s - %s" % (self.parent.name, settings.site.name),
+                "",
+                "",
+            ]
             for post in [
                 self.parent[key]
-                for key in list(sorted(self.parent.keys(), reverse=True))
+                for key in list(
+                    sorted(self.parent.keys(), reverse=True)
+                )
             ]:
                 line = "0%s\t/%s/%s\t%s\t70" % (
                     post.title,
@@ -1978,6 +2058,7 @@ class Category(dict):
                     lines.append(line)
                 lines.append("")
             writepath(self.renderfile, "\r\n".join(lines))
+
 
 class Sitemap(dict):
     @property
@@ -2058,7 +2139,6 @@ class Webmention(object):
         else:
             self.save(r.text)
 
-
     def backfill_syndication(self):
         """ this is very specific to webmention.io and brid.gy publish """
 
@@ -2105,9 +2185,7 @@ class Webmention(object):
             if "url" in maybe["http_body"]:
                 data = json.loads(maybe["http_body"])
                 url = data["url"]
-                sp = os.path.join(
-                    self.dpath, "%s.copy" % url2slug(url)
-                )
+                sp = os.path.join(self.dpath, "%s.copy" % url2slug(url))
                 if os.path.exists(sp):
                     return
                 with open(sp, "wt") as f:
@@ -2122,6 +2200,7 @@ class Webmention(object):
                 e,
             )
             pass
+
 
 class WebmentionIO(object):
     def __init__(self):
@@ -2258,12 +2337,22 @@ def make():
     frontposts = Category()
     home = Home(settings.paths.get("home"))
 
+    reverse_redirects = {}
+    for e in glob.glob(os.path.join(content, "*", "*.url")):
+        post = Redirect(e)
+        rules.add_redirect(post.source, post.target)
+        if post.target not in reverse_redirects:
+            reverse_redirects[post.target] = []
+        reverse_redirects[post.target].append(post.source)
+
     for e in sorted(
         glob.glob(
             os.path.join(content, "*", "*", settings.filenames.md)
         )
     ):
         post = Singular(e)
+        if post.url in reverse_redirects:
+            post.pointers = reverse_redirects[post.target]
         # deal with images, if needed
         for i in post.images.values():
             queue.put(i.downsize())
@@ -2279,11 +2368,11 @@ def make():
         if post.is_future:
             logger.info("%s is for the future", post.name)
             continue
-        elif not os.path.exists(post.renderfile):
-            logger.debug(
-                "%s seems to be fist time published", post.name
-            )
-            firsttimepublished.append(post)
+        # elif not os.path.exists(post.renderfile):
+        # logger.debug(
+        # "%s seems to be fist time published", post.name
+        # )
+        # firsttimepublished.append(post)
 
         # add post to search database
         search.append(post)
@@ -2330,7 +2419,7 @@ def make():
         home.add(category, category.get(category.sortedkeys[0]))
         queue.put(category.render())
 
-    #queue.put(frontposts.render_feeds())
+    # queue.put(frontposts.render_feeds())
     queue.put(home.render())
     # actually run all the render & copy tasks
     queue.run()
@@ -2377,9 +2466,8 @@ def make():
         queue.run()
         logger.info("sending webmentions finished")
 
-    for post in firsttimepublished:
-        queue.put(post.save_memento())
-        queue.put(post.save_to_archiveorg())
+    # for post in firsttimepublished:
+    # queue.put(post.save_to_archiveorg())
     queue.run()
 
 
