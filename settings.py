@@ -16,6 +16,7 @@ class nameddict(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
+
 base = os.path.abspath(os.path.expanduser("~/Projects/petermolnar.net"))
 syncserver = "liveserver:/web/petermolnar.net"
 
@@ -26,7 +27,11 @@ displaydate = "YYYY-MM-DD HH:mm"
 mementostartime = 1560992400
 
 licence = nameddict(
-    {"article": "CC-BY-4.0", "journal": "CC-BY-NC-4.0", "_default": "CC-BY-NC-ND-4.0"}
+    {
+        "article": "CC-BY-4.0",
+        "journal": "CC-BY-NC-4.0",
+        "_default": "CC-BY-NC-ND-4.0",
+    }
 )
 
 author = nameddict(
@@ -48,8 +53,11 @@ site = nameddict(
         "url": "https://petermolnar.net",
         "name": "petermolnar.net",
         "image": "https://petermolnar.net/favicon.ico",
-        "license": "https://spdx.org/licenses/%s.html" % (licence["_default"]),
-        "sameAs": [],
+        "license": "https://spdx.org/licenses/%s.html"
+        % (licence["_default"]),
+        "sameAs": [
+            "https://t.me/petermolnarnet"
+        ],
         "author": {
             "@context": "http://schema.org",
             "@type": "Person",
@@ -117,10 +125,22 @@ site = nameddict(
 menu = nameddict(
     {
         "home": {"url": "%s/" % site["url"], "text": "home"},
-        "photo": {"url": "%s/category/photo/" % site["url"], "text": "photos"},
-        "journal": {"url": "%s/category/journal/" % site["url"], "text": "journal"},
-        "article": {"url": "%s/category/article/" % site["url"], "text": "IT"},
-        "note": {"url": "%s/category/note/" % site["url"], "text": "notes"},
+        "photo": {
+            "url": "%s/category/photo/" % site["url"],
+            "text": "photos",
+        },
+        "journal": {
+            "url": "%s/category/journal/" % site["url"],
+            "text": "journal",
+        },
+        "article": {
+            "url": "%s/category/article/" % site["url"],
+            "text": "IT",
+        },
+        "note": {
+            "url": "%s/category/note/" % site["url"],
+            "text": "notes",
+        },
     }
 )
 
@@ -140,7 +160,9 @@ paths = nameddict(
     {
         "content": os.path.join(base, "content"),
         "tmpl": os.path.join(base, "nasg", "templates"),
-        "watermark": os.path.join(base, "nasg", "templates", "watermark.png"),
+        "watermark": os.path.join(
+            base, "nasg", "templates", "watermark.png"
+        ),
         "build": os.path.join(base, "www"),
         "queue": os.path.join(base, "queue"),
         "remotewww": "web",
@@ -206,32 +228,23 @@ gones = [
 ]
 
 formerdomains = [
-    "cadeyrn.webporfolio.hu",
-    "blog.petermolnar.eu",
-    "petermolnar.eu",
+    # "cadeyrn.webporfolio.hu",
+    # "blog.petermolnar.eu",
+    # "petermolnar.eu",
 ]
 
 formercategories = {
-    "article": [
-        "linux-tech-coding",
-        "diy-do-it-yourself",
-        "sysadmin-blog",
-        "sysadmin",
-        "szubjektiv-technika",
-        "wordpress"
-    ],
-    "note": [
-        "blips",
-        "blog",
-        "r"
-    ],
-    "journal": [
-        "blog",
-    ],
-    "photo": [
-        "photoblog",
-        "fotography",
-    ]
+    # "article": [
+        # "linux-tech-coding",
+        # "diy-do-it-yourself",
+        # "sysadmin-blog",
+        # "sysadmin",
+        # "szubjektiv-technika",
+        # "wordpress",
+    # ],
+    # "note": ["blips", "blog", "r"],
+    # "journal": ["blog"],
+    # "photo": ["photoblog", "fotography"],
 }
 
 
@@ -252,11 +265,12 @@ _booleanparams = {
     "offline": "offline mode - no syncing, no querying services, etc.",
     "noping": "make dummy webmention entries and don't really send them",
     "noservices": "skip querying any service but do sync the website",
-    "memento": "try to fetch mementos from archive.org",
 }
 
 for k, v in _booleanparams.items():
-    _parser.add_argument("--%s" % (k), action="store_true", default=False, help=v)
+    _parser.add_argument(
+        "--%s" % (k), action="store_true", default=False, help=v
+    )
 
 args = vars(_parser.parse_args())
 
@@ -271,7 +285,9 @@ logger = logging.getLogger("NASG")
 logger.setLevel(loglevel)
 
 console_handler = logging.StreamHandler()
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 

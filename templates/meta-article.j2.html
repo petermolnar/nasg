@@ -1,4 +1,11 @@
-<article class="h-entry hentry" lang="{{ post.inLanguage }}">
+{% if 'Photograph' == post['@type'] and post.image[0].width > post.image[0].height %}
+{% set flexval_raw = post.image[0].width / post.image[0].height %}
+{% else %}
+{% set flexval_raw = 1 %}
+{% endif %}
+{% set flexval = flexval_raw|round|int %}
+
+<article class="h-entry hentry" style="flex-grow: {{ flexval }}" lang="{{ post.inLanguage }}">
     <header class="entry-header">
         <h3 class="p-name entry-title">
         {% if post.mentions %}

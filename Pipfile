@@ -5,7 +5,6 @@ name = "pypi"
 
 [packages]
 wand = "*"
-arrow = "*"
 unicode-slugify = "*"
 requests = "*"
 python-frontmatter = "*"
@@ -13,7 +12,7 @@ langdetect = "*"
 jinja2 = "*"
 feedgen = "*"
 filetype = "*"
-gumbo = "*"
+arrow = "==0.14.2"
 
 [dev-packages]
 

@@ -807,7 +807,6 @@ class Singular(MarkdownDoc):
         self.dirpath = os.path.dirname(fpath)
         self.name = os.path.basename(self.dirpath)
         self.category = os.path.basename(os.path.dirname(self.dirpath))
-        self.pointers = []
 
     @cached_property
     def files(self):
@@ -1236,34 +1235,32 @@ class Singular(MarkdownDoc):
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
 
-    async def save_to_archiveorg(self):
-        requests.get(f"http://web.archive.org/save/{self.url}")
+    @property
+    def has_archive(self):
+        return len(
+            glob.glob(os.path.join(self.dirpath, f"*archiveorg*.copy"))
+        )
 
     async def get_from_archiveorg(self):
-        done = glob.glob(
-            os.path.join(self.dirpath, f"*archiveorg*.copy")
-        )
-        if done:
-            logger.debug(
-                "archive.org .copy exists for %s at %s",
-                self.name,
-                done[0],
-            )
+        if self.has_archive:
             return
-        logger.info("trying to get archive.org .copy for %s", self.name)
-        if len(self.category):
-            wb = wayback.FindWaybackURL(
-                self.name, self.category, self.pointers
-            )
+        if self.is_future:
+            return
+        logger.info("archive.org .copy is missing for %s", self.name)
+        if len(self.category) and not (
+            settings.args.get("noservices")
+            or settings.args.get("offline")
+        ):
+            wb = wayback.FindWaybackURL(self.name, self.category)
             wb.run()
             if len(wb.oldest):
                 archiveurl = url2slug(wb.oldest)
                 t = os.path.join(self.dirpath, f"{archiveurl}.copy")
                 writepath(t, wb.oldest)
+            del wb
 
     async def render(self):
-        if settings.args.get("memento"):
-            await self.get_from_archiveorg()
+        await self.get_from_archiveorg()
 
         if self.exists:
             return True
@@ -1541,25 +1538,6 @@ class IndexPHP(PHPFile):
         writepath(self.renderfile, r)
 
 
-class WebhookPHP(PHPFile):
-    @property
-    def renderfile(self):
-        return os.path.join(settings.paths.get("build"), "webhook.php")
-
-    @property
-    def templatefile(self):
-        return "Webhook.j2.php"
-
-    async def _render(self):
-        r = J2.get_template(self.templatefile).render(
-            {
-                "author": settings.author,
-                "webmentionio": keys.webmentionio,
-            }
-        )
-        writepath(self.renderfile, r)
-
-
 class Category(dict):
     def __init__(self, name=""):
         self.name = name
@@ -1628,10 +1606,13 @@ class Category(dict):
             years.update({year: url})
         return years
 
-    async def render(self):
+    async def render_feeds(self):
         await self.XMLFeed(self, "rss").render()
         await self.XMLFeed(self, "atom").render()
         await self.JSONFeed(self).render()
+
+    async def render(self):
+        await self.render_feeds()
         await self.Gopher(self).render()
         if self.name in settings.flat:
             await self.Flat(self).render()
@@ -1788,9 +1769,13 @@ class Category(dict):
                 fg.link(href=self.parent.feedurl, rel="self")
                 fg.link(href=settings.meta.get("hub"), rel="hub")
 
-            for key in list(sorted(self.parent.keys(), reverse=True))[
-                0 : settings.pagination
-            ]:
+            rkeys = list(sorted(self.parent.keys(), reverse=True))
+            rkeys = rkeys[0 : settings.pagination]
+            rkeys = list(sorted(rkeys, reverse=False))
+            # for key in list(sorted(self.parent.keys(), reverse=True))[
+            #    0 : settings.pagination
+            # ]:
+            for key in rkeys:
                 post = self.parent[key]
                 fe = fg.add_entry()
 
@@ -1825,6 +1810,7 @@ class Category(dict):
                 if self.feedformat == "rss":
                     fe.link(href=post.url)
                     fe.content(post.html_content, type="CDATA")
+                    # fe.description(post.txt_content, isSummary=True)
                     if post.is_photo:
                         fe.enclosure(
                             post.photo.href,
@@ -1833,7 +1819,14 @@ class Category(dict):
                         )
                 elif self.feedformat == "atom":
                     fe.link(
-                        href=post.url, rel="alternate", type="text/html"
+                        href=post.url,
+                        rel="alternate",
+                        type="text/html"
+                    )
+                    fe.link(
+                        href=post.photo.href,
+                        rel="enclosure",
+                        type=post.photo.mime_type,
                     )
                     fe.content(src=post.url, type="text/html")
                     fe.summary(post.summary)
@@ -2149,22 +2142,24 @@ class Webmention(object):
         if not self.exists:
             return
 
-        with open(self.fpath) as f:
+        with open(self.fpath, "rt") as f:
             txt = f.read()
-
-        if "telegraph.p3k.io" not in txt:
-            return
 
         try:
             maybe = json.loads(txt)
-            if "status" in maybe and "error" == maybe["status"]:
-                logger.error(
-                    "errored webmention found at %s: %s",
-                    self.dpath,
-                    maybe,
-                )
-                return
+        except Exception as e:
+            # if it's not a JSON, it's a manually placed file, ignore it
+            return
 
+        if "status" in maybe and "error" == maybe["status"]:
+            logger.error(
+                "errored webmention found at %s: %s", self.dpath, maybe
+            )
+            # maybe["location"] = maybe[""]
+            # TODO finish cleanup and re-fetching with from 'original' in JSON
+            return
+
+        try:
             if "location" not in maybe:
                 return
             if "http_body" not in maybe:
@@ -2314,22 +2309,18 @@ def make():
     start = int(round(time.time() * 1000))
     last = 0
 
-    # this needs to be before collecting the 'content' itself
-    if not settings.args.get("offline") and not settings.args.get(
-        "noservices"
+    if not (
+        settings.args.get("offline") or settings.args.get("noservices")
     ):
         incoming = WebmentionIO()
         incoming.run()
 
     queue = AQ()
     send = []
-    firsttimepublished = []
+    to_archive = []
 
     content = settings.paths.get("content")
     rules = IndexPHP()
-
-    webhook = WebhookPHP()
-    queue.put(webhook.render())
 
     sitemap = Sitemap()
     search = Search()
@@ -2337,13 +2328,9 @@ def make():
     frontposts = Category()
     home = Home(settings.paths.get("home"))
 
-    reverse_redirects = {}
     for e in glob.glob(os.path.join(content, "*", "*.url")):
         post = Redirect(e)
         rules.add_redirect(post.source, post.target)
-        if post.target not in reverse_redirects:
-            reverse_redirects[post.target] = []
-        reverse_redirects[post.target].append(post.source)
 
     for e in sorted(
         glob.glob(
@@ -2351,14 +2338,15 @@ def make():
         )
     ):
         post = Singular(e)
-        if post.url in reverse_redirects:
-            post.pointers = reverse_redirects[post.target]
         # deal with images, if needed
         for i in post.images.values():
             queue.put(i.downsize())
         if not post.is_future:
             for i in post.to_ping:
                 send.append(i)
+
+        # if not post.is_future and not post.has_archive:
+        # to_archive.append(post.url)
 
         # render and arbitrary file copy tasks for this very post
         queue.put(post.render())
@@ -2368,11 +2356,6 @@ def make():
         if post.is_future:
             logger.info("%s is for the future", post.name)
             continue
-        # elif not os.path.exists(post.renderfile):
-        # logger.debug(
-        # "%s seems to be fist time published", post.name
-        # )
-        # firsttimepublished.append(post)
 
         # add post to search database
         search.append(post)
@@ -2419,9 +2402,8 @@ def make():
         home.add(category, category.get(category.sortedkeys[0]))
         queue.put(category.render())
 
-    # queue.put(frontposts.render_feeds())
+    queue.put(frontposts.render_feeds())
     queue.put(home.render())
-    # actually run all the render & copy tasks
     queue.run()
 
     # copy static files
@@ -2431,9 +2413,7 @@ def make():
         t = os.path.join(
             settings.paths.get("build"), os.path.basename(e)
         )
-        if os.path.exists(t) and mtime(e) <= mtime(t):
-            continue
-        cp(e, t)
+        maybe_copy(e, t)
 
     end = int(round(time.time() * 1000))
     logger.info("process took %d ms" % (end - start))
@@ -2457,18 +2437,12 @@ def make():
         except Exception as e:
             logger.error("syncing failed: %s", e)
 
-    if not settings.args.get("offline") and not settings.args.get(
-        "noservices"
-    ):
-        logger.info("sending webmentions")
-        for wm in send:
-            queue.put(wm.send())
-        queue.run()
-        logger.info("sending webmentions finished")
-
-    # for post in firsttimepublished:
-    # queue.put(post.save_to_archiveorg())
-    queue.run()
+        if not settings.args.get("noservices"):
+            logger.info("sending webmentions")
+            for wm in send:
+                queue.put(wm.send())
+            queue.run()
+            logger.info("sending webmentions finished")
 
 
 if __name__ == "__main__":

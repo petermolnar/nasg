@@ -1,3 +1,4 @@
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -362,7 +363,8 @@ li p {
 }
 
 #syndication {
-    float:right;
+    display: block;
+    text-align: right;
 }
 
 @media all and (max-width: 51em) {
@@ -391,3 +393,24 @@ li p {
     margin: 0 auto;
   }
 }
+
+@media all and (min-width: 70em) {
+  #main.photo {
+    max-width: 100%;
+  }
+  
+  #main.photo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items:stretch;
+  }
+
+  #main.photo article {
+    flex: 1 1 30em;
+    margin: 0.2em;
+  }
+
+  #main.photo article h3 {
+    text-align: center;  
+  }
+}    

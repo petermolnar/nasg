@@ -33,39 +33,28 @@ RE_FIRST = re.compile(
 
 
 class FindWaybackURL(object):
-    def __init__(self, path, category="", redirects=[]):
+    def __init__(self, path, category=""):
         self.path = path
         self.category = category
-        self.redirects = redirects
         self.epoch = int(arrow.utcnow().timestamp)
         self.oldest = ""
 
     def possible_urls(self):
         q = {}
-        paths = self.redirects
-        paths.append(self.path)
-        for path in paths:
-            q[f"http://{settings.site.name}/{path}/"] = True
-            q[f"http://{settings.site.name}/{path}/index.html"] = True
+        q[f"http://{settings.site.name}/{self.path}/"] = True
+        q[f"http://{settings.site.name}/{self.path}/index.html"] = True
 
-            domains = settings.formerdomains
-            domains.append(settings.site.name)
-
-            for domain in domains:
-                q[f"http://{domain}/{path}/"] = True
-                if self.category in settings.formercategories:
-                    categories = settings.formercategories[
-                        self.category
-                    ]
-                else:
-                    categories = []
-                categories.append(self.category)
-                for category in categories:
-                    q[f"http://{domain}/{category}/{path}/"] = True
-                    q[
-                        f"http://{domain}/category/{category}/{path}/"
-                    ] = True
-        # logger.info("possible urls: %s", json.dumps(list(q.keys()), indent=4, ensure_ascii=False))
+        domains = settings.formerdomains + [settings.site.name]
+        for domain in domains:
+            q[f"http://{domain}/{self.path}/"] = True
+            categories = [self.category]
+            if self.category in settings.formercategories:
+                categories = categories + settings.formercategories[self.category]
+            for category in categories:
+                q[f"http://{domain}/{category}/{self.path}/"] = True
+                q[
+                    f"http://{domain}/category/{category}/{self.path}/"
+                ] = True
         return list(q.keys())
 
     def get_first_memento(self, url):

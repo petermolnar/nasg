@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-<main id="main" class="h-feed hatom">
+<main id="main" class="h-feed hatom {{ category.name }}">
 
 {% set year = [0] %}
 {% for post in posts %}
