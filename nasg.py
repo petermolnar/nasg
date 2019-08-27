@@ -1246,6 +1246,8 @@ class Singular(MarkdownDoc):
             return
         if self.is_future:
             return
+        if (self.published.timestamp + 7200) > arrow.utcnow().timestamp:
+            return
         logger.info("archive.org .copy is missing for %s", self.name)
         if len(self.category) and not (
             settings.args.get("noservices")
@@ -1301,10 +1303,39 @@ class Singular(MarkdownDoc):
 class Home(Singular):
     def __init__(self, fpath):
         super().__init__(fpath)
-        self.posts = []
+        self.cdata = {}
+        self.pdata = {}
 
     def add(self, category, post):
-        self.posts.append((category.ctmplvars, post.jsonld))
+        if not len(category.name):
+            return
+
+        if category.name not in self.cdata:
+            self.cdata[category.name] = category
+
+        if category.name not in self.pdata:
+            self.pdata[category.name] = post
+        else:
+            current = arrow.get(self.pdata[category.name].datePublished)
+            if current > post.published:
+                return
+            else:
+                self.pdata[category.name] = post
+                return
+
+    @property
+    def posts(self):
+        flattened = []
+        order = {}
+        for cname, post in self.pdata.items():
+            order[post.published.timestamp] = cname
+
+        for mtime in sorted(order.keys(), reverse=True):
+            category = self.cdata[order[mtime]].ctmplvars
+            post = self.pdata[order[mtime]].jsonld
+            flattened.append((category, post))
+
+        return flattened
 
     @property
     def renderdir(self):
@@ -1811,26 +1842,21 @@ class Category(dict):
                     fe.link(href=post.url)
                     fe.content(post.html_content, type="CDATA")
                     # fe.description(post.txt_content, isSummary=True)
-                    if post.is_photo:
-                        fe.enclosure(
-                            post.photo.href,
-                            "%d" % post.photo.mime_size,
-                            post.photo.mime_type,
-                        )
                 elif self.feedformat == "atom":
                     fe.link(
                         href=post.url,
                         rel="alternate",
                         type="text/html"
                     )
-                    fe.link(
-                        href=post.photo.href,
-                        rel="enclosure",
-                        type=post.photo.mime_type,
-                    )
                     fe.content(src=post.url, type="text/html")
                     fe.summary(post.summary)
 
+                if post.is_photo:
+                    fe.enclosure(
+                        post.photo.href,
+                        "%d" % post.photo.mime_size,
+                        post.photo.mime_type,
+                    )
             writepath(self.renderfile, fg.atom_str(pretty=True))
 
     class Year(object):
