@@ -39,6 +39,15 @@ class FindWaybackURL(object):
         self.epoch = int(arrow.utcnow().timestamp)
         self.oldest = ""
 
+    def save_to_archiveorg(self):
+        urls = [
+            f"{settings.site.url}/{self.path}/",
+            f"{settings.site.url}/{self.path}/index.html"
+        ]
+        for url in urls:
+            logger.info("saving %s to archive.org ", url)
+            r = requests.get(f"https://web.archive.org/save/{url}")
+
     def possible_urls(self):
         q = {}
         q[f"http://{settings.site.name}/{self.path}/"] = True
@@ -47,7 +56,7 @@ class FindWaybackURL(object):
         domains = settings.formerdomains + [settings.site.name]
         for domain in domains:
             q[f"http://{domain}/{self.path}/"] = True
-            categories = [self.category]
+            categories = []
             if self.category in settings.formercategories:
                 categories = categories + settings.formercategories[self.category]
             for category in categories:
@@ -107,6 +116,7 @@ class FindWaybackURL(object):
             sleep(.500)
         if not len(self.oldest):
             logger.error("no memento found for %s", self.path)
+            self.save_to_archiveorg()
         else:
             logger.info(
                 "\t\toldest found memento for %s: %s :: %s",
