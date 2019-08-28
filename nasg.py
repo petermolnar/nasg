@@ -1246,7 +1246,7 @@ class Singular(MarkdownDoc):
             return
         if self.is_future:
             return
-        if (self.published.timestamp + 7200) > arrow.utcnow().timestamp:
+        if (self.published.timestamp + 86400) > arrow.utcnow().timestamp:
             return
         logger.info("archive.org .copy is missing for %s", self.name)
         if len(self.category) and not (
@@ -2104,6 +2104,18 @@ class Sitemap(dict):
                 f.write("\n".join(sorted(self.keys())))
 
 
+#def json_decode(string):
+    #r = {}
+    #try:
+        #r = json.loads(string)
+        #for k, v in j.items():
+            #if isinstance(v, str):
+                #r[k] = json_decode(v)
+    #except Exception as e:
+        ##logger.error("failed to recursive parse JSON portion: %s", e)
+        #pass
+    #return r
+
 class Webmention(object):
     """ outgoing webmention class """
 
@@ -2172,56 +2184,51 @@ class Webmention(object):
             txt = f.read()
 
         try:
-            maybe = json.loads(txt)
+            data = json.loads(txt)
         except Exception as e:
-            # if it's not a JSON, it's a manually placed file, ignore it
+            """ if it's not a JSON, it's a manually placed file, ignore it """
+            logger.debug("not a JSON webmention at %s", self.fpath)
             return
 
-        if "status" in maybe and "error" == maybe["status"]:
-            logger.error(
-                "errored webmention found at %s: %s", self.dpath, maybe
+        # unprocessed webmention
+        if "http_body" not in data and "location" in data:
+            logger.debug(
+                "fetching webmention.io respose from %s",
+                data["location"]
             )
-            # maybe["location"] = maybe[""]
-            # TODO finish cleanup and re-fetching with from 'original' in JSON
-            return
-
-        try:
-            if "location" not in maybe:
+            wio = requests.get(data["location"])
+            if wio.status_code != requests.codes.ok:
+                logger.debug("fetching %s failed", data["location"])
                 return
-            if "http_body" not in maybe:
-                logger.debug(
-                    "trying to re-fetch %s for %s",
-                    maybe["location"],
-                    self.fpath,
-                )
-                wio = requests.get(maybe["location"])
-                if wio.status_code != requests.codes.ok:
-                    return
-                maybe = wio.json()
-                logger.debug("response: %s", maybe)
-                with open(self.fpath, "wt") as update:
-                    update.write(
-                        json.dumps(maybe, sort_keys=True, indent=4)
-                    )
-            if "url" in maybe["http_body"]:
-                data = json.loads(maybe["http_body"])
-                url = data["url"]
+
+            try:
+                wio_json = json.loads(wio.text)
+                logger.debug("got response %s", wio_json)
+                if "http_body" in  wio_json and isinstance(wio_json["http_body"], str):
+                    wio_json.update({"http_body": json.loads("".join(wio_json["http_body"]))})
+                    if "original" in wio_json["http_body"].keys():
+                        wio_json.update({"http_body": wio_json["http_body"]["original"]})
+                data = {**data, **wio_json}
+            except Exception as e:
+                logger.error("failed to JSON load webmention.io response %s because: %s", wio.text, e)
+                return
+
+            logger.debug("saving updated webmention.io data %s to %s", data, self.fpath)
+            with open(self.fpath, "wt") as update:
+                update.write(json.dumps(data, sort_keys=True, indent=4))
+
+        if "http_body" in data.keys():
+            # healthy and processed webmention
+            if isinstance(data["http_body"], dict) and "url" in data["http_body"].keys():
+                url = data["http_body"]["url"]
                 sp = os.path.join(self.dpath, "%s.copy" % url2slug(url))
                 if os.path.exists(sp):
+                    logger.debug("syndication already exists for %s", url)
                     return
                 with open(sp, "wt") as f:
-                    logger.info(
-                        "writing syndication copy %s to %s", url, sp
-                    )
+                    logger.info("writing syndication copy %s to %s", url, sp)
                     f.write(url)
-        except Exception as e:
-            logger.error(
-                "failed to fetch syndication URL for %s: %s",
-                self.dpath,
-                e,
-            )
-            pass
-
+                    return
 
 class WebmentionIO(object):
     def __init__(self):
