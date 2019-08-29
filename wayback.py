@@ -9,8 +9,6 @@ import json
 import os
 import logging
 import requests
-from collections import deque
-from urllib.parse import urlparse
 import settings
 import arrow
 from time import sleep
@@ -42,7 +40,7 @@ class FindWaybackURL(object):
     def save_to_archiveorg(self):
         urls = [
             f"{settings.site.url}/{self.path}/",
-            f"{settings.site.url}/{self.path}/index.html"
+            f"{settings.site.url}/{self.path}/index.html",
         ]
         for url in urls:
             logger.info("saving %s to archive.org ", url)
@@ -58,7 +56,10 @@ class FindWaybackURL(object):
             q[f"http://{domain}/{self.path}/"] = True
             categories = []
             if self.category in settings.formercategories:
-                categories = categories + settings.formercategories[self.category]
+                categories = (
+                    categories
+                    + settings.formercategories[self.category]
+                )
             for category in categories:
                 q[f"http://{domain}/{category}/{self.path}/"] = True
                 q[
@@ -76,7 +77,6 @@ class FindWaybackURL(object):
             for memento in mementos.text.split("\n"):
                 m = RE_FIRST.match(memento)
                 if m:
-
                     r = settings.nameddict(
                         {
                             "epoch": int(
@@ -113,7 +113,7 @@ class FindWaybackURL(object):
                 if maybe.epoch < self.epoch:
                     self.epoch = maybe.epoch
                     self.oldest = maybe.url
-            sleep(.500)
+            sleep(0.500)
         if not len(self.oldest):
             logger.error("no memento found for %s", self.path)
             self.save_to_archiveorg()

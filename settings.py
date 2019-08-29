@@ -183,9 +183,6 @@ filenames = nameddict(
         "txt": "index.txt",
         "html": "index.html",
         "gopher": "gophermap",
-        "oembed_xml": "oembed.xml",
-        "oembed_json": "oembed.json",
-        "memento": "memento.html",
         "sitemap": "sitemap.txt",
     }
 )
@@ -200,7 +197,7 @@ photo = nameddict(
         "default": 720,
         "sizes": {
             # 90 = s
-            240: "_m",
+            #240: "_m",
             720: "",
             1280: "_b",
         },

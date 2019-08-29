@@ -14,7 +14,6 @@ import asyncio
 import sqlite3
 import json
 
-# import base64
 from shutil import copy2 as cp
 from urllib.parse import urlparse
 from collections import namedtuple
@@ -27,11 +26,10 @@ import filetype
 import jinja2
 import yaml
 
-# python-frontmatter
 import frontmatter
 from feedgen.feed import FeedGenerator
+from feedgen.entry import FeedEntry
 
-# unicode-slugify
 from slugify import slugify
 import requests
 
@@ -1246,7 +1244,9 @@ class Singular(MarkdownDoc):
             return
         if self.is_future:
             return
-        if (self.published.timestamp + 86400) > arrow.utcnow().timestamp:
+        if (
+            self.published.timestamp + 86400
+        ) > arrow.utcnow().timestamp:
             return
         logger.info("archive.org .copy is missing for %s", self.name)
         if len(self.category) and not (
@@ -1638,8 +1638,8 @@ class Category(dict):
         return years
 
     async def render_feeds(self):
-        await self.XMLFeed(self, "rss").render()
-        await self.XMLFeed(self, "atom").render()
+        await self.AtomFeed(self).render()
+        await self.RSSFeed(self).render()
         await self.JSONFeed(self).render()
 
     async def render(self):
@@ -1735,9 +1735,47 @@ class Category(dict):
             )
 
     class XMLFeed(object):
-        def __init__(self, parent, feedformat="rss"):
+        def __init__(self, parent):
             self.parent = parent
-            self.feedformat = feedformat
+
+        def init_entry(self, post):
+            fe = FeedEntry()
+            fe.id(post.url)
+            fe.title(post.title)
+            fe.published(post.published.datetime)
+            fe.updated(arrow.get(post.dt).datetime)
+            lname = post.licence.upper()
+            lyear = post.published.format("YYYY")
+            fe.rights(f"{lname} {settings.author.name} {lyear}")
+            fe.author(
+                {
+                    "name": settings.author.name,
+                    "email": settings.author.email,
+                }
+            )
+            categories = []
+            for tag in set(post.tags):
+                categories.append(
+                    {
+                        "term": tag
+                        # "scheme": "https://schema.org/keywords"
+                    }
+                )
+            fe.category(categories)
+            if post.is_photo:
+                fe.enclosure(
+                    post.photo.href,
+                    "%d" % post.photo.mime_size,
+                    post.photo.mime_type,
+                )
+            return fe
+
+        @property
+        def rkeys(self):
+            rkeys = list(sorted(self.parent.keys(), reverse=True))
+            rkeys = rkeys[0 : settings.pagination]
+            rkeys = list(sorted(rkeys, reverse=False))
+            return rkeys
 
         @property
         def mtime(self):
@@ -1749,14 +1787,8 @@ class Category(dict):
 
         @property
         def renderfile(self):
-            if "rss" == self.feedformat:
-                fname = settings.filenames.rss
-            elif "atom" == self.feedformat:
-                fname = settings.filenames.atom
-            else:
-                fname = "index.xml"
             return os.path.join(
-                self.parent.renderdir, settings.paths.feed, fname
+                self.parent.renderdir, settings.paths.feed, "index.xml"
             )
 
         @property
@@ -1769,95 +1801,91 @@ class Category(dict):
                 return True
             return False
 
-        async def render(self):
-            if self.exists:
-                logger.debug(
-                    "category %s is up to date", self.parent.name
-                )
-                return
+        def uptodate(self):
+            logger.debug(
+                "category %s %s is up to date",
+                self.parent.name,
+                self.__class__.__name__,
+            )
 
+        def notuptodate(self):
             logger.info(
                 "rendering %s feed for category %s",
-                self.feedformat,
+                self.__class__.__name__,
                 self.parent.name,
             )
 
+        def init_fg(self):
             fg = FeedGenerator()
             fg.id(self.parent.feedurl)
             fg.title(self.parent.title)
             fg.logo(settings.site.image)
             fg.updated(arrow.get(self.mtime).to("utc").datetime)
             fg.description(settings.site.headline)
+            fg.link(href=self.parent.feedurl)
             fg.author(
                 {
                     "name": settings.author.name,
                     "email": settings.author.email,
                 }
             )
-            if self.feedformat == "rss":
-                fg.link(href=self.parent.feedurl)
-            elif self.feedformat == "atom":
-                fg.link(href=self.parent.feedurl, rel="self")
-                fg.link(href=settings.meta.get("hub"), rel="hub")
+            return fg
 
-            rkeys = list(sorted(self.parent.keys(), reverse=True))
-            rkeys = rkeys[0 : settings.pagination]
-            rkeys = list(sorted(rkeys, reverse=False))
-            # for key in list(sorted(self.parent.keys(), reverse=True))[
-            #    0 : settings.pagination
-            # ]:
-            for key in rkeys:
+    class AtomFeed(XMLFeed):
+        @property
+        def renderfile(self):
+            return os.path.join(
+                self.parent.renderdir,
+                settings.paths.feed,
+                settings.filenames.atom,
+            )
+
+        async def render(self):
+            if self.exists:
+                self.uptodate()
+                return
+
+            self.notuptodate()
+            fg = self.init_fg()
+
+            for key in self.rkeys:
                 post = self.parent[key]
-                fe = fg.add_entry()
-
-                fe.id(post.url)
-                fe.title(post.title)
-                fe.author(
-                    {
-                        "name": settings.author.name,
-                        "email": settings.author.email,
-                    }
+                fe = self.init_entry(post)
+                fe.link(
+                    href=post.url, rel="alternate", type="text/html"
                 )
-                fe.category(
-                    {
-                        "term": post.category,
-                        "label": post.category,
-                        "scheme": f"{settings.site.url}/{settings.paths.category}/{post.category}/",
-                    }
-                )
-
-                fe.published(post.published.datetime)
-                fe.updated(arrow.get(post.dt).datetime)
-
-                fe.rights(
-                    "%s %s %s"
-                    % (
-                        post.licence.upper(),
-                        settings.author.name,
-                        post.published.format("YYYY"),
-                    )
-                )
-
-                if self.feedformat == "rss":
-                    fe.link(href=post.url)
-                    fe.content(post.html_content, type="CDATA")
-                    # fe.description(post.txt_content, isSummary=True)
-                elif self.feedformat == "atom":
-                    fe.link(
-                        href=post.url,
-                        rel="alternate",
-                        type="text/html"
-                    )
-                    fe.content(src=post.url, type="text/html")
+                fe.content(src=post.url, type="text/html")
+                if len(post.summary):
                     fe.summary(post.summary)
+                fg.add_entry(fe)
 
-                if post.is_photo:
-                    fe.enclosure(
-                        post.photo.href,
-                        "%d" % post.photo.mime_size,
-                        post.photo.mime_type,
-                    )
             writepath(self.renderfile, fg.atom_str(pretty=True))
+
+    class RSSFeed(XMLFeed):
+        @property
+        def renderfile(self):
+            return os.path.join(
+                self.parent.renderdir,
+                settings.paths.feed,
+                settings.filenames.rss,
+            )
+
+        async def render(self):
+            if self.exists:
+                self.uptodate()
+                return
+
+            self.notuptodate()
+            fg = self.init_fg()
+
+            for key in self.rkeys:
+                post = self.parent[key]
+                fe = self.init_entry(post)
+                fe.link(href=post.url)
+                fe.content(post.html_content, type="CDATA")
+                fg.add_entry(fe)
+
+            writepath(self.renderfile, fg.rss_str(pretty=True))
 
     class Year(object):
         def __init__(self, parent, year):
@@ -2104,18 +2132,6 @@ class Sitemap(dict):
                 f.write("\n".join(sorted(self.keys())))
 
 
-#def json_decode(string):
-    #r = {}
-    #try:
-        #r = json.loads(string)
-        #for k, v in j.items():
-            #if isinstance(v, str):
-                #r[k] = json_decode(v)
-    #except Exception as e:
-        ##logger.error("failed to recursive parse JSON portion: %s", e)
-        #pass
-    #return r
-
 class Webmention(object):
     """ outgoing webmention class """
 
@@ -2147,7 +2163,6 @@ class Webmention(object):
 
     async def send(self):
         if self.exists:
-            self.backfill_syndication()
             return
         elif settings.args.get("noping"):
             self.save("noping entry at %s" % arrow.now())
@@ -2170,9 +2185,11 @@ class Webmention(object):
         else:
             self.save(r.text)
 
-    def backfill_syndication(self):
+    async def backfill_syndication(self):
         """ this is very specific to webmention.io and brid.gy publish """
 
+        if not self.exists:
+            return
         if "fed.brid.gy" in self.target:
             return
         if "brid.gy" not in self.target:
@@ -2194,7 +2211,7 @@ class Webmention(object):
         if "http_body" not in data and "location" in data:
             logger.debug(
                 "fetching webmention.io respose from %s",
-                data["location"]
+                data["location"],
             )
             wio = requests.get(data["location"])
             if wio.status_code != requests.codes.ok:
@@ -2204,31 +2221,61 @@ class Webmention(object):
             try:
                 wio_json = json.loads(wio.text)
                 logger.debug("got response %s", wio_json)
-                if "http_body" in  wio_json and isinstance(wio_json["http_body"], str):
-                    wio_json.update({"http_body": json.loads("".join(wio_json["http_body"]))})
+                if "http_body" in wio_json and isinstance(
+                    wio_json["http_body"], str
+                ):
+                    wio_json.update(
+                        {
+                            "http_body": json.loads(
+                                "".join(wio_json["http_body"])
+                            )
+                        }
+                    )
                     if "original" in wio_json["http_body"].keys():
-                        wio_json.update({"http_body": wio_json["http_body"]["original"]})
+                        wio_json.update(
+                            {
+                                "http_body": wio_json["http_body"][
+                                    "original"
+                                ]
+                            }
+                        )
                 data = {**data, **wio_json}
             except Exception as e:
-                logger.error("failed to JSON load webmention.io response %s because: %s", wio.text, e)
+                logger.error(
+                    "failed JSON from webmention.io %s because: %s",
+                    wio.text,
+                    e,
+                )
                 return
 
-            logger.debug("saving updated webmention.io data %s to %s", data, self.fpath)
+            logger.debug(
+                "saving updated webmention.io data %s to %s",
+                data,
+                self.fpath,
+            )
             with open(self.fpath, "wt") as update:
                 update.write(json.dumps(data, sort_keys=True, indent=4))
 
         if "http_body" in data.keys():
             # healthy and processed webmention
-            if isinstance(data["http_body"], dict) and "url" in data["http_body"].keys():
+            if (
+                isinstance(data["http_body"], dict)
+                and "url" in data["http_body"].keys()
+            ):
                 url = data["http_body"]["url"]
                 sp = os.path.join(self.dpath, "%s.copy" % url2slug(url))
                 if os.path.exists(sp):
-                    logger.debug("syndication already exists for %s", url)
+                    logger.debug(
+                        "syndication already exists for %s", url
+                    )
                     return
                 with open(sp, "wt") as f:
-                    logger.info("writing syndication copy %s to %s", url, sp)
+                    logger.info(
+                        "writing syndication copy %s to %s", url, sp
+                    )
                     f.write(url)
                     return
+
 
 class WebmentionIO(object):
     def __init__(self):
@@ -2349,7 +2396,7 @@ def make():
         incoming.run()
 
     queue = AQ()
-    send = []
+    outbox = []
     to_archive = []
 
     content = settings.paths.get("content")
@@ -2371,12 +2418,17 @@ def make():
         )
     ):
         post = Singular(e)
-        # deal with images, if needed
-        for i in post.images.values():
-            queue.put(i.downsize())
         if not post.is_future:
             for i in post.to_ping:
-                send.append(i)
+                outbox.append(i)
+                if not (
+                    settings.args.get("offline")
+                    or settings.args.get("noservices")
+                ):
+                    queue.put(i.backfill_syndication())
+
+        for i in post.images.values():
+            queue.put(i.downsize())
 
         # if not post.is_future and not post.has_archive:
         # to_archive.append(post.url)
@@ -2472,7 +2524,7 @@ def make():
 
         if not settings.args.get("noservices"):
             logger.info("sending webmentions")
-            for wm in send:
+            for wm in outbox:
                 queue.put(wm.send())
             queue.run()
             logger.info("sending webmentions finished")
