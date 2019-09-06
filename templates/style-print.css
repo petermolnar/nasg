@@ -59,6 +59,7 @@ body > header,
 body > footer,
 video,
 audio,
+.syndication,
 .footnote-backref,
 .footnote-back,
 .encourage,
@@ -86,4 +87,4 @@ pre {
 
 .h-feed .h-entry {
   page-break-after: always;
-}    
+}
