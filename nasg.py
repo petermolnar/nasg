@@ -344,6 +344,16 @@ class MarkdownDoc(object):
 
 class Comment(MarkdownDoc):
     @property
+    def dt(self):
+        maybe = self.meta.get("date")
+        if not maybe or maybe == "null":
+            maybe = int(os.path.basename(self.fpath).split("-")[0])
+        dt = arrow.get(maybe)
+        if self.mtime != dt.timestamp:
+            os.utime(self.fpath, (dt.timestamp, dt.timestamp))
+        return dt
+
+    @property
     def source(self):
         return self.meta.get("source")
 
@@ -826,16 +836,14 @@ class Singular(MarkdownDoc):
         same directory level as the Singular objects
         """
         comments = {}
-        for f in [
-            k
-            for k in glob.glob(os.path.join(self.dirpath, "*.md"))
-            if (
-                os.path.basename(k) != settings.filenames.md
-                and not k.startswith(".")
-            )
-        ]:
-            c = Comment(f)
-            comments[c.dt.timestamp] = c
+        canditates = glob.glob(os.path.join(self.dirpath, "*.md"))
+        for candidate in canditates:
+            if os.path.basename(candidate) == settings.filenames.md:
+                continue
+            if candidate.startswith("."):
+                continue
+            comment = Comment(candidate)
+            comments[comment.dt.timestamp] = comment
         return comments
 
     @cached_property
