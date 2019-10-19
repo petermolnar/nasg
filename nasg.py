@@ -128,6 +128,8 @@ def writepath(fpath, content, mtime=0):
     with open(fpath, mode) as f:
         logger.info("writing file %s", fpath)
         f.write(content)
+        if mtime > 0:
+            os.utime(fpath, (mtime, mtime))
 
 
 def maybe_copy(source, target):
@@ -240,15 +242,14 @@ class Gone(object):
         return {"source": self.source}
 
     async def render(self):
-        """ this is disabled for now """
-        return
-
-        # if self.exists:
-        # return
-        # logger.info("rendering %s to %s", self.__class__, self.renderfile)
-        # writepath(
-        # self.renderfile, J2.get_template(self.template).render()
-        # )
+        if self.exists:
+            return
+        logger.info(
+            "rendering %s to %s", self.__class__, self.renderfile
+        )
+        writepath(
+            self.renderfile, J2.get_template(self.template).render()
+        )
 
 
 class Redirect(Gone):
@@ -2325,23 +2326,38 @@ class WebmentionIO(object):
             urlparse(webmention.get("target")).path.lstrip("/")
         )[0]
 
+        author = webmention.get("data", {}).get("author", None)
+        if not author:
+            logger.error(
+                "missing author info on webmention; skipping; webmention data is: %s",
+                webmention.get("source"),
+            )
+            return
+
         # ignore selfpings
         if slug == settings.site.get("name"):
             return
+        elif not len(slug):
+            logger.error(
+                "couldn't find post for incoming webmention: %s",
+                webmention.get("source"),
+            )
+
 
         fdir = glob.glob(
             os.path.join(settings.paths.get("content"), "*", slug)
         )
+
         if not len(fdir):
             logger.error(
                 "couldn't find post for incoming webmention: %s",
-                webmention,
+                webmention.get("source"),
             )
             return
         elif len(fdir) > 1:
             logger.error(
                 "multiple posts found for incoming webmention: %s",
-                webmention,
+                webmention.get("source"),
             )
             return
 
@@ -2354,7 +2370,10 @@ class WebmentionIO(object):
 
         author = webmention.get("data", {}).get("author", None)
         if not author:
-            logger.error("missing author info on webmention; skipping")
+            logger.error(
+                "missing author info on webmention: %s",
+                webmention,
+            )
             return
         meta = {
             "author": {
@@ -2377,7 +2396,7 @@ class WebmentionIO(object):
             pass
 
         r = "---\n%s\n---\n\n%s\n" % (utfyamldump(meta), txt)
-        writepath(fpath, r)
+        writepath(fpath, r, mtime=dt.timestamp)
 
     def run(self):
         webmentions = requests.get(self.url, params=self.params)
@@ -2483,10 +2502,12 @@ def make():
     # make gone and redirect arrays for PHP
     for e in glob.glob(os.path.join(content, "*", "*.del")):
         post = Gone(e)
+        queue.put(post.render())
         rules.add_gone(post.source)
     for e in glob.glob(os.path.join(content, "*", "*.url")):
         post = Redirect(e)
         rules.add_redirect(post.source, post.target)
+        queue.put(post.render())
     # render 404 fallback PHP
     queue.put(rules.render())
 

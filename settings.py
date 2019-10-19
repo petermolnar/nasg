@@ -147,11 +147,11 @@ menu = nameddict(
 meta = nameddict(
     {
         "webmention": "https://webmention.io/petermolnar.net/webmention",
-        "pingback": "https://webmention.io/petermolnar.net/xmlrpc",
+        #"pingback": "https://webmention.io/petermolnar.net/xmlrpc",
         "hub": "https://petermolnar.superfeedr.com/",
         "authorization_endpoint": "https://indieauth.com/auth",
         "token_endpoint": "https://tokens.indieauth.com/token",
-        "micropub": "https://petermolnar.net/micropub.php",
+        "micropub": "https://hooks.zapier.com/hooks/catch/3982452/o3hpw1x/",
         #'microsub': 'https://aperture.p3k.io/microsub/83'
     }
 )
