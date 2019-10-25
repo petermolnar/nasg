@@ -13,8 +13,9 @@
     {% for key, value in meta.items() %}
     <link rel="{{ key }}" href="{{ value }}" />
     {% endfor %}
-    {% block meta %}{% endblock %}
-
+    <script type="application/ld+json">
+        {{ site|tojson(indent=4) }}
+    </script>
     <style media="all">
         {% include('style.css') %}
     </style>
@@ -27,7 +28,7 @@
     <style media="print">
         {% include('style-print.css') %}
     </style>
-
+    {% block meta %}{% endblock %}
 </head>
 
 <body>
@@ -58,7 +59,7 @@
         <div id="header-forms">
             {% for action in site.potentialAction %}
             {% if 'SearchAction' == action['@type'] %}
-            <form id="search" role="search" method="get" action="{{ action.url|relurl(baseurl) }}">
+            <form id="search" role="search" method="get" action="{{ action.target|relurl(baseurl) }}">
                 <label for="qsub">
                     <input type="submit" value="search" id="qsub" name="qsub" />
                     <svg width="16" height="16">
@@ -97,7 +98,8 @@
             {% for action in site.potentialAction %}
             {% if 'FollowAction' == action['@type'] %}
             <li>
-                <a href="{{ action.url }}">
+                <input type="hidden" value="" name="{{ action['name'] }}" id="{{ action['name'] }}" />
+                <a href="{{ action.target }}">
                     <svg width="16" height="16"><use xlink:href="#icon-{{ action['@type'] }}" /></svg>
                     {{ action.name }}
                 </a>
@@ -125,6 +127,20 @@
                     github
                 </a>
             </li>
+            {% elif 'twitter' in url %}
+            <li>
+                <a rel="me" href="{{ url }}">
+                    <svg width="16" height="16"><use xlink:href="#icon-twitter" /></svg>
+                    twitter
+                </a>
+            </li>
+            {% elif 'mastodon' in url %}
+            <li>
+                <a rel="me" href="{{ url }}">
+                    <svg width="16" height="16"><use xlink:href="#icon-mastodon.social" /></svg>
+                    mastodon
+                </a>
+            </li>
             {% endif %}
             {% endfor %}
         </ul>
@@ -139,7 +155,8 @@
                 {% for action in site.potentialAction %}
                 {% if 'DonateAction' == action['@type'] %}
                 <li>
-                    <a href="{{ action.url }}">
+                    <input type="hidden" value="{{ action['price'] }}" name="{{ action['name'] }}" id="{{ action['name'] }}" />
+                    <a href="{{ action.target }}">
                         <svg width="16" height="16"><use xlink:href="#icon-{{ action['name'] }}" /></svg>
                         {{ action.description }}
                     </a>

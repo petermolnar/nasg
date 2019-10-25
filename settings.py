@@ -72,6 +72,7 @@ site = nameddict(
                 "https://wa.me/447592011721",
                 "https://t.me/petermolnar",
                 "https://twitter.com/petermolnar",
+                "https://mastodon.social/@petermolnar"
             ],
             "follows": "https://petermolnar.net/following.opml",
         },
@@ -93,29 +94,32 @@ site = nameddict(
                 "@type": "SearchAction",
                 "target": "https://petermolnar.net/search.php?q={q}",
                 "query-input": "required name=q",
-                "url": "https://petermolnar.net/search.php",
             },
             {
                 "@context": "http://schema.org",
                 "@type": "FollowAction",
-                "url": "https://petermolnar.net/follow/",
                 "name": "follow",
+                "target": "https://petermolnar.net/follow/",
             },
             {
                 "@context": "http://schema.org",
                 "@type": "DonateAction",
                 "description": "Monzo",
                 "name": "monzo",
-                "url": "https://monzo.me/petermolnar/",
                 "recipient": author,
+                "target": "https://monzo.me/petermolnar/",
+                "price": "3",
+                "priceCurrency": "GBP"
             },
             {
                 "@context": "http://schema.org",
                 "@type": "DonateAction",
                 "description": "Paypal",
                 "name": "paypal",
-                "url": "https://paypal.me/petermolnar/",
                 "recipient": author,
+                "target": "https://paypal.me/petermolnar/",
+                "price": "3",
+                "priceCurrency": "GBP"
             },
         ],
     }
@@ -147,12 +151,12 @@ menu = nameddict(
 meta = nameddict(
     {
         "webmention": "https://webmention.io/petermolnar.net/webmention",
-        #"pingback": "https://webmention.io/petermolnar.net/xmlrpc",
+        "pingback": "https://webmention.io/petermolnar.net/xmlrpc",
         "hub": "https://petermolnar.superfeedr.com/",
         "authorization_endpoint": "https://indieauth.com/auth",
         "token_endpoint": "https://tokens.indieauth.com/token",
-        "micropub": "https://hooks.zapier.com/hooks/catch/3982452/o3hpw1x/",
-        #'microsub': 'https://aperture.p3k.io/microsub/83'
+        "micropub": "https://petermolnar.net/micropub.php",
+        "microsub": "https://aperture.p3k.io/microsub/83"
     }
 )
 
@@ -184,6 +188,7 @@ filenames = nameddict(
         "html": "index.html",
         "gopher": "gophermap",
         "sitemap": "sitemap.txt",
+        "worldmap": "map.html"
     }
 )
 

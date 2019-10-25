@@ -1,0 +1,25 @@
+ {% extends "base.j2.html" %}
+
+ {% block title %}Posts World Map  - {{ site.name }}{% endblock %}
+
+{% block meta %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js" integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og==" crossorigin=""></script>
+{% endblock %}
+
+{% block content %}
+    <div id="map" style="margin: 2em auto; width: 90vw; height: 80vh;"></div>
+    <script>
+        var mymap = L.map('map').setView([48, 58], 4);
+        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={{ token }}', {
+            maxZoom: 18,
+            attribution: '© <a href="https://www.mapbox.com/feedback/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            id: 'mapbox.streets'
+        }).addTo(mymap);
+
+{% for (lat, lon), content in geo.items() %}
+        L.marker([{{ lat }},{{ lon }}]).addTo(mymap).bindPopup("{{ content|join|replace('"', '\\\"') }}", {maxHeight: 240});
+{% endfor %}
+
+    </script>
+{% endblock %}

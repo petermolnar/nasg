@@ -366,6 +366,26 @@ li p {
     text-align: right;
 }
 
+#fediversefollow label {
+  font-weight: bold;
+}
+#fediversefollow input {
+  display: block;
+  width: 30em;
+  max-width: 90%;
+  font-size:1em;
+  padding: 0.6em;
+  background-color: transparent;
+  border: 2px solid #f90;
+}
+
+#fediversefollow input[type="submit"] {
+  cursor: pointer;
+  margin-top: 0.3em;
+  width: auto;
+  font-weight: bold;
+}
+
 @media all and (max-width: 51em) {
   #header > * {
     display: block;
@@ -428,4 +448,4 @@ li p {
     object-fit:contain;
   }
   */
-}  
+}          

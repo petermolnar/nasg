@@ -40,8 +40,18 @@
         </span>
     </section>
     {% else %}
-    <section class="e-content entry-content">
+    <section>
+        {% if post.image|length %}
+            {% for image in post.image %}
+                {% if image.representativeOfPage %}
+                 {{ image.text|relurl(baseurl) }}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+        <div class="e-content entry-content">
         {{ post.text|relurl(baseurl) }}
+        </div>
     </section>
     {% endif %}
 

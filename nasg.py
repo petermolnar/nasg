@@ -252,6 +252,71 @@ class Gone(object):
         )
 
 
+class FediverseStats(object):
+    def __init__(self, postcount=0, commentcount=0):
+        self.postcount = postcount
+        self.commentcount = commentcount
+        self.nodeinfo_json = "nodeinfo.json"
+
+    async def render(self):
+        writepath(
+            os.path.join(
+                settings.paths.build, ".well-known", "nodeinfo"
+            ),
+            json.dumps(self.metanodeinfo, indent=4, ensure_ascii=False),
+        )
+        writepath(
+            os.path.join(
+                settings.paths.build, ".well-known", self.nodeinfo_json
+            ),
+            json.dumps(self.nodeinfo, indent=4, ensure_ascii=False),
+        )
+
+    @property
+    def metanodeinfo(self):
+        return {
+            "links": [
+                {
+                    "href": f"{settings.site.url}/.well-known/{self.nodeinfo_json}",
+                    "rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
+                }
+            ]
+        }
+
+    @property
+    def nodeinfo(self):
+        return {
+            "metadata": {
+                "nodeName": settings.site.name,
+                "software": {
+                    "homepage": "https://github.com/petermolnar/nasg",
+                    "github": "https://github.com/petermolnar/nasg",
+                    "follow": f"{settings.site.url}",
+                },
+            },
+            "openRegistrations": False,
+            "protocols": ["webmention", "activitypub"],
+            "services": {
+                "inbound": [],
+                "outbound": ["github", "flickr"],
+            },
+            "software": {
+                "name": "nasg",
+                "version": "6.6"
+            },
+            "usage": {
+                "localPosts": self.postcount,
+                "localComments": self.commentcount,
+                "users": {
+                    "total": 1,
+                    "activeHalfyear": 1,
+                    "activeMonth": 1,
+                },
+            },
+            "version": "2.0",
+        }
+
+
 class Redirect(Gone):
     """
     Redirect object for entries that moved
@@ -328,7 +393,10 @@ class MarkdownDoc(object):
         c = self.content
         if hasattr(self, "images") and len(self.images):
             for match, img in self.images.items():
-                c = c.replace(match, str(img))
+                if self.is_photo:
+                    c = c.replace(match, "")
+                else:
+                    c = c.replace(match, str(img))
         c = str(PandocMD2HTML(c))
         c = RE_PRECODE.sub(
             '<pre><code lang="\g<1>" class="language-\g<1>">', c
@@ -453,17 +521,19 @@ class WebImage(object):
             "caption": self.caption,
             "headline": self.title,
             "representativeOfPage": False,
+            # "text": str(self)
         }
         for k, v in self.exif.items():
             r["exifData"].append(
                 {"@type": "PropertyValue", "name": k, "value": v}
             )
         if self.is_photo:
+            licence = settings.licence["_default"]
             r.update(
                 {
                     "creator": settings.author,
                     "copyrightHolder": settings.author,
-                    "license": settings.licence["_default"],
+                    "license": f"https://spdx.org/licenses/{licence}.html",
                 }
             )
         if self.is_mainimg:
@@ -483,12 +553,12 @@ class WebImage(object):
                                 {
                                     "@context": "http://schema.org",
                                     "@type": "GeoCoordinates",
-                                    "latitude": self.exif[
-                                        "GPSLatitude"
-                                    ],
-                                    "longitude": self.exif[
-                                        "GPSLongitude"
-                                    ],
+                                    "latitude": round(
+                                        self.exif["GPSLatitude"], 4
+                                    ),
+                                    "longitude": round(
+                                        self.exif["GPSLongitude"], 4
+                                    ),
                                 }
                             ),
                         }
@@ -1000,6 +1070,7 @@ class Singular(MarkdownDoc):
         urls = self.meta.get("syndicate", [])
         if not self.is_page:
             urls.append("https://fed.brid.gy/")
+            urls.append("https://brid.gy/publish/mastodon")
         if self.is_photo:
             urls.append("https://brid.gy/publish/flickr")
         return urls
@@ -1134,7 +1205,9 @@ class Singular(MarkdownDoc):
         if len(self.images):
             r["image"] = []
             for img in list(self.images.values()):
-                r["image"].append(img.jsonld)
+                imgld = img.jsonld
+                imgld["text"] = str(img)
+                r["image"].append(imgld)
 
         if self.is_reply:
             r.update(
@@ -1158,7 +1231,7 @@ class Singular(MarkdownDoc):
                 {
                     "@context": "http://schema.org",
                     "@type": "InteractAction",
-                    "url": url,
+                    "target": url,
                 }
             )
 
@@ -1299,14 +1372,6 @@ class Singular(MarkdownDoc):
             self.txtfile, J2.get_template(self.txttemplate).render(g)
         )
         del g
-
-        j = settings.site.copy()
-        j.update({"mainEntity": self.jsonld})
-        writepath(
-            os.path.join(self.renderdir, settings.filenames.json),
-            json.dumps(j, indent=4, ensure_ascii=False),
-        )
-        del j
 
 
 class Home(Singular):
@@ -1576,6 +1641,89 @@ class IndexPHP(PHPFile):
             }
         )
         writepath(self.renderfile, r)
+
+
+class Micropub(PHPFile):
+    @property
+    def renderfile(self):
+        return os.path.join(settings.paths.get("build"), "micropub.php")
+
+    @property
+    def templatefile(self):
+        return "%s.j2.php" % (self.__class__.__name__)
+
+    async def _render(self):
+        r = J2.get_template(self.templatefile).render(
+            {
+                "wallabag": keys.wallabag,
+                "site": settings.site,
+            }
+        )
+        writepath(self.renderfile, r)
+
+class WorldMap(object):
+    def __init__(self):
+        self.data = {}
+        self.mtime = 0
+
+    def add(self, post):
+        if not post.is_photo:
+            return
+        if not post.photo.jsonld.locationCreated:
+            return
+
+        lat = post.photo.jsonld.locationCreated.geo.latitude
+        lon = post.photo.jsonld.locationCreated.geo.longitude
+        k = (lat, lon)
+        content = f'<p><a href="{post.url}"><img src="{post.photo.src}" style="width: 150px; height: auto" /><br />{post.title}</a></p>'
+        # d = {"latitude": nlat, "longitude": nlon, "popup": content}
+        if k in self.data:
+            self.data[k].append(content)
+        else:
+            self.data[k] = [content]
+        self.mtime = max(post.dt.timestamp, self.mtime)
+
+    @property
+    def exists(self):
+        if settings.args.get("force"):
+            return False
+        if not os.path.exists(self.renderfile):
+            return False
+        if mtime(self.renderfile) >= self.mtime:
+            return True
+        return False
+
+    @property
+    def renderfile(self):
+        return os.path.join(
+            settings.paths.get("build"), settings.filenames.worldmap
+        )
+
+    @property
+    def template(self):
+        return "%s.j2.html" % (self.__class__.__name__)
+
+    @property
+    def tmplvars(self):
+        return {
+            "token": keys.mapbox,
+            "site": settings.site,
+            "menu": settings.menu,
+            "meta": settings.meta,
+            "site": settings.site,
+            "geo": self.data,
+        }
+
+    async def render(self):
+        if self.exists:
+            return
+        logger.info(
+            "rendering %s to %s", self.__class__, self.renderfile
+        )
+        writepath(
+            self.renderfile,
+            J2.get_template(self.template).render(self.tmplvars),
+        )
 
 
 class Category(dict):
@@ -1863,7 +2011,8 @@ class Category(dict):
                 fe.link(
                     href=post.url, rel="alternate", type="text/html"
                 )
-                fe.content(src=post.url, type="text/html")
+                # fe.content(src=post.url, type="text/html")
+                fe.content(post.html_content, type="html")
                 if len(post.summary):
                     fe.summary(post.summary)
                 fg.add_entry(fe)
@@ -2343,7 +2492,6 @@ class WebmentionIO(object):
                 webmention.get("source"),
             )
 
-
         fdir = glob.glob(
             os.path.join(settings.paths.get("content"), "*", slug)
         )
@@ -2371,8 +2519,7 @@ class WebmentionIO(object):
         author = webmention.get("data", {}).get("author", None)
         if not author:
             logger.error(
-                "missing author info on webmention: %s",
-                webmention,
+                "missing author info on webmention: %s", webmention
             )
             return
         meta = {
@@ -2434,6 +2581,9 @@ def make():
     categories = {}
     frontposts = Category()
     home = Home(settings.paths.get("home"))
+    worldmap = WorldMap()
+    postcount = 0
+    commentcount = 0
 
     for e in glob.glob(os.path.join(content, "*", "*.url")):
         post = Redirect(e)
@@ -2446,6 +2596,9 @@ def make():
     ):
         post = Singular(e)
         if not post.is_future:
+            postcount = postcount + 1
+            commentcount = commentcount + len(post.comments)
+            worldmap.add(post)
             for i in post.to_ping:
                 outbox.append(i)
                 if not (
@@ -2518,6 +2671,11 @@ def make():
 
     queue.put(frontposts.render_feeds())
     queue.put(home.render())
+    queue.put(worldmap.render())
+    fediversemockery = FediverseStats(postcount, commentcount)
+    queue.put(fediversemockery.render())
+    micropub = Micropub()
+    queue.put(micropub.render())
     queue.run()
 
     # copy static files

@@ -4,15 +4,15 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-wand = "*"
+Wand = "*"
 unicode-slugify = "*"
 requests = "*"
 python-frontmatter = "*"
 langdetect = "*"
-jinja2 = "*"
+Jinja2 = "*"
 feedgen = "*"
 filetype = "*"
-arrow = "==0.14.2"
+arrow = "*"
 
 [dev-packages]
 

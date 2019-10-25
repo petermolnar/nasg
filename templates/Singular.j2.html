@@ -7,7 +7,6 @@
 {% block meta %}
     <meta name="description" content="{{ post.description|striptags|e }}" />
     <link rel="canonical" href="{{ post.url }}" />
-    <link rel="alternate" type="application/ld+json" href="{{ post.url }}{{ fnames.json }}" />
     <link rel="alternate" type="text/plain" href="{{ post.url }}{{ fnames.txt }}" />
     <meta property="og:title" content="{{ post.headline }}" />
     <meta property="og:type" content="article" />
@@ -33,7 +32,9 @@
     <meta NAME="DC.Creator" content="{{ post.author.name }}" />
     <meta NAME="DC.Date" content="{{ post.datePublished }}" />
     <meta NAME="DC.Description" content="{{ post.description|striptags|e }}" />
-
+    <script type="application/ld+json">
+        {{ post|tojson(indent=4) }}
+    </script>
     {% if post['@type'] == 'TechArticle' %}
     <style media="all">
         {% include('prism.css') %}
@@ -67,14 +68,14 @@
             <span id="syndication">
                 this post on other sites:
                 {% for url in post.sameAs %}
-                    <a class="u-syndication" href="{{ url }}"><svg width="16" height="16" aria-label="{{ url|extractdomain }}"><use xlink:href="#icon-{{ url|extractdomain }}"</svg></a>
+                    <a class="u-syndication" href="{{ url }}"><svg width="16" height="16" aria-label="{{ url|extractdomain }}"><use xlink:href="#icon-{{ url|extractdomain }}" /></svg></a>
                 {% endfor %}
             </span>
             {% endif %}
             {% if 'WebPage' != post['@type'] %}
                 {% for action in post.potentialAction %}
                     {% if  'InteractAction' == action['@type'] %}
-                        <a href="{{ action.url }}"></a>
+                        <a href="{{ action.target }}"></a>
                     {% endif %}
                 {% endfor %}
             {% endif %}
@@ -127,8 +128,18 @@
         </section>
         {% endif %}
 
-        <section class="e-content entry-content">
-            {{ post.text|relurl(baseurl) }}
+        <section>
+        {% if post.image|length %}
+            {% for image in post.image %}
+                {% if image.representativeOfPage %}
+                 {{ image.text|relurl(baseurl) }}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+            <div class="e-content entry-content">
+                {{ post.text|relurl(baseurl) }}
+            </div>
         </section>
 
     {% if 'WebPage' != post['@type'] %}
@@ -205,8 +216,8 @@
                     {% if post.image[0].locationCreated %}
                     from the location
                     <a class="h-geo" href="https://www.openstreetmap.org/#map=14/{{ post.image[0].locationCreated.geo.longitude }}/{{ post.image[0].locationCreated.geo.latitude }}">
-                        <span class="p-longitude">{{ post.image[0].locationCreated.geo.longitude }}</span>,
-                        <span class="p-latitude">{{ post.image[0].locationCreated.geo.latitude }}</span>
+                        <span class="p-latitude">{{ post.image[0].locationCreated.geo.latitude }}</span>,
+                        <span class="p-longitude">{{ post.image[0].locationCreated.geo.longitude }}</span>
                     </a>
                     {% endif %}
                 {% endif %}
