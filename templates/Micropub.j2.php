@@ -121,12 +121,21 @@ function save_to_wallabag($url) {
     }
 }
 
+function maybe_array_pop($x) {
+    if(is_array($x)) {
+        return array_pop($x);
+    }
+    else {
+        return $x;
+    }
+}
+
 if (!empty($_GET)) {
     if ( ! isset($_GET['q']) ) {
         badrequest('please POST a micropub request');
     }
     if ( isset($_GET['q']['config']) ) {
-        httpok(json_encode(array('tags' => array())));
+        httpok('{{tags|tojson(indent=4)}}');
     }
     if(isset($_GET['q']['syndicate-to'])) {
         httpok(json_encode(array('syndicate-to' => array())));
@@ -134,12 +143,14 @@ if (!empty($_GET)) {
     badrequest('please POST a micropub request');
 }
 
-
 $raw = file_get_contents("php://input");
+$decoded = 'null';
 try {
     $decoded = json_decode($raw, true);
 } catch (Exception $e) {
     _syslog('failed to decode JSON, trying decoding form data');
+}
+if($decoded == 'null' or empty($decoded)) {
     try {
         parse_str($raw, $decoded);
     }
@@ -165,17 +176,31 @@ else {
     verify_token($token);
 }
 
-$source_url = '';
+/* likes and bookmarks */
+$bookmark_url = '';
 if(isset($decoded["properties"]) && isset($decoded["properties"]["like-of"])) {
-    $source_url = $decoded["properties"]["like-of"];
+    $bookmark_url = maybe_array_pop($decoded["properties"]["like-of"]);
 }
 elseif(isset($decoded["like-of"])) {
-    $source_url = $decoded["like-of"];
+    $bookmark_url = maybe_array_pop($decoded["like-of"]);
 }
 
-/* deal with like: forward it to wallabag */
-if(!empty($source_url)) {
-    save_to_wallabag($source_url);
+if(!empty($bookmark_url)) {
+    save_to_wallabag($bookmark_url);
+    accepted();
+}
+else {
+    /* save everything else into the queue for now */
+    $t = microtime(true);
+    $fpath = "/web/petermolnar.net/queue/{$t}.json";
+    if(!is_dir(dirname($fpath))) {
+        mkdir(dirname($fpath), 0755, true);
+    }
+    $c = json_encode($decoded, JSON_PRETTY_PRINT);
+    if (file_put_contents($fpath, $c)) {
+        accepted();
+    }
 }
 
+/* fallback to not implemented */
 notimplemented();

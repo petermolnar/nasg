@@ -1,11 +1,4 @@
-{% if 'Photograph' == post['@type'] and post.image[0].width > post.image[0].height %}
-{% set flexval_raw = post.image[0].width / post.image[0].height %}
-{% else %}
-{% set flexval_raw = 1 %}
-{% endif %}
-{% set flexval = flexval_raw|round|int %}
-
-<article class="h-entry hentry" style="flex-grow: {{ flexval }}" lang="{{ post.inLanguage }}">
+<article class="h-entry hentry" lang="{{ post.inLanguage }}">
     <header class="entry-header">
         <h3 class="p-name entry-title">
         {% if post.mentions %}
@@ -31,16 +24,12 @@
     </header>
 
     {% if post.description|length %}
-    <section class="e-summary entry-summary">
-        {{ post.description|relurl(baseurl) }}
-        <span class="more">
-            <a href="{{ post.url|relurl(baseurl) }}">
-            {% if post.inLanguage == 'hu' %}Tovább »{% else %}Continue »{% endif %}
-            </a>
-        </span>
-    </section>
+        {% set summary = post.description %}
     {% else %}
-    <section>
+        {% set summary = post.text|truncate(255) %}
+    {% endif %}
+
+    {% if post['@type'] == 'Photograph' %}
         {% if post.image|length %}
             {% for image in post.image %}
                 {% if image.representativeOfPage %}
@@ -48,12 +37,15 @@
                 {% endif %}
             {% endfor %}
         {% endif %}
-
-        <div class="e-content entry-content">
-        {{ post.text|relurl(baseurl) }}
-        </div>
-    </section>
     {% endif %}
+    <div class="e-summary entry-summary">
+        {{ summary|relurl(baseurl) }}
+        <span class="more">
+            <a href="{{ post.url|relurl(baseurl) }}">
+            {% if post.inLanguage == 'hu' %}Tovább »{% else %}Continue »{% endif %}
+            </a>
+        </span>
+    </div>
 
     <footer class="entry-footer" aria-hidden="true" hidden="hidden">
         Published at

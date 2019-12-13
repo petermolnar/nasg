@@ -32,9 +32,7 @@ function setTheme(e) {
         localStorage.removeItem(STORAGE_KEY);
     }
     else {
-        if(confirm("I\'ll need to store your choice in your browser, in a place called localStorage.\n\nAre you OK with this?")) {
-            localStorage.setItem(STORAGE_KEY, mode);
-        }
+        localStorage.setItem(STORAGE_KEY, mode);
     }
     autoTheme(mql);
 }

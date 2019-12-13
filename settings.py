@@ -18,7 +18,7 @@ class nameddict(dict):
 
 
 base = os.path.abspath(os.path.expanduser("~/Projects/petermolnar.net"))
-syncserver = "liveserver:/web/petermolnar.net"
+syncserver = "liveserver"
 
 pagination = 42
 notinfeed = ["note"]
@@ -73,6 +73,7 @@ site = nameddict(
                 "https://t.me/petermolnar",
                 "https://twitter.com/petermolnar",
                 "https://mastodon.social/@petermolnar"
+                "https://www.flickr.com/people/petermolnareu/"
             ],
             "follows": "https://petermolnar.net/following.opml",
         },
@@ -168,9 +169,8 @@ paths = nameddict(
             base, "nasg", "templates", "watermark.png"
         ),
         "build": os.path.join(base, "www"),
-        "queue": os.path.join(base, "queue"),
-        "remotewww": "web",
-        "remotequeue": "queue",
+        "remotewww": "/web/petermolnar.net/web",
+        "remotequeue": "/web/petermolnar.net/queue",
         "micropub": os.path.join(base, "content", "note"),
         "home": os.path.join(base, "content", "home", "index.md"),
         "category": "category",
@@ -209,6 +209,11 @@ photo = nameddict(
         "earlyyears": 2014,
     }
 )
+
+mapbox = nameddict({
+    "style": "outdoors-v11",
+    "size": "720x480"
+})
 
 rewrites = {
     "^/(?:sysadmin|it|linux-tech-coding|sysadmin-blog)/?(page.*)?$": "category/article/",

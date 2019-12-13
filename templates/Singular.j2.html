@@ -136,7 +136,6 @@
                 {% endif %}
             {% endfor %}
         {% endif %}
-
             <div class="e-content entry-content">
                 {{ post.text|relurl(baseurl) }}
             </div>
@@ -214,7 +213,7 @@
                 {% endif %}
                 {% if post['@type'] == 'Photograph' %}
                     {% if post.image[0].locationCreated %}
-                    from the location
+                    photographed at the location of
                     <a class="h-geo" href="https://www.openstreetmap.org/#map=14/{{ post.image[0].locationCreated.geo.longitude }}/{{ post.image[0].locationCreated.geo.latitude }}">
                         <span class="p-latitude">{{ post.image[0].locationCreated.geo.latitude }}</span>,
                         <span class="p-longitude">{{ post.image[0].locationCreated.geo.longitude }}</span>

@@ -15,14 +15,16 @@
 
 {% block content %}
 <main id="main" class="h-feed hatom">
-    <section class="intro">
+    <section id="intro">
         <div>
             {{ post.text }}
         </div>
     </section>
 
+    {% set isFrontPage = 1 %}
+    <section id="latest">
+    <h1>Latest entries</h1>
     {% for category, post in posts %}
-    <section id="home">
         <h2>in:
             <a href="{{ category.url|relurl(baseurl) }}">
                 <svg width="16" height="16"><use xlink:href="#icon-{{ category.name }}" /></svg>
@@ -30,7 +32,7 @@
             </a>
         </h2>
         {% include 'meta-article.j2.html' %}
+    {% endfor %}
     </section>
-{% endfor %}
 </main>
 {% endblock %}

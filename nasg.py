@@ -15,6 +15,8 @@ import sqlite3
 import json
 
 from shutil import copy2 as cp
+from shutil import rmtree
+from shutil import copyfileobj
 from urllib.parse import urlparse
 from collections import namedtuple
 import logging
@@ -243,13 +245,16 @@ class Gone(object):
 
     async def render(self):
         if self.exists:
+            os.remove(self.renderfile)
+            os.rmdir(self.renderdir)
+            # rmtree(self.renderdir)
             return
-        logger.info(
-            "rendering %s to %s", self.__class__, self.renderfile
-        )
-        writepath(
-            self.renderfile, J2.get_template(self.template).render()
-        )
+        # logger.info(
+            # "rendering %s to %s", self.__class__, self.renderfile
+        # )
+        # writepath(
+            # self.renderfile, J2.get_template(self.template).render()
+        # )
 
 
 class FediverseStats(object):
@@ -293,12 +298,13 @@ class FediverseStats(object):
                     "github": "https://github.com/petermolnar/nasg",
                     "follow": f"{settings.site.url}",
                 },
+                "email": "webmaster@petermolnar.net"
             },
             "openRegistrations": False,
-            "protocols": ["webmention", "activitypub"],
+            "protocols": ["activitypub"],
             "services": {
                 "inbound": [],
-                "outbound": ["github", "flickr"],
+                "outbound": [],
             },
             "software": {
                 "name": "nasg",
@@ -1070,7 +1076,7 @@ class Singular(MarkdownDoc):
         urls = self.meta.get("syndicate", [])
         if not self.is_page:
             urls.append("https://fed.brid.gy/")
-            urls.append("https://brid.gy/publish/mastodon")
+            #urls.append("https://brid.gy/publish/mastodon")
         if self.is_photo:
             urls.append("https://brid.gy/publish/flickr")
         return urls
@@ -1297,23 +1303,49 @@ class Singular(MarkdownDoc):
             ".copy",
             ".cache",
         ]
+        include = [
+            "map.png"
+        ]
         files = glob.glob(
             os.path.join(os.path.dirname(self.fpath), "*.*")
         )
         for f in files:
-            fname, fext = os.path.splitext(f)
-            if fext.lower() in exclude:
+            fname = os.path.basename(f)
+            fbasename, fext = os.path.splitext(fname)
+            if fext.lower() in exclude and fname.lower() not in include:
                 continue
 
             t = os.path.join(
                 settings.paths.get("build"),
                 self.name,
-                os.path.basename(f),
+                fname
             )
             if os.path.exists(t) and mtime(f) <= mtime(t):
                 continue
             logger.info("copying '%s' to '%s'", f, t)
             cp(f, t)
+
+    async def render_map(self):
+        if not self.is_photo:
+            return
+
+        if "locationCreated" not in self.photo.jsonld:
+            return
+
+        style = settings.mapbox.style
+        size = settings.mapbox.size
+        lat = round(float(self.photo.jsonld["locationCreated"]["geo"]["latitude"]), 3)
+        lon = round(float(self.photo.jsonld["locationCreated"]["geo"]["longitude"]), 3)
+        token = keys.mapbox.get("private")
+        mapfpath = os.path.join(self.dirpath, "map.png")
+        if os.path.exists(mapfpath):
+            return
+
+        url = f"https://api.mapbox.com/styles/v1/mapbox/{style}/static/pin-s({lon},{lat})/{lon},{lat},11,20/{size}?access_token={token}"
+        logger.info("requesting map for %s with URL %s", self.name, url)
+        with requests.get(url, stream=True) as r:
+            with open(mapfpath, 'wb') as f:
+                copyfileobj(r.raw, f)
 
     @property
     def has_archive(self):
@@ -1345,6 +1377,7 @@ class Singular(MarkdownDoc):
 
     async def render(self):
         await self.get_from_archiveorg()
+        await self.render_map()
 
         if self.exists:
             return True
@@ -1644,6 +1677,20 @@ class IndexPHP(PHPFile):
 
 
 class Micropub(PHPFile):
+    def __init__(self):
+        self.collected_tags = {}
+
+    @property
+    def tags(self):
+        return list(self.collected_tags.keys())
+
+    def add_tag(self, tag):
+        self.add_tags([tag])
+
+    def add_tags(self, tags):
+        for tag in tags:
+            self.collected_tags.update({tag: True})
+
     @property
     def renderfile(self):
         return os.path.join(settings.paths.get("build"), "micropub.php")
@@ -1657,6 +1704,8 @@ class Micropub(PHPFile):
             {
                 "wallabag": keys.wallabag,
                 "site": settings.site,
+                "paths": settings.paths,
+                "tags": { "tags": self.tags }
             }
         )
         writepath(self.renderfile, r)
@@ -1706,7 +1755,7 @@ class WorldMap(object):
     @property
     def tmplvars(self):
         return {
-            "token": keys.mapbox,
+            "token": keys.mapbox.get(settings.site.name),
             "site": settings.site,
             "menu": settings.menu,
             "meta": settings.meta,
@@ -2563,11 +2612,13 @@ def make():
     start = int(round(time.time() * 1000))
     last = 0
 
+    # get incoming webmentions
     if not (
         settings.args.get("offline") or settings.args.get("noservices")
     ):
         incoming = WebmentionIO()
         incoming.run()
+        # TODO get queued micropub posts?
 
     queue = AQ()
     outbox = []
@@ -2584,6 +2635,7 @@ def make():
     worldmap = WorldMap()
     postcount = 0
     commentcount = 0
+    micropub = Micropub()
 
     for e in glob.glob(os.path.join(content, "*", "*.url")):
         post = Redirect(e)
@@ -2606,6 +2658,7 @@ def make():
                     or settings.args.get("noservices")
                 ):
                     queue.put(i.backfill_syndication())
+            micropub.add_tags(post.tags)
 
         for i in post.images.values():
             queue.put(i.downsize())
@@ -2669,13 +2722,23 @@ def make():
         home.add(category, category.get(category.sortedkeys[0]))
         queue.put(category.render())
 
+    # RSS and ATOM feeds
     queue.put(frontposts.render_feeds())
+
+    # home
     queue.put(home.render())
+
+    # worldmap for photos
     queue.put(worldmap.render())
+
+    # fediverse stats
     fediversemockery = FediverseStats(postcount, commentcount)
     queue.put(fediversemockery.render())
-    micropub = Micropub()
+
+    # micropub handler PHP
     queue.put(micropub.render())
+
+    # render all the things!
     queue.run()
 
     # copy static files
@@ -2695,15 +2758,7 @@ def make():
         try:
             logger.info("starting syncing")
             os.system(
-                "rsync -avuhH --delete-after %s/ %s/"
-                % (
-                    settings.paths.get("build"),
-                    "%s/%s"
-                    % (
-                        settings.syncserver,
-                        settings.paths.get("remotewww"),
-                    ),
-                )
+                f"rsync -avuhH --delete-after {settings.paths.build}/ {settings.syncserver}:{settings.paths.remotewww}"
             )
             logger.info("syncing finished")
         except Exception as e:
