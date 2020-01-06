@@ -33,9 +33,8 @@ elseif(isset($_GET['search'])) {
 else {
     $q = '';
 }
-
+$q = filter_var($q, FILTER_SANITIZE_STRING);
 $db = new SQLite3('./search.sqlite', SQLITE3_OPEN_READONLY);
-$q = str_replace('-', '+', $q);
 $sql = $db->prepare("
     SELECT
         url, category, title, snippet(data, '', '', '[...]', 5, 24), mtime
@@ -46,7 +45,7 @@ $sql = $db->prepare("
     ORDER BY
         category, mtime
 ");
-$sql->bindValue(':q', $q);
+$sql->bindValue(':q', str_replace('-', '+', $q));
 $query = $sql->execute();
 $results = array();
 if($query) {
@@ -118,11 +117,11 @@ if (isset($_GET['json'])) {
 
 {% extends "base.j2.html" %}
 {% block lang %}{% endblock %}
-{% block title %}Search results for: <?php echo($_GET['q']); ?>{% endblock %}
+{% block title %}Search results for: <?php echo($q); ?>{% endblock %}
 {% block content %}
 
 <main id="main" class="h-feed hatom">
-    <h1>Search results for: <?php echo($_GET['q']); ?></h1>
+    <h1>Search results for: <?php echo($q); ?></h1>
     <dl>
 <?php
     foreach($results as $row) {
