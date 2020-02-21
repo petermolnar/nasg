@@ -376,11 +376,6 @@ li p {
 }
 */
 
-#syndication {
-    display: block;
-    text-align: right;
-}
-
 #fediversefollow label {
   font-weight: bold;
 }
@@ -426,4 +421,4 @@ li p {
     display: block;
     margin: 0 auto;
   }
-}    
+}

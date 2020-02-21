@@ -9,9 +9,9 @@ import json
 import os
 import logging
 import requests
-import settings
 import arrow
 from time import sleep
+import settings
 
 logger = logging.getLogger("wayback")
 logger.setLevel(10)

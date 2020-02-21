@@ -141,8 +141,20 @@ class PandocMD2TXT(Pandoc):
         "+autolink_bare_uris",
         "-smart",
     ]
-    out_format = "plain"
-    out_options = []
+    out_format = "markdown"
+    out_options = [
+        "+footnotes",
+        "+pipe_tables",
+        "+strikeout",
+        "+raw_html",
+        "+definition_lists",
+        "+backtick_code_blocks",
+        "+fenced_code_attributes",
+        "+shortcut_reference_links",
+        "+lists_without_preceding_blankline",
+        "+autolink_bare_uris",
+        "-smart",
+    ]
     columns = "--columns=80"
 
 

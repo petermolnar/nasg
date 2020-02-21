@@ -250,10 +250,10 @@ class Gone(object):
             # rmtree(self.renderdir)
             return
         # logger.info(
-            # "rendering %s to %s", self.__class__, self.renderfile
+        # "rendering %s to %s", self.__class__, self.renderfile
         # )
         # writepath(
-            # self.renderfile, J2.get_template(self.template).render()
+        # self.renderfile, J2.get_template(self.template).render()
         # )
 
 
@@ -298,18 +298,12 @@ class FediverseStats(object):
                     "github": "https://github.com/petermolnar/nasg",
                     "follow": f"{settings.site.url}",
                 },
-                "email": "webmaster@petermolnar.net"
+                "email": "webmaster@petermolnar.net",
             },
             "openRegistrations": False,
             "protocols": ["activitypub"],
-            "services": {
-                "inbound": [],
-                "outbound": [],
-            },
-            "software": {
-                "name": "nasg",
-                "version": "6.6"
-            },
+            "services": {"inbound": [], "outbound": []},
+            "software": {"name": "nasg", "version": "6.6"},
             "usage": {
                 "localPosts": self.postcount,
                 "localComments": self.commentcount,
@@ -1006,8 +1000,10 @@ class Singular(MarkdownDoc):
 
     @property
     def is_front(self):
-        if self.category in settings.notinfeed:
+        if self.is_reply:
             return False
+        # if self.category in settings.notinfeed:
+        # return False
         return True
 
     @property
@@ -1076,7 +1072,7 @@ class Singular(MarkdownDoc):
         urls = self.meta.get("syndicate", [])
         if not self.is_page:
             urls.append("https://fed.brid.gy/")
-            #urls.append("https://brid.gy/publish/mastodon")
+            # urls.append("https://brid.gy/publish/mastodon")
         if self.is_photo:
             urls.append("https://brid.gy/publish/flickr")
         return urls
@@ -1303,9 +1299,7 @@ class Singular(MarkdownDoc):
             ".copy",
             ".cache",
         ]
-        include = [
-            "map.png"
-        ]
+        include = ["map.png"]
         files = glob.glob(
             os.path.join(os.path.dirname(self.fpath), "*.*")
         )
@@ -1316,9 +1310,7 @@ class Singular(MarkdownDoc):
                 continue
 
             t = os.path.join(
-                settings.paths.get("build"),
-                self.name,
-                fname
+                settings.paths.get("build"), self.name, fname
             )
             if os.path.exists(t) and mtime(f) <= mtime(t):
                 continue
@@ -1334,8 +1326,18 @@ class Singular(MarkdownDoc):
 
         style = settings.mapbox.style
         size = settings.mapbox.size
-        lat = round(float(self.photo.jsonld["locationCreated"]["geo"]["latitude"]), 3)
-        lon = round(float(self.photo.jsonld["locationCreated"]["geo"]["longitude"]), 3)
+        lat = round(
+            float(
+                self.photo.jsonld["locationCreated"]["geo"]["latitude"]
+            ),
+            3,
+        )
+        lon = round(
+            float(
+                self.photo.jsonld["locationCreated"]["geo"]["longitude"]
+            ),
+            3,
+        )
         token = keys.mapbox.get("private")
         mapfpath = os.path.join(self.dirpath, "map.png")
         if os.path.exists(mapfpath):
@@ -1344,7 +1346,7 @@ class Singular(MarkdownDoc):
         url = f"https://api.mapbox.com/styles/v1/mapbox/{style}/static/pin-s({lon},{lat})/{lon},{lat},11,20/{size}?access_token={token}"
         logger.info("requesting map for %s with URL %s", self.name, url)
         with requests.get(url, stream=True) as r:
-            with open(mapfpath, 'wb') as f:
+            with open(mapfpath, "wb") as f:
                 copyfileobj(r.raw, f)
 
     @property
@@ -1705,10 +1707,11 @@ class Micropub(PHPFile):
                 "wallabag": keys.wallabag,
                 "site": settings.site,
                 "paths": settings.paths,
-                "tags": { "tags": self.tags }
+                "tags": {"tags": self.tags},
             }
         )
         writepath(self.renderfile, r)
+
 
 class WorldMap(object):
     def __init__(self):
@@ -2092,7 +2095,8 @@ class Category(dict):
                 fe.content(post.html_content, type="CDATA")
                 fg.add_entry(fe)
 
-            writepath(self.renderfile, fg.rss_str(pretty=True))
+            output = fg.rss_str(pretty=True)
+            writepath(self.renderfile, output)
 
     class Year(object):
         def __init__(self, parent, year):
@@ -2758,7 +2762,7 @@ def make():
         try:
             logger.info("starting syncing")
             os.system(
-                f"rsync -avuhH --delete-after {settings.paths.build}/ {settings.syncserver}:{settings.paths.remotewww}"
+                f"rsync -avuhH --exclude='.git' --delete-after {settings.paths.build}/ {settings.syncserver}:{settings.paths.remotewww}"
             )
             logger.info("syncing finished")
         except Exception as e:

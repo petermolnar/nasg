@@ -55,9 +55,7 @@ site = nameddict(
         "image": "https://petermolnar.net/favicon.ico",
         "license": "https://spdx.org/licenses/%s.html"
         % (licence["_default"]),
-        "sameAs": [
-            "https://t.me/petermolnarnet"
-        ],
+        "sameAs": ["https://t.me/petermolnarnet"],
         "author": {
             "@context": "http://schema.org",
             "@type": "Person",
@@ -73,7 +71,7 @@ site = nameddict(
                 "https://t.me/petermolnar",
                 "https://twitter.com/petermolnar",
                 "https://mastodon.social/@petermolnar"
-                "https://www.flickr.com/people/petermolnareu/"
+                "https://www.flickr.com/people/petermolnareu/",
             ],
             "follows": "https://petermolnar.net/following.opml",
         },
@@ -110,7 +108,7 @@ site = nameddict(
                 "recipient": author,
                 "target": "https://monzo.me/petermolnar/",
                 "price": "3",
-                "priceCurrency": "GBP"
+                "priceCurrency": "GBP",
             },
             {
                 "@context": "http://schema.org",
@@ -120,7 +118,7 @@ site = nameddict(
                 "recipient": author,
                 "target": "https://paypal.me/petermolnar/",
                 "price": "3",
-                "priceCurrency": "GBP"
+                "priceCurrency": "GBP",
             },
         ],
     }
@@ -157,7 +155,7 @@ meta = nameddict(
         "authorization_endpoint": "https://indieauth.com/auth",
         "token_endpoint": "https://tokens.indieauth.com/token",
         "micropub": "https://petermolnar.net/micropub.php",
-        "microsub": "https://aperture.p3k.io/microsub/83"
+        "microsub": "https://aperture.p3k.io/microsub/83",
     }
 )
 
@@ -169,8 +167,7 @@ paths = nameddict(
             base, "nasg", "templates", "watermark.png"
         ),
         "build": os.path.join(base, "www"),
-        "remotewww": "/web/petermolnar.net/web",
-        "remotequeue": "/web/petermolnar.net/queue",
+        "remotewww": "/usr/local/www/petermolnar.net",
         "micropub": os.path.join(base, "content", "note"),
         "home": os.path.join(base, "content", "home", "index.md"),
         "category": "category",
@@ -184,11 +181,11 @@ filenames = nameddict(
         "atom": "atom.xml",
         "json": "index.json",
         "md": "index.md",
-        "txt": "index.txt",
+        "txt": "index.md",
         "html": "index.html",
         "gopher": "gophermap",
         "sitemap": "sitemap.txt",
-        "worldmap": "map.html"
+        "worldmap": "map.html",
     }
 )
 
@@ -202,7 +199,7 @@ photo = nameddict(
         "default": 720,
         "sizes": {
             # 90 = s
-            #240: "_m",
+            # 240: "_m",
             720: "",
             1280: "_b",
         },
@@ -210,10 +207,7 @@ photo = nameddict(
     }
 )
 
-mapbox = nameddict({
-    "style": "outdoors-v11",
-    "size": "720x480"
-})
+mapbox = nameddict({"style": "outdoors-v11", "size": "720x480"})
 
 rewrites = {
     "^/(?:sysadmin|it|linux-tech-coding|sysadmin-blog)/?(page.*)?$": "category/article/",
@@ -242,12 +236,12 @@ formerdomains = [
 
 formercategories = {
     # "article": [
-        # "linux-tech-coding",
-        # "diy-do-it-yourself",
-        # "sysadmin-blog",
-        # "sysadmin",
-        # "szubjektiv-technika",
-        # "wordpress",
+    # "linux-tech-coding",
+    # "diy-do-it-yourself",
+    # "sysadmin-blog",
+    # "sysadmin",
+    # "szubjektiv-technika",
+    # "wordpress",
     # ],
     # "note": ["blips", "blog", "r"],
     # "journal": ["blog"],
