@@ -51,20 +51,22 @@ td, th {
   text-overflow:initial !important;
 }
 
-.footnote-back {
+ {
   display: none;
 }
 
-body > header,
-body > footer,
+#header,
+#footer,
 video,
 audio,
-.syndication,
+#syndication,
+.footnote-back,
 .footnote-backref,
 .footnote-back,
 .encourage,
 .noprint {
   display:none !important;
+
 }
 
 code, pre {

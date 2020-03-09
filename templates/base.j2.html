@@ -141,6 +141,13 @@
                     flickr
                 </a>
             </li>
+            {% elif 'xmpp' in url %}
+            <li>
+                <a rel="me" href="{{ url }}">
+                    <svg width="16" height="16"><use xlink:href="#icon-xmpp" /></svg>
+                    XMPP
+                </a>
+            </li>
             {% endif %}
             {% endfor %}
         </ul>
