@@ -61,8 +61,8 @@
 {% endblock %}
 
 {% block content %}
-<main id="main">
-    <article class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
+<div id="main">
+    <div class="h-entry hentry" lang="{{ post.inLanguage }}" id="article">
         <h1 class="p-name entry-title">
             {% if post.mentions %}
             <span>
@@ -84,7 +84,7 @@
         </h1>
 
         {% if post.review %}
-        <section class="h-review hreview">
+        <div class="h-review hreview">
             <strong>Review summary of: <a href="{{ post.review.url }}" class="p-name u-url p-item h-product item fn url">{{ post.review.name }}</a></strong>
             <p>
                 By
@@ -101,16 +101,16 @@
                 </span>
             </p>
             <p class="p-summary summary">{{ post.review.text }}</p>
-        </section>
+        </div>
         {% endif %}
 
         {% if post.description|length %}
-        <section class="e-summary entry-summary">
+        <div class="e-summary entry-summary">
             {{ post.description|relurl(baseurl) }}
-        </section>
+        </div>
         {% endif %}
 
-        <section>
+        <div class="section">
         {% if post.image|length %}
             {% for image in post.image %}
                 {% if image.representativeOfPage %}
@@ -121,12 +121,12 @@
             <div class="e-content entry-content">
                 {{ post.text|relurl(baseurl) }}
             </div>
-        </section>
+        </div>
 
     {% if 'WebPage' != post['@type'] %}
         {% if post.comment|length %}
-        <section class="comments">
-            <h2><a id="comments"></a>Responses</h2>
+        <div class="comments" id="comments">
+            <h2>Responses</h2>
             <ol>
                 {% for comment in post.comment %}
                 <li class="h-entry p-comment hentry">
@@ -168,12 +168,12 @@
                 </li>
                 {% endfor %}
             </ol>
-        </section>
+        </div>
         {% endif %}
 
     {% endif %}
 
-        <footer class="entry-footer">
+        <div class="entry-footer">
             <p>Licenced under
                 <a rel="license" href="{{ post.license }}" class="u-license">{{ post.license | extractlicense }}</a>,
                 created by
@@ -238,8 +238,8 @@
                     <a class="u-url url" href="{{ post.url }}"></a>
                 </p>
 {% endif %}
-        </footer>
+        </div>
 
-    </article>
-</main>
+    </div>
+</div>
 {% endblock %}

@@ -14,15 +14,15 @@
 {% endblock %}
 
 {% block content %}
-<main id="main" class="h-feed hatom">
-    <section id="intro">
+<div id="main" class="h-feed hatom">
+    <div class="section" id="intro">
         <div>
             {{ post.text }}
         </div>
-    </section>
+    </div>
 
     {% set isFrontPage = 1 %}
-    <section id="latest">
+    <div id="latest">
     <h1>Latest entries</h1>
     {% for category, post in posts %}
         <h2>in:
@@ -33,6 +33,6 @@
         </h2>
         {% include 'meta-article.j2.html' %}
     {% endfor %}
-    </section>
-</main>
+    </div>
+</div>
 {% endblock %}

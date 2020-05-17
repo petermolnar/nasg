@@ -1,5 +1,5 @@
-<article class="h-entry hentry" lang="{{ post.inLanguage }}">
-    <header class="entry-header">
+<div class="h-entry hentry" lang="{{ post.inLanguage }}">
+    <div class="entry-header">
         <h3 class="p-name entry-title">
         {% if post.mentions %}
             <span>
@@ -21,7 +21,7 @@
 
         </h3>
         <a href="{{ post.url }}" class="u-url bookmark"></a>
-    </header>
+    </div>
 
     {% if post.description|length %}
         {% set summary = post.description %}
@@ -47,7 +47,7 @@
         </span>
     </div>
 
-    <footer class="entry-footer" aria-hidden="true" hidden="hidden">
+    <div class="entry-footer" aria-hidden="true" hidden="hidden">
         Published at
         <time datetime="{{ post.datePublished }}" class="dt-published published">{{ post.datePublished|printdate }}</time>
         <time datetime="{{ post.dateModified }}" class="dt-updated updated"></time>
@@ -57,5 +57,5 @@
             <a class="p-name u-url fn url org" href="{{ post.author.url }}">{{ post.author.name }}</a>
             <a class="u-email email" href="mailto:{{ post.author.email }}">{{ post.author.email }}</a>
         </span>
-    </footer>
-</article>
+    </div>
+</div>

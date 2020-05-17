@@ -39,9 +39,9 @@
     or ( category is defined and category.name == name )%}class="active"{% endif %}
 {% endmacro %}
 
-<header id="header">
+<div id="header">
     <div>
-        <nav>
+        <div class="nav">
             <ul>
             {% for key, data in menu.items() %}
                 <li>
@@ -54,7 +54,7 @@
                 </li>
             {% endfor %}
             </ul>
-        </nav>
+        </div>
 
         <div id="header-forms">
             {% for action in site.potentialAction %}
@@ -72,7 +72,7 @@
             {% endfor %}
         </div>
     </div>
-</header>
+</div>
 
 {% block content %}
 {% endblock %}
@@ -80,7 +80,7 @@
 {% block pagination %}
 {% endblock %}
 
-<footer id="footer" class="p-author h-card vcard">
+<div id="footer" class="p-author h-card vcard">
     <div>
         <p>
             <a href="https://creativecommons.org/">CC</a>,
@@ -173,7 +173,7 @@
             </ul>
         </div>
     </div>
-</footer>
+</div>
 
 <script>
 {% include 'themeswitcher.js' %}

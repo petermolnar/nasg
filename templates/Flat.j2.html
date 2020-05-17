@@ -11,23 +11,23 @@
 {% endblock %}
 
 {% block content %}
-<main id="main" class="h-feed hatom {{ category.name }}">
+<div id="main" class="h-feed hatom {{ category.name }}">
 
 {% set year = [0] %}
 {% for post in posts %}
     {% set _year = year.pop() %}
     {% if _year != post.copyrightYear %}
         {% if not loop.first %}
-        </section>
+        </div>
         {% endif %}
-        <section class="year">
+        <div class="year">
         <h2>{{ post.copyrightYear }}</h2>
     {% endif %}
     {% set _ = year.append(post.copyrightYear)%}
         {% include 'meta-article.j2.html' %}
     {% if loop.last %}
-    </section>
+    </div>
     {% endif %}
 {% endfor %}
-</main>
+</div>
 {% endblock %}

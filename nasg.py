@@ -244,18 +244,7 @@ class Gone(object):
         return {"source": self.source}
 
     async def render(self):
-        if self.exists:
-            os.remove(self.renderfile)
-            os.rmdir(self.renderdir)
-            # rmtree(self.renderdir)
-            return
-        # logger.info(
-        # "rendering %s to %s", self.__class__, self.renderfile
-        # )
-        # writepath(
-        # self.renderfile, J2.get_template(self.template).render()
-        # )
-
+        return
 
 class FediverseStats(object):
     def __init__(self, postcount=0, commentcount=0):
@@ -760,15 +749,6 @@ class WebImage(object):
             self.parent = parent
             self.size = size
             self.crop = crop
-
-        # @property
-        # def data(self):
-        # with open(self.fpath, "rb") as f:
-        # encoded = base64.b64encode(f.read())
-        # return "data:%s;base64,%s" % (
-        # self.parent.mime_type,
-        # encoded.decode("utf-8"),
-        # )
 
         @property
         def suffix(self):
@@ -2712,7 +2692,6 @@ def make():
     # make gone and redirect arrays for PHP
     for e in glob.glob(os.path.join(content, "*", "*.del")):
         post = Gone(e)
-        queue.put(post.render())
         rules.add_gone(post.source)
     for e in glob.glob(os.path.join(content, "*", "*.url")):
         post = Redirect(e)

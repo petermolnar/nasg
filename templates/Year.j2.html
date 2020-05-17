@@ -12,7 +12,7 @@
 
 {% block pagination %}
 {% if category.paginated %}
-<section id="pagination">
+<div id="pagination">
     <ol>
         {% for y, url in category.years.items() %}
         {% if (y == category.year) or (not category.year and loop.first) %}
@@ -30,28 +30,28 @@
         {% endif %}
         {% endfor %}
     </ol>
-</section>
+</div>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<main id="main" class="h-feed hatom {{ category.name }}">
+<div id="main" class="h-feed hatom {{ category.name }}">
 
 {% set year = [0] %}
 {% for post in posts %}
     {% set _year = year.pop() %}
     {% if not category.paginated and _year != post.copyrightYear %}
         {% if not loop.first %}
-        </section>
+        </div>
         {% endif %}
-        <section class="year">
-        <h2>{{ post.copyrightYear }}</h2>
+        <div class="year">
+            <h2>{{ post.copyrightYear }}</h2>
     {% endif %}
     {% set _ = year.append(post.copyrightYear)%}
         {% include 'meta-article.j2.html' %}
     {% if not category.paginated and loop.last %}
-    </section class="year">
+        </div>
     {% endif %}
 {% endfor %}
-</main>
+</div>
 {% endblock %}

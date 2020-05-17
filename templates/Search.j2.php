@@ -120,7 +120,7 @@ if (isset($_GET['json'])) {
 {% block title %}Search results for: <?php echo($q); ?>{% endblock %}
 {% block content %}
 
-<main id="main" class="h-feed hatom">
+<div id="main" class="h-feed hatom main">
     <h1>Search results for: <?php echo($q); ?></h1>
     <dl>
 <?php
@@ -129,5 +129,5 @@ if (isset($_GET['json'])) {
     }
 ?>
     </dl>
-</main>
+</div>
 {% endblock %}
