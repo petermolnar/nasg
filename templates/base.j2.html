@@ -13,9 +13,6 @@
     {% for key, value in meta.items() %}
     <link rel="{{ key }}" href="{{ value }}" />
     {% endfor %}
-    <script type="application/ld+json">
-        {{ site|tojson(indent=4) }}
-    </script>
     <style media="all">
         {% include('style.css') %}
     </style>

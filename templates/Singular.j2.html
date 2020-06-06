@@ -32,9 +32,6 @@
     <meta NAME="DC.Creator" content="{{ post.author.name }}" />
     <meta NAME="DC.Date" content="{{ post.datePublished }}" />
     <meta NAME="DC.Description" content="{{ post.description|striptags|e }}" />
-    <script type="application/ld+json">
-        {{ post|tojson(indent=4) }}
-    </script>
     {% if post['@type'] == 'TechArticle' %}
     <style media="all">
         {% include('prism.css') %}
