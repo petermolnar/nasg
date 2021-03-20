@@ -4,7 +4,7 @@ chardet==3.0.4
 feedgen==0.8.0
 filetype==1.0.5
 idna==2.8
-Jinja2==2.10.3
+Jinja2==2.11.3
 langdetect==1.0.7
 lxml==4.4.2
 MarkupSafe==1.1.1
